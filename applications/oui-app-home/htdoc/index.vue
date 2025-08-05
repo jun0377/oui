@@ -1,11 +1,14 @@
 <template>
   <el-space :size="100">
+    <!-- 循环显示CPU各核心使用率 -->
     <dashboard :label="$t('CPU Usage')" :percentage="cpuUsage['cpu']" :color="cpuUsageColor">
       <div v-for="name in Object.keys(cpuUsage).sort()" :key="name">{{ name + ': ' + cpuUsage[name] + '%' }}</div>
     </dashboard>
+    <!-- 显示内存项目名称和大小 -->
     <dashboard :label="$t('Memory Usage')" :percentage="memUsage" :color="memUsageColor">
       <div v-for="item in memInfo" :key="item[0]">{{ $t(item[0]) + ': ' + bytesToHuman(item[1])}}</div>
     </dashboard>
+    <!-- 显示存储空间使用率 -->
     <dashboard v-if="sysinfo && sysinfo.root" :label="$t('Storage Usage')" :percentage="storageUsage" :color="storageUsageColor">
       <div>{{ $t('Total') + ': ' + bytesToHuman(sysinfo.root.total * 1024) }}</div>
       <div>{{ $t('Used') + ': ' + bytesToHuman(sysinfo.root.used * 1024) }}</div>
@@ -13,12 +16,15 @@
   </el-space>
   <el-divider/>
   <el-space wrap>
+    <!-- 循环显示系统信息项 -->
     <el-descriptions :title="$t('System')" border :column="1">
       <el-descriptions-item v-for="item in renderSysinfo" :key="item[0]" :label="$t(item[0])">{{ item[1] }}</el-descriptions-item>
     </el-descriptions>
+    <!-- 显示IPv4网络详细信息 -->
     <el-descriptions v-for="net in wanNetworks" :key="net.interface" :title="'IPv4 ' + $t('Upstream')" border :column="1">
       <el-descriptions-item v-for="item in renderNetworkInfo(net)" :key="item[0]" :label="$t(item[0])">{{ item[1] }}</el-descriptions-item>
     </el-descriptions>
+    <!-- 显示IPv6网络详细信息 -->
     <el-descriptions v-for="net in wan6Networks" :key="net.interface" :title="'IPv6 '+ $t('Upstream')" border :column="1">
       <el-descriptions-item v-for="item in renderNetworkInfo(net, true)" :key="item[0]" :label="$t(item[0])">{{ item[1] }}</el-descriptions-item>
     </el-descriptions>
@@ -35,7 +41,8 @@ export default {
       sysinfo: null,
       boardinfo: null,
       wanNetworks: [],
-      wan6Networks: []
+      wan6Networks: [],
+      serial: null
     }
   },
   components: {
@@ -126,10 +133,11 @@ export default {
 
       const load = sysinfo.load
       const info = [
-        ['Hostname', boardinfo.hostname],
-        ['Model', boardinfo.model],
-        ['Architecture', boardinfo.system],
-        ['Target Platform', boardinfo.release ? boardinfo.release.target : ''],
+        // ['Hostname', boardinfo.hostname],
+        // ['Model', boardinfo.model],
+        // ['Architecture', boardinfo.system],
+        // ['Target Platform', boardinfo.release ? boardinfo.release.target : ''],
+        ['Serial Number', this.serial || 'N/A'],
         ['Firmware Version', boardinfo.release ? boardinfo.release.description : ''],
         ['Kernel Version', boardinfo.kernel],
         ['Uptime', this.secondsToHuman(sysinfo.uptime)],
@@ -224,6 +232,21 @@ export default {
     this.$oui.ubus('system', 'board').then(r => {
       this.boardinfo = r
     })
+
+    // 获取序列号
+    this.$oui.ubus('file', 'exec', {
+      command: 'sh',
+      params: ['-c', "cat /proc/cpuinfo | grep Serial | awk '{print $3}'"]
+    }).then(r => {
+      if (r.stdout && r.stdout.trim()) {
+        this.serial = r.stdout.trim();
+      } else {
+        this.serial = 'N/A';
+      }
+    }).catch(e => {
+      console.error('Failed to get serial:', e);
+      this.serial = 'N/A';
+    });
   }
 }
 </script>

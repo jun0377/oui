@@ -1,5 +1,6 @@
 {
     "en": {
+        "Serial Number": "Serial Number",
         "CPU Usage": "CPU Usage",
         "Memory Usage": "Memory Usage",
         "Storage Usage": "Storage Usage",
@@ -26,6 +27,7 @@
         "Connected": "Connected"
     },
     "zh-CN": {
+        "Serial Number": "序列号",
         "CPU Usage": "CPU使用率",
         "Memory Usage": "内存使用率",
         "Storage Usage": "存储使用率",
@@ -52,6 +54,7 @@
         "Connected": "已连接"
     },
     "zh-TW": {
+        "Serial Number": "序列号",
         "CPU Usage": "CPU使用率",
         "Memory Usage": "内存使用率",
         "Storage Usage": "存儲使用率",
