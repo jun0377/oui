@@ -16,7 +16,7 @@
     </el-form>
     <el-divider/>
     <div class="copyright">
-      <p>Copyright © 2022 Powered by <a href="https://github.com/zhaojh329/oui" target="_blank">oui</a></p>
+      <p>Copyright © 2025 Powered by 青青子衿</p>
     </div>
   </el-card>
 </template>
