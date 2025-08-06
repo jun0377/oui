@@ -42,7 +42,8 @@ export default {
       boardinfo: null,
       wanNetworks: [],
       wan6Networks: [],
-      serial: null
+      serial: null,
+      version: null
     }
   },
   components: {
@@ -138,6 +139,7 @@ export default {
         // ['Architecture', boardinfo.system],
         // ['Target Platform', boardinfo.release ? boardinfo.release.target : ''],
         ['Serial Number', this.serial || 'N/A'],
+        ['Version', this.version || 'N/A'],
         ['Firmware Version', boardinfo.release ? boardinfo.release.description : ''],
         ['Kernel Version', boardinfo.kernel],
         ['Uptime', this.secondsToHuman(sysinfo.uptime)],
@@ -247,6 +249,22 @@ export default {
       console.error('Failed to get serial:', e);
       this.serial = 'N/A';
     });
+
+    // 获取版本号
+    this.$oui.ubus('file', 'exec', {
+      command: 'sh',
+      params: ['-c', "cat /etc/version"]
+    }).then(r => {
+      if (r.stdout){
+        this.version = r.stdout;
+      } else {
+        this.version = 'N/A';
+      }
+    }).catch(e => {
+      console.error('Failed to get version:', e);
+      this.version = 'N/A';
+    })
+
   }
 }
 </script>
