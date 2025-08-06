@@ -4,6 +4,7 @@ local log = require 'eco.log'
 
 local M = {}
 
+-- ubus RPC 代理模块，提供了对 OpenWrt ubus 系统的安全访问接口
 function M.call(params, session)
     local object = params.object
     local method = params.method

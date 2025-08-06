@@ -35,6 +35,8 @@
 import dashboard from './dashboard.vue'
 
 export default {
+
+  // 数据定义
   data() {
     return {
       cpuTimes: [],
@@ -46,10 +48,16 @@ export default {
       version: null
     }
   },
+
+  // 引入dashboard子组件，用于显示仪表盘
   components: {
     dashboard
   },
+
+  // 计算属性
   computed: {
+
+    // CPU各核心使用率
     cpuUsage() {
       if (this.cpuTimes.length < 2)
         return {cpu: 0}
@@ -62,6 +70,8 @@ export default {
 
       return values
     },
+
+    // 根据CPU不同的使用率显示不同的颜色
     cpuUsageColor() {
       const val = this.cpuUsage['cpu']
 
@@ -73,12 +83,16 @@ export default {
 
       return undefined
     },
+
+    // 内存使用率
     memUsage() {
       if (!this.sysinfo)
         return 0
       const memory = this.sysinfo.memory
       return parseFloat(((memory.total - memory.free) * 100 / memory.total).toFixed(2))
     },
+
+    // 不同的内存使用率显示不同的颜色
     memUsageColor() {
       const val = this.memUsage
 
@@ -90,6 +104,8 @@ export default {
 
       return undefined
     },
+
+    // 格式化内存详细信息（总量、可用、已用、缓存等）
     memInfo() {
       if (!this.sysinfo)
         return []
@@ -108,12 +124,16 @@ export default {
 
       return info
     },
+
+    // 存储空间使用率
     storageUsage() {
       if (!this.sysinfo)
         return 0
       const root = this.sysinfo.root
       return parseFloat((root.used * 100 / root.total).toFixed(2))
     },
+
+    // 存储空间使用率颜色指示
     storageUsageColor() {
       const val = this.storageUsage
 
@@ -125,6 +145,8 @@ export default {
 
       return undefined
     },
+
+    // 系统信息格式化显示
     renderSysinfo() {
       const sysinfo = this.sysinfo
       const boardinfo = this.boardinfo
@@ -148,7 +170,9 @@ export default {
       return info
     }
   },
+  // 方法定义
   methods: {
+    // 将字节转换为可读性更高的格式（KB, MB, GB等）
     bytesToHuman(bytes) {
       if (isNaN(bytes))
         return ''
@@ -164,6 +188,8 @@ export default {
 
       return (bytes / Math.pow(1024, k)).toFixed(2) + ' ' + units
     },
+
+    // 将秒数转换为天时分秒格式
     secondsToHuman(second) {
       if (isNaN(second))
         return ''
@@ -173,6 +199,8 @@ export default {
       const seconds = Math.floor(((second % 86400) % 3600) % 60)
       return `${days}d ${hours}h ${minutes}m ${seconds}s`
     },
+
+    // 计算两个时间点之间的CPU使用率
     calcCpuUsage(times0, times1) {
       const times0CPU = times0[0] + times0[1] + times0[2]
       const times1CPU = times1[0] + times1[1] + times1[2]
@@ -181,6 +209,8 @@ export default {
 
       return parseFloat(val.toFixed(2))
     },
+
+    // 获取CPU时间
     getCpuTimes() {
       this.$oui.call('system', 'get_cpu_time').then(({ times }) => {
         this.cpuTimes.push(times)
@@ -188,21 +218,29 @@ export default {
           this.cpuTimes.shift()
       })
     },
+
+    // 获取系统信息
     getSysinfo() {
       this.$oui.ubus('system', 'info').then(r => {
         this.sysinfo = r
       })
     },
+
+    // 获取IPv4网络信息
     getWanNetworks() {
       this.$oui.call('network', 'get_wan_networks').then(({ networks }) => {
         this.wanNetworks = networks
       })
     },
+
+    // 获取IPv6网络信息
     getWan6Networks() {
       this.$oui.call('network', 'get_wan6_networks').then(({ networks }) => {
         this.wan6Networks = networks
       })
     },
+
+    // 格式化网络接口信息
     renderNetworkInfo(net, ipv6) {
       const info = [
         ['Protocol', net.proto]
@@ -225,12 +263,16 @@ export default {
       return info
     }
   },
+
+  // 生命周期钩子,组件创建时执行的初始化操作
   created() {
+    // 创建定时器，定期获取数据
     this.$timer.create('getCpuTimes', this.getCpuTimes, {repeat: true, immediate: true, time: 3000})
     this.$timer.create('getSysinfo', this.getSysinfo, {repeat: true, immediate: true, time: 3000})
     this.$timer.create('getWanNetworks', this.getWanNetworks, {repeat: true, immediate: true, time: 5000})
     this.$timer.create('getWan6Networks', this.getWan6Networks, {repeat: true, immediate: true, time: 5000})
 
+    // ubus获取主板信息
     this.$oui.ubus('system', 'board').then(r => {
       this.boardinfo = r
     })
