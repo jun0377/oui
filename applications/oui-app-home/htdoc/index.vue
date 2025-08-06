@@ -140,7 +140,7 @@ export default {
         // ['Target Platform', boardinfo.release ? boardinfo.release.target : ''],
         ['Serial Number', this.serial || 'N/A'],
         ['Version', this.version || 'N/A'],
-        ['Firmware Version', boardinfo.release ? boardinfo.release.description : ''],
+        // ['Firmware Version', boardinfo.release ? boardinfo.release.description : ''],
         ['Kernel Version', boardinfo.kernel],
         ['Uptime', this.secondsToHuman(sysinfo.uptime)],
         ['Load Average', load.map(v => (v / 65535).toFixed(2)).join(', ')]
