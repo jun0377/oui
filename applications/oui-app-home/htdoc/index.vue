@@ -45,7 +45,8 @@ export default {
       wanNetworks: [],
       wan6Networks: [],
       serial: null,
-      version: null
+      version: null,
+      serverIP: null
     }
   },
 
@@ -162,6 +163,7 @@ export default {
         // ['Target Platform', boardinfo.release ? boardinfo.release.target : ''],
         ['Serial Number', this.serial || 'N/A'],
         ['Version', this.version || 'N/A'],
+        ['Server IP', this.server || 'N/A'],
         // ['Firmware Version', boardinfo.release ? boardinfo.release.description : ''],
         ['Kernel Version', boardinfo.kernel],
         ['Uptime', this.secondsToHuman(sysinfo.uptime)],
@@ -280,31 +282,50 @@ export default {
     // 获取序列号
     this.$oui.ubus('file', 'exec', {
       command: 'sh',
-      params: ['-c', "cat /proc/cpuinfo | grep Serial | awk '{print $3}'"]
+      params: ['-c', 'cat /proc/cpuinfo | grep Serial | awk \'{print $3}\'']
     }).then(r => {
       if (r.stdout && r.stdout.trim()) {
-        this.serial = r.stdout.trim();
+        this.serial = r.stdout.trim()
       } else {
-        this.serial = 'N/A';
+        this.serial = 'N/A'
       }
     }).catch(e => {
-      console.error('Failed to get serial:', e);
-      this.serial = 'N/A';
-    });
+      console.error('Failed to get serial:', e)
+      this.serial = 'N/A'
+    })
 
     // 获取版本号
     this.$oui.ubus('file', 'exec', {
       command: 'sh',
-      params: ['-c', "cat /etc/version"]
+      params: ['-c', 'cat /etc/version']
     }).then(r => {
-      if (r.stdout){
-        this.version = r.stdout;
+      if (r.stdout) {
+        this.version = r.stdout
       } else {
-        this.version = 'N/A';
+        this.version = 'N/A'
       }
     }).catch(e => {
-      console.error('Failed to get version:', e);
-      this.version = 'N/A';
+      console.error('Failed to get version:', e)
+      this.version = 'N/A'
+    })
+
+    // 获取服务器IP
+    this.$oui.call('uci', 'get', {
+      config: 'openmptcprouter',
+      section: 'vps',
+      option: 'ip'
+    }).then(ip => {
+      if (ip) {
+        // 目前只支持设置一个服务器
+        this.server = ip[0]
+        console.log('server IP:', ip)
+      } else {
+        console.log('server IP not found')
+        this.server = 'N/A'
+      }
+    }).catch(e => {
+      console.error('Faile to get server IP:', e)
+      this.server = 'N/A'
     })
 
   }

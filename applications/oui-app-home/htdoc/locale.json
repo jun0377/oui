@@ -1,5 +1,6 @@
 {
     "en": {
+        "Server IP": "Server IP",
         "Version" : "Version",
         "Serial Number": "Serial Number",
         "CPU Usage": "CPU Usage",
@@ -28,6 +29,7 @@
         "Connected": "Connected"
     },
     "zh-CN": {
+        "Server IP": "服务器",
         "Version" : "版本号",
         "Serial Number": "序列号",
         "CPU Usage": "CPU使用率",
@@ -56,6 +58,7 @@
         "Connected": "已连接"
     },
     "zh-TW": {
+        "Server IP": "服务器",
         "Version" : "版本号",
         "Serial Number": "序列号",
         "CPU Usage": "CPU使用率",

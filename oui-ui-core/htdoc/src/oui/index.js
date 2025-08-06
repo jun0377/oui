@@ -33,14 +33,14 @@ class Oui {
 
   // 构造函数
   constructor() {
-    window.Vue = Vue          // 将Vue暴露到全局window对象
-    this.menus = null         // 菜单数据，初始为空
-    this.inited = false       // 初始化状态标志
-    this.aliveTimer = null    // 会话保活定时器
+    window.Vue = Vue // 将Vue暴露到全局window对象
+    this.menus = null // 菜单数据，初始为空
+    this.inited = false // 初始化状态标志
+    this.aliveTimer = null // 会话保活定时器
     this.state = reactive({
-      sid: '',                // 会话ID
-      locale: '',             // 语言设置
-      hostname: ''            // 主机名
+      sid: '', // 会话ID
+      locale: '', // 语言设置
+      hostname: '' // 主机名
     })
 
     // 暗色主题计算属性
@@ -60,8 +60,8 @@ class Oui {
 
     // 异步初始化流程
     const p = [
-      this.call('ui', 'get_locale'),            // 获取语言设置
-      this.call('ui', 'get_theme')              // 获取主题设置
+      this.call('ui', 'get_locale'), // 获取语言设置
+      this.call('ui', 'get_theme') // 获取主题设置
     ]
 
     // 检查会话是否有效
@@ -80,9 +80,9 @@ class Oui {
       this.state.locale = locale
 
       if (locale === 'auto')
-        i18n.global.locale = navigator.language             // 使用浏览器语言
+        i18n.global.locale = navigator.language // 使用浏览器语言
       else
-        i18n.global.locale = locale                         // 使用指定语言
+        i18n.global.locale = locale // 使用指定语言
 
       // 处理主题设置
       this.state.isDark = results[1].theme === 'dark'
@@ -93,7 +93,7 @@ class Oui {
         if (alive)
           this.initWithAlived(sid)
       }
-      
+
       // 标记初始化完成
       this.inited = true
     })
@@ -167,14 +167,14 @@ class Oui {
 
   // 退出登录
   logout() {
-    this.menus = null                                 // 1. 清空菜单数据
-    const sid = getSID()                              // 2. 获取当前会话ID
+    this.menus = null // 1. 清空菜单数据
+    const sid = getSID() // 2. 获取当前会话ID
     if (!sid)
       return
 
     // 3. 清理保活定时器
     if (this.aliveTimer) {
-      clearInterval(this.aliveTimer)                
+      clearInterval(this.aliveTimer)
       this.aliveTimer = null
     }
 
@@ -220,11 +220,11 @@ class Oui {
         // 父菜单不存在或已有视图，则跳过
         if (!parent || parent.view)
           continue
-        
+
         // 为父菜单创建 children 对象
         if (!parent.children)
           parent.children = {}
-        
+
         // 建立父子关系
         parent.children[path] = raw[path]
         parent.children[path].parent = parent
@@ -332,8 +332,8 @@ class Oui {
 
       // 成功回调，
       img.addEventListener('load', () => {
-        window.clearInterval(interval)        // 清除定时器
-        img.remove()                          // 移除检测元素
+        window.clearInterval(interval) // 清除定时器
+        img.remove() // 移除检测元素
         resolve()
       })
 
