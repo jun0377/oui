@@ -105,13 +105,13 @@ export default {
         try {
 
           // uci del_list openmptcprouter.vps.ip
-          this.$oui.ubus('file', 'exec', {
+          await this.$oui.ubus('file', 'exec', {
             command: 'sh',
             params: ['-c', 'uci del openmptcprouter.vps.ip']
           })
 
           // uci add_list openmptcprouter.vps.ip=192.168.10.116
-          this.$oui.ubus('file', 'exec', {
+          await this.$oui.ubus('file', 'exec', {
             command: 'sh',
             params: ['-c', 'uci add_list openmptcprouter.vps.ip=' + this.formValue.serverIP]
           })
