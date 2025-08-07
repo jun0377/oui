@@ -1,5 +1,6 @@
 {
     "en": {
+        "Lan Addr" : "Lan Addr",
         "Server IP": "Server IP",
         "Version" : "Version",
         "Serial Number": "Serial Number",
@@ -29,6 +30,7 @@
         "Connected": "Connected"
     },
     "zh-CN": {
+        "Lan Addr" : "子网信息",
         "Server IP": "服务器",
         "Version" : "版本号",
         "Serial Number": "序列号",
@@ -58,6 +60,7 @@
         "Connected": "已连接"
     },
     "zh-TW": {
+        "Lan Addr" : "子网信息",
         "Server IP": "服务器",
         "Version" : "版本号",
         "Serial Number": "序列号",

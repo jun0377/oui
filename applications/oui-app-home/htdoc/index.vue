@@ -17,7 +17,7 @@
   <el-divider/>
   <el-space wrap>
     <!-- 循环显示系统信息项 -->
-    <el-descriptions :title="$t('System')" border :column="1">
+    <el-descriptions :title="$t('System')" border :column="1" style="width: 680px;">
       <el-descriptions-item v-for="item in renderSysinfo" :key="item[0]" :label="$t(item[0])">{{ item[1] }}</el-descriptions-item>
     </el-descriptions>
     <!-- 显示IPv4网络详细信息 -->
@@ -46,7 +46,8 @@ export default {
       wan6Networks: [],
       serial: null,
       version: null,
-      serverIP: null
+      serverIP: null,
+      lanAddr: null
     }
   },
 
@@ -164,6 +165,7 @@ export default {
         ['Serial Number', this.serial || 'N/A'],
         ['Version', this.version || 'N/A'],
         ['Server IP', this.server || 'N/A'],
+        ['Lan Addr', this.lanAddr || 'N/A'],
         // ['Firmware Version', boardinfo.release ? boardinfo.release.description : ''],
         ['Kernel Version', boardinfo.kernel],
         ['Uptime', this.secondsToHuman(sysinfo.uptime)],
@@ -326,6 +328,32 @@ export default {
     }).catch(e => {
       console.error('Faile to get server IP:', e)
       this.server = 'N/A'
+    })
+
+    // 子网IP
+    this.$oui.call('uci', 'get', {
+      config: 'network',
+      section: 'lan',
+      option: 'ipaddr'
+    }).then(lanip => {
+      if (lanip) {
+        this.lanAddr = lanip
+      } else {
+        this.lanAddr = 'Null'
+      }
+    })
+
+    // 子网掩码
+    this.$oui.call('uci', 'get', {
+      config: 'network',
+      section: 'lan',
+      option: 'netmask'
+    }).then(lanMask => {
+      if (lanMask) {
+        this.lanAddr = this.lanAddr + ' / ' + lanMask
+      } else {
+        this.lanAddr = 'Null'
+      }
     })
 
   }
