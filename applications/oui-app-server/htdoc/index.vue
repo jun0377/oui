@@ -62,8 +62,8 @@ export default {
     }).then(ip => {
       if (ip) {
         // 目前只支持设置一个服务器
-        this.formValue.serverIP = ip
-        console.log('server IP:', ip)
+        this.formValue.serverIP = ip[0]
+        console.log('server IP:', this.formValue.serverIP)
       } else {
         console.log('server IP not found')
         this.formValue.serverIP = 'N/A'
@@ -83,7 +83,7 @@ export default {
       if (port) {
         // 目前只支持设置一个服务器
         this.formValue.serverPort = port
-        console.log('server Port:', port)
+        console.log('server Port:', this.formValue.serverPort)
       } else {
         console.log('server IP not found')
         this.formValue.serverPort = 'N/A'
@@ -104,13 +104,23 @@ export default {
 
         try {
 
-          // uci set openmptcprouter.vps.ip=192.168.10.116
+          // uci del_list openmptcprouter.vps.ip
+          this.$oui.ubus('file', 'exec', {
+            command: 'sh',
+            params: ['-c', 'uci del openmptcprouter.vps.ip']
+          })
+
+          // uci add_list openmptcprouter.vps.ip=192.168.10.116
+          this.$oui.ubus('file', 'exec', {
+            command: 'sh',
+            params: ['-c', 'uci add_list openmptcprouter.vps.ip=' + this.formValue.serverIP]
+          })
+
           // uci set openmptcprouter.vps.port=65500
           await this.$oui.call('uci', 'set', {
             config: 'openmptcprouter',
             section: 'vps',
             values: {
-              ip: this.formValue.serverIP,
               port: this.formValue.serverPort
             }
           })

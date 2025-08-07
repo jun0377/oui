@@ -5,7 +5,9 @@
     "Server Port" : "Server Port",
     "Configuration has been applied" : "Configuration has been applied",
     "Invalid IP address" : "Invalid IP address",
-    "Port must be between 1 and 65535" : "Port must be between 1 and 65535"
+    "Port must be between 1 and 65535" : "Port must be between 1 and 65535",
+    "Failed to save configuration: " : "Failed to save configuration",
+    "Save & Apply" : "Save & Apply"
   },
   "zh-CN": {
     "server": "服务器",
@@ -13,7 +15,9 @@
     "Server Port" : "服务器端口",
     "Configuration has been applied" : "配置成功",
     "Invalid IP address" : "非法的IP地址",
-    "Port must be between 1 and 65535" : "端口范围 1 ~ 65535"
+    "Port must be between 1 and 65535" : "端口范围 1 ~ 65535",
+    "Failed to save configuration: " : "配置保存失败",
+    "Save & Apply" : "保存 & 应用"
   },
   "zh-TW": {
     "server": "服务器",
@@ -21,6 +25,8 @@
     "Server Port" : "服务器端口",
     "Configuration has been applied" : "配置成功",
     "Invalid IP address" : "非法的IP地址",
-    "Port must be between 1 and 65535" : "端口范围 1 ~ 65535"
+    "Port must be between 1 and 65535" : "端口范围 1 ~ 65535",
+    "Failed to save configuration: " : "配置保存失败",
+    "Save & Apply" : "保存 & 应用"
   }
 }
