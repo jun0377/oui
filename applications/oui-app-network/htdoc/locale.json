@@ -1,11 +1,38 @@
 {
   "en": {
-    "hello": "hello world!"
+    "hello": "hello world!",
+    "Wan Area": "Wan Area",
+    "Lan Area": "Lan Area",
+    "Label": "Label",
+    "Interface": "Interface",
+    "Operator": "Operator",
+    "Network Access": "Network Access",
+    "Frequency Band": "Frequency Band",
+    "Rsrp": "Rsrp",
+    "Status": "Status"
   },
   "zh-CN": {
-    "hello": "你好世界！"
+    "hello": "你好世界！",
+    "Wan Area": "广域网链路",
+    "Lan Area": "局域网链路",
+    "Label": "名称",
+    "Interface": "接口",
+    "Operator": "运营商",
+    "Network Access": "入网方式",
+    "Frequency Band": "频段",
+    "Rsrp": "信号强度",
+    "Status": "状态"
   },
   "zh-TW": {
-    "hello": "你好世界！"
+    "hello": "你好世界！",
+    "Wan Area": "广域网链路",
+    "Lan Area": "局域网链路",
+    "Label": "名称",
+    "Interface": "接口",
+    "Operator": "运营商",
+    "Network Access": "入网方式",
+    "Frequency Band": "频段",
+    "Rsrp": "信号强度",
+    "Status": "状态"
   }
 }
