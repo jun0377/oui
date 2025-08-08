@@ -1,5 +1,5 @@
 {
-    "/demo": {
+    "/network": {
         "title": "Network Manager",
         "view": "network",
         "index": 20,
