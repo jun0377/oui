@@ -2,7 +2,7 @@
     "/status/dhcp-lease": {
         "title": "DHCP lease",
         "view": "dhcp-lease",
-        "index": 1,
+        "index": 31,
         "locales": {
             "en": "DHCP lease",
             "zh-CN": "DHCP 租约",

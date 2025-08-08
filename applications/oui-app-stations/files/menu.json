@@ -2,7 +2,7 @@
     "/status/stations": {
         "title": "Stations",
         "view": "stations",
-        "index": 1,
+        "index": 31,
         "locales": {
             "en": "Stations",
             "zh-CN": "无线站点",

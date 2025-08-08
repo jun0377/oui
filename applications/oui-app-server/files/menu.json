@@ -2,7 +2,7 @@
     "/server": {
         "title": "Server",
         "view": "server",
-        "index": 0,
+        "index": 10,
         "locales": {
             "en": "Server",
             "zh-CN": "服务器",

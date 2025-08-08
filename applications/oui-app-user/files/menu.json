@@ -2,7 +2,7 @@
     "/system/user": {
         "title": "user",
         "view": "user",
-        "index": 2,
+        "index": 60,
         "locales": {
             "en": "User",
             "zh-CN": "用户",

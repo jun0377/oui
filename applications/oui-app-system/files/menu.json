@@ -2,7 +2,7 @@
     "/system/system": {
         "title": "System",
         "view": "system",
-        "index": 0,
+        "index": 40,
         "locales": {
             "en": "System",
             "zh-CN": "系统",
