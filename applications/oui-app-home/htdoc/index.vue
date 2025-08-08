@@ -167,7 +167,7 @@ export default {
         ['Server IP', this.server || 'N/A'],
         ['Lan Addr', this.lanAddr || 'N/A'],
         // ['Firmware Version', boardinfo.release ? boardinfo.release.description : ''],
-        ['Kernel Version', boardinfo.kernel],
+        // ['Kernel Version', boardinfo.kernel],
         ['Uptime', this.secondsToHuman(sysinfo.uptime)],
         ['Load Average', load.map(v => (v / 65535).toFixed(2)).join(', ')]
       ]
@@ -320,7 +320,7 @@ export default {
       if (ip) {
         // 目前只支持设置一个服务器
         this.server = ip[0]
-        console.log('server IP:', ip)
+        // console.log('server IP:', ip)
       } else {
         console.log('server IP not found')
         this.server = 'N/A'
