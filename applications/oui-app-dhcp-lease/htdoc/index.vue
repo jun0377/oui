@@ -16,7 +16,7 @@
         </el-table-column>
       </el-table>
     </el-card>
-    <el-card :header="$t('Active DHCPv6 Leases')">
+    <!-- <el-card :header="$t('Active DHCPv6 Leases')">
       <el-table :data="leases6">
         <el-table-column prop="hostname" :label="$t('Hostname')" width="200"/>
         <el-table-column :label="$t('IPv6 address')" width="200">
@@ -31,7 +31,7 @@
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </el-card> -->
   </el-space>
 </template>
 
@@ -57,22 +57,22 @@ export default {
       })
     },
     getDhcpLeases6() {
-      let leases6 = []
-      this.$oui.ubus('dhcp', 'ipv6leases').then(({ device }) => {
-        Object.keys(device).forEach(dev => {
-          const leases = device[dev].leases.map(l => {
-            return {
-              hostname: l.hostname,
-              duid: l.duid,
-              ipaddr: l['ipv6-addr'].map(a => a.address),
-              expire: l.valid
-            }
-          })
-          leases6 = [...leases6, ...leases]
-        })
+      // let leases6 = []
+      // this.$oui.ubus('dhcp', 'ipv6leases').then(({ device }) => {
+      //   Object.keys(device).forEach(dev => {
+      //     const leases = device[dev].leases.map(l => {
+      //       return {
+      //         hostname: l.hostname,
+      //         duid: l.duid,
+      //         ipaddr: l['ipv6-addr'].map(a => a.address),
+      //         expire: l.valid
+      //       }
+      //     })
+      //     leases6 = [...leases6, ...leases]
+      //   })
 
-        this.leases6 = leases6
-      })
+      //   this.leases6 = leases6
+      // })
     }
   },
   created() {
