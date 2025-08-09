@@ -13,7 +13,7 @@
               <span>{{ $t('Label') }}</span>
               <span>{{ $t('Interface') }}</span>
               <span>{{ $t('Operator') }}</span>
-              <span>{{ $t('Network Access') }}</span>
+              <span>{{ $t('Real Network Access') }}</span>
               <span>APN</span>
               <span>{{ $t('Frequency Band') }}</span>
               <span>{{ $t('Rsrp') }}</span>
@@ -39,7 +39,7 @@
               <span>{{ wan.name }}</span>
               <span>{{ wan.interface }}</span>
               <span>{{ wan.operator }}</span>
-              <span>{{ wan.accessType }}</span>
+              <span>{{ wan.realNetworkAccess }}</span>
               <span>{{ wan.apn }}</span>
               <span>{{ wan.band }}</span>
               <span>{{ wan.signal }}</span>
@@ -121,7 +121,7 @@ export default {
           name: '5G-1',
           interface: 'usb0',
           operator: '中国移动',
-          accessType: 'NR',
+          realNetworkAccess: 'NR',
           apn: '3gnet',
           band: 'n28',
           signal: '-98',
@@ -131,7 +131,7 @@ export default {
           name: '5G-2',
           interface: 'usb1',
           operator: '中国联通',
-          accessType: 'NR',
+          realNetworkAccess: 'NR',
           apn: 'cmnet',
           band: 'n79',
           signal: '-100',
@@ -141,7 +141,7 @@ export default {
           name: '5G-3',
           interface: 'usb2',
           operator: '中国电信',
-          accessType: 'NR',
+          realNetworkAccess: 'NR',
           apn: 'ctnet',
           band: 'b41',
           signal: '-83',
@@ -151,7 +151,7 @@ export default {
           name: '5G-4',
           interface: 'usb3',
           operator: '中国广电',
-          accessType: 'NR',
+          realNetworkAccess: 'NR',
           apn: 'ctnet',
           band: 'b41',
           signal: '-83',
@@ -188,6 +188,15 @@ export default {
       default: return '未知'
       }
     },
+    getStatusWan() {
+      console.log('get wan status')
+      this.wanLinks.forEach((wan, index) => {
+        // console.log(`WAN ${index + 1} - Interface: ${wan.interface}, Name: ${wan.name}, Status: ${wan.status}`)
+        this.$oui.call('sim', 'getSimStatus').then(sta => {
+          console.log('index + 1')
+        })
+      })
+    },
     editSubWan(wan) {
       // 切换到WAN配置页面
       this.selectedWan = wan
@@ -201,6 +210,9 @@ export default {
     editSubNet(lan) {
       alert('修改LAN设置: ' + lan.name)
     }
+  },
+  created() {
+    this.$timer.create('wan', this.getStatusWan, { time: 3000, immediate: true, repeat: true})
   }
 }
 </script>

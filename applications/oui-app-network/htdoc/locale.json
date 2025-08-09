@@ -32,7 +32,13 @@
     "Disconnected": "OffLine",
     "Connecting": "Dialing",
     "Wire Lan": "Wire Lan",
-    "Wireless Lan": "Wireless Lan"
+    "Wireless Lan": "Wireless Lan",
+    "IP Address": "IP Address",
+    "Gateway": "Gateway",
+    "Netmask": "Netmask",
+    "Real Network Access": "Real Network Access",
+    "Select access type": "Select access type",
+    "Enter frequency band": "Enter frequency band,like: n28、b41"
   },
   "zh-CN": {
     "hello": "你好世界！",
@@ -67,7 +73,13 @@
     "Configuration reset successfully": "配置重置成功",
     "Configuration saved successfully": "配置保存成功",
     "Wire Lan": "有线网络",
-    "Wireless Lan": "无线网络"
+    "Wireless Lan": "无线网络",
+    "IP Address": "IP",
+    "Gateway": "网关",
+    "Netmask": "掩码",
+    "Real Network Access": "实时网络",
+    "Select access type": "请选择入网方式",
+    "Enter frequency band": "请输入频段,如n28、b41"
   },
   "zh-TW": {
     "hello": "你好世界！",
@@ -102,6 +114,12 @@
     "Configuration reset successfully": "配置重置成功",
     "Configuration saved successfully": "配置保存成功",
     "Wire Lan": "有线网络",
-    "Wireless Lan": "无线网络"
+    "Wireless Lan": "无线网络",
+    "IP Address": "IP",
+    "Gateway": "网关",
+    "Netmask": "掩码",
+    "Real Network Access": "实时网络",
+    "Select access type": "请选择入网方式",
+    "Enter frequency band": "请输入频段,如n28、b41"
   }
 }

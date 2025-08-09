@@ -22,9 +22,6 @@
           <el-form-item :label="$t('Interface')">
             <el-input v-model="wanConfig.interface" :placeholder="$t('Enter interface name')" readonly/>
           </el-form-item>
-          <el-form-item :label="$t('Operator')">
-            <el-input v-model="wanConfig.operator" :placeholder="$t('未识别')" readonly/>
-          </el-form-item>
 
           <el-form-item :label="$t('Network Access')">
             <el-select v-model="wanConfig.accessType" :placeholder="$t('Select access type')" style="width: 100%">
@@ -39,7 +36,15 @@
           </el-form-item>
 
           <el-form-item :label="$t('Lock Frequency Band')">
-            <el-input v-model="wanConfig.band" :placeholder="$t('Enter frequency band')"/>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <el-input 
+                v-model="wanConfig.band" 
+                :placeholder="bandUnlocked ? '自动' : $t('Enter frequency band')"
+                :readonly="bandUnlocked"
+                style="flex: 1;"
+              />
+              <el-checkbox v-model="bandUnlocked" @change="handleUnlockChange">解锁</el-checkbox>
+            </div>
           </el-form-item>
         </el-form>
       </el-card>
@@ -54,14 +59,39 @@
         <div class="status-info">
           <div class="status-item">
             <span class="status-label">{{ $t('Current Status') }}:</span>
-            <span :class="['status-value', getStatusClass(wanConfig.status)]">
-              {{ getStatusText(wanConfig.status) }}
+            <span :class="['status-value', getStatusClass(wanStatus.status)]">
+              {{ getStatusText(wanStatus.status) }}
             </span>
           </div>
 
           <div class="status-item">
+            <span class="status-label">{{ $t('Operator') }}:</span>
+            <span class="status-value">{{ wanStatus.operator }}</span>
+          </div>
+
+          <div class="status-item">
+            <span class="status-label">{{ $t('Real Network Access') }}:</span>
+            <span class="status-value">{{ wanStatus.realNetworkAccess }}</span>
+          </div>
+
+          <div class="status-item">
             <span class="status-label">{{ $t('Signal Strength') }}:</span>
-            <span class="status-value">{{ wanConfig.signal }} dBm</span>
+            <span class="status-value">{{ wanStatus.signal }} dBm</span>
+          </div>
+
+          <div class="status-item">
+            <span class="status-label">{{ $t('IP Address') }}:</span>
+            <span class="status-value">{{ wanStatus.ip }}</span>
+          </div>
+
+          <div class="status-item">
+            <span class="status-label">{{ $t('Netmask') }}:</span>
+            <span class="status-value">{{ wanStatus.ip }}</span>
+          </div>
+
+          <div class="status-item">
+            <span class="status-label">{{ $t('Gateway') }}:</span>
+            <span class="status-value">{{ wanStatus.gateway }}</span>
           </div>
         </div>
       </el-card>
@@ -101,13 +131,20 @@ export default {
       wanConfig: {
         name: '',
         interface: '',
-        operator: '',
         accessType: '',
         apn: '',
-        band: '',
-        signal: '',
-        status: ''
-      }
+        band: ''
+      },
+      wanStatus: {
+        operator: '中国移动',
+        realNetworkAccess: 'NR-5G',
+        signal: '-83',
+        status: 'connected',
+        ip: '127.0.0.1',
+        netmask: '255.255.255.255',
+        gateway: '127.0.0.1'
+      },
+      bandUnlocked: false // 解锁状态，false表示锁定，true表示解锁
     }
   },
   created() {
@@ -155,6 +192,12 @@ export default {
         this.wanConfig = { ...this.wanInfo }
         this.$message.success(this.$t('Configuration reset successfully'))
       })
+    },
+    handleUnlockChange(unlocked) {
+      if (unlocked) {
+        // 解锁时清空频段值，显示"自动"
+        this.wanConfig.band = ''
+      }
     }
   }
 }
