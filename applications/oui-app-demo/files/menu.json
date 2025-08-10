@@ -2,7 +2,7 @@
     "/demo": {
         "title": "Oui Demo",
         "view": "demo",
-        "index": 60,
+        "index": 90,
         "locales": {
             "en": "Oui Demo",
             "zh-CN": "Oui 示范",
