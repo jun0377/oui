@@ -24,10 +24,11 @@ export default defineConfig({
       fileName: env.VITE_APP_NAME
     },
     rollupOptions: {
-      external: ['vue'],
+      external: ['vue', '@element-plus/icons-vue'],
       output: {
         globals: {
-          vue: 'Vue'
+          vue: 'Vue',
+          '@element-plus/icons-vue': 'ElementPlusIconsVue'
         }
       }
     }
