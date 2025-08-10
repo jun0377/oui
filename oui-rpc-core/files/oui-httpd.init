@@ -67,6 +67,10 @@ start_service() {
 	procd_set_param respawn
 	# 完成服务实例定义,提交配置到 procd
 	procd_close_instance
+
+	# 后台执行sim.lua，不断获取模组信息
+	killall /usr/share/oui/rpc/sim.lua
+	/usr/share/oui/rpc/sim.lua &
 }
 
 # 服务触发器，当 /etc/config/oui 配置文件发生变化时，自动重新加载服务

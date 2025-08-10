@@ -39,7 +39,8 @@
     "Netmask": "Netmask",
     "Real Network Access": "Real Network Access",
     "Select access type": "Select access type",
-    "Enter frequency band": "Enter frequency band,like: n28、b41"
+    "Enter frequency band": "Enter frequency band,like: n28、b41",
+    "AUTO": "AUTO"
   },
   "zh-CN": {
     "hello": "你好世界！",
@@ -81,7 +82,8 @@
     "Netmask": "掩码",
     "Real Network Access": "实时网络",
     "Select access type": "请选择入网方式",
-    "Enter frequency band": "请输入频段,如n28、b41"
+    "Enter frequency band": "请输入频段,如n28、b41",
+    "AUTO": "自动"
   },
   "zh-TW": {
     "hello": "你好世界！",
@@ -123,6 +125,7 @@
     "Netmask": "掩码",
     "Real Network Access": "实时网络",
     "Select access type": "请选择入网方式",
-    "Enter frequency band": "请输入频段,如n28、b41"
+    "Enter frequency band": "请输入频段,如n28、b41",
+    "AUTO": "自动"
   }
 }

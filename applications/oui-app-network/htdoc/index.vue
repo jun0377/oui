@@ -191,7 +191,6 @@ export default {
     getStatusWan() {
       console.log('get wan status')
       this.wanLinks.forEach((wan, index) => {
-        // console.log(`WAN ${index + 1} - Interface: ${wan.interface}, Name: ${wan.name}, Status: ${wan.status}`)
         this.$oui.call('sim', 'getSimStatus').then(sta => {
           console.log('index + 1')
         })

@@ -25,6 +25,7 @@
 
           <el-form-item :label="$t('Network Access')">
             <el-select v-model="wanConfig.accessType" :placeholder="$t('Select access type')" style="width: 100%">
+              <el-option :label="$t('AUTO')" value="AUTO"/>
               <el-option label="SA" value="SA"/>
               <el-option label="NSA" value="NSA"/>
               <el-option label="LTE" value="LTE"/>
