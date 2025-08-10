@@ -37,8 +37,8 @@
 
           <el-form-item :label="$t('Lock Frequency Band')">
             <div style="display: flex; align-items: center; gap: 10px;">
-              <el-input 
-                v-model="wanConfig.band" 
+              <el-input
+                v-model="wanConfig.band"
                 :placeholder="bandUnlocked ? '自动' : $t('Enter frequency band')"
                 :readonly="bandUnlocked"
                 style="flex: 1;"
@@ -112,13 +112,10 @@
 </template>
 
 <script>
-import { ArrowLeft } from '@element-plus/icons-vue'
+// 不直接从@element-plus/icons-vue导入，而是使用全局注册的组件
 
 export default {
   name: 'WanConfig',
-  components: {
-    ArrowLeft
-  },
   props: {
     wanData: {
       type: Object,

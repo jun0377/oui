@@ -10,7 +10,7 @@
           <div class="subnet-item">
             <div class="subnet-header-empty"></div>
             <div class="subnet-info-wan">
-              <span>{{ $t('Label') }}</span>
+              <span>{{ $t('SIM') }}</span>
               <span>{{ $t('Interface') }}</span>
               <span>{{ $t('Operator') }}</span>
               <span>{{ $t('Real Network Access') }}</span>
