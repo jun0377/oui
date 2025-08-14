@@ -17,6 +17,7 @@
     "Status" : "Status",
     "RTT" : "RTT",
     "Location": "Location",
+    "Server Version": "Server Version",
     "Notice": "Notice",
     "Server IP is required" : "Server IP is required",
     "Server Port is required" : "Server Port is required"
@@ -39,6 +40,7 @@
     "Status" : "状态",
     "RTT" : "延时",
     "Location": "节点",
+    "Server Version": "服务器版本",
     "Notice": "公告",
     "Server IP is required" : "服务器IP不能为空",
     "Server Port is required" : "服务器端口不能为空"
@@ -61,6 +63,7 @@
     "Status" : "狀態",
     "RTT" : "延时",
     "Location": "节点",
+    "Server Version": "服务器版本",
     "Notice": "公告",
     "Server IP is required" : "服务器IP不能為空",
     "Server Port is required" : "服务器端口不能為空"

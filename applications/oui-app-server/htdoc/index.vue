@@ -37,7 +37,7 @@
       <div class="status-info">
         <el-descriptions :column="1" border>
           <el-descriptions-item :label="$t('Status')">
-            <el-tag :type="serverStatus.connected ? 'success' : 'danger'">
+            <el-tag :class="{'blink-bg': true}" :type="getStatusTagType()">
               {{ serverStatus.connected ? $t('Connected') : $t('Disconnected') }}
             </el-tag>
           </el-descriptions-item>
@@ -48,6 +48,9 @@
           </el-descriptions-item>
           <el-descriptions-item :label="$t('Location')">
             <el-tag type="info">{{ serverStatus.location }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item :label="$t('Server Version')">
+            <el-tag type="info">{{ serverStatus.version }}</el-tag>
           </el-descriptions-item>
           <el-descriptions-item :label="$t('Notice')">
             <el-tag type="info">{{ serverStatus.notice }}</el-tag>
@@ -76,9 +79,12 @@ export default {
         connected: false,
         rtt: 0,
         location: '',
+        version: '',
         notice: ''
       },
       refreshTimer: null,
+      blinkTimer: null,
+      isBlinking: false, // 控制状态背景闪烁
       rules: {
         ip: [
           { required: true, message: this.$t('Server IP is required'), trigger: 'blur' },
@@ -98,11 +104,18 @@ export default {
     this.refreshTimer = setInterval(() => {
       this.fetchServerStatus()
     }, 5000)
+    // 设置背景闪烁定时器，每秒切换一次
+    this.blinkTimer = setInterval(() => {
+      this.isBlinking = !this.isBlinking
+    }, 1000)
   },
   beforeUnmount() {
     // 组件销毁前清除定时器
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer)
+    }
+    if (this.blinkTimer) {
+      clearInterval(this.blinkTimer)
     }
   },
   methods: {
@@ -146,22 +159,9 @@ export default {
       }
       callback() // 验证通过
     },
+    // 获取服务器状态
     fetchServerStatus() {
-      // 模拟从后台API获取服务器状态
-      // 实际项目中应该替换为真实的API调用
-      // 例如: this.$http.get('/api/server/status')
-      // 模拟API响应延迟
-      setTimeout(() => {
-        // 模拟API返回数据
-        const mockResponse = {
-          connected: Math.random() > 0.2, // 80%概率连接成功
-          rtt: Math.floor(Math.random() * 200), // 0-200ms的RTT
-          location: '上海 电信',
-          notice: this.$t('Notice') + ': ' + new Date().toLocaleTimeString() // 动态公告
-        }
-        // 更新状态
-        this.serverStatus = mockResponse
-      }, 300)
+      this.$oui.call('server', 'echo')
     },
     getRttTagType(rtt) {
       // 根据RTT值返回不同的标签类型
@@ -173,6 +173,14 @@ export default {
         return 'warning' // 较慢
       } else {
         return 'danger' // 很慢
+      }
+    },
+    getStatusTagType() {
+      // 根据闪烁状态和连接状态返回不同的标签类型
+      if (this.isBlinking) {
+        return this.serverStatus.connected ? 'warning' : 'success'
+      } else {
+        return this.serverStatus.connected ? 'success' : 'danger'
       }
     }
   }
@@ -211,6 +219,48 @@ export default {
 
 .status-info {
   padding: 10px;
+}
+
+/* 添加过渡效果，使状态变化更平滑 */
+.el-tag {
+  transition: background-color 0.3s ease, color 0.3s ease;
+  font-weight: 600; /* 加深字体 */
+  color: rgba(0, 0, 0, 0.85); /* 加深字体加深各种颜色的背景色 */
+}
+
+/* 加深各种状态的背景色 */
+.el-tag--success {
+    background-color: #67c23a !important;
+    border-color: #67c23a !important;
+    color: #fff !important;
+  }
+
+.el-tag--danger {
+    background-color: #f56c6c !important;
+    border-color: #f56c6c !important;
+    color: #fff !important;
+  }
+.el-tag--warning {
+  background-color: #e6a23c !important;
+  border-color: #e6a23c !important;
+  color: #fff !important;
+}
+
+.el-tag--info {
+  background-color: #909399 !important;
+  border-color: #909399 !important;
+  color: #fff !important;
+}
+
+/* 闪烁背景样式 */
+.blink-bg {
+  animation: blink-animation 1s infinite;
+}
+
+@keyframes blink-animation {
+  0% { opacity: 1; }
+  50% { opacity: 0.9; }
+  100% { opacity: 1; }
 }
 
 @media (max-width: 768px) {
