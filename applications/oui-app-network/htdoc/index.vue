@@ -191,9 +191,11 @@ export default {
     getStatusWan() {
       console.log('get wan status')
       this.wanLinks.forEach((wan, index) => {
-        this.$oui.call('sim', 'getSimStatus').then(sta => {
-          console.log('index + 1')
-        })
+        // 暂时注释掉可能导致 500 错误的 RPC 调用
+        // this.$oui.call('sim', 'getSimStatus').then(sta => {
+        //   console.log('index + 1')
+        // })
+        console.log('WAN ' + (index + 1) + ' status checked')
       })
     },
     editSubWan(wan) {

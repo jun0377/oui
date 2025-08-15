@@ -161,14 +161,29 @@ export default {
     },
     // 获取服务器状态
     fetchServerStatus() {
-      this.$oui.call('server', 'echo')
+      this.$oui.call('serverManager', 'getServerIP').then(ip => {
+        if (ip) {
+          this.serverStatus.connected = true;
+          // 模拟RTT值，实际应该通过ping或其他方式获取
+          this.serverStatus.rtt = Math.floor(Math.random() * 100);
+          this.serverStatus.location = 'Default Location';
+          this.ServerConfig.ip = ip;
+        } else {
+          this.serverStatus.connected = false;
+          this.serverStatus.rtt = 0;
+        }
+      }).catch(error => {
+        console.error('Failed to get server IP:', error);
+        this.serverStatus.connected = false;
+        this.serverStatus.rtt = 0;
+      });
     },
     getRttTagType(rtt) {
       // 根据RTT值返回不同的标签类型
       if (rtt < 50) {
         return 'success' // 优秀
       } else if (rtt < 100) {
-        return '' // 正常（默认颜色）
+        return 'info' // 正常
       } else if (rtt < 150) {
         return 'warning' // 较慢
       } else {

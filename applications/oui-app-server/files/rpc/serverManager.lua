@@ -1,6 +1,4 @@
 local M = {}
-local socket = require "socket"
-local nixio = require "nixio"
 
 function M.echo(params)
     return params
