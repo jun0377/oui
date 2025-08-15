@@ -1,14 +1,27 @@
 local M = {}
+local uci = require 'eco.uci'
 
-function M.echo(params)
-    return params
+
+
+-- 更新服务器端口,只是用来在系统开机时获取服务器IP
+local function updateServerPort()
+    local c = uci.cursor()
+
+    -- uci get openmptcprouter.vps.port
+    return c:get('openmptcprouter', 'vps', 'port')
+    
 end
 
--- 获取服务器 IP 地址
+-- uci get openmptcprouter.vps.ip
 function M.getServerIP()
-    local ip = "127.0.0.1"
-    
-    return ip
+    local c = uci.cursor()
+    return c:get('openmptcprouter', 'vps', 'ip')
+end
+
+-- uci get openmptcprouter.vps.port
+function M.getServerPort()
+    local c = uci.cursor()
+    return c:get('openmptcprouter', 'vps', 'port')
 end
 
 return M

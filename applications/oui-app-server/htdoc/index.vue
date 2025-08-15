@@ -7,51 +7,64 @@
   </div>
 
   <div class="server-section">
-
+    <!-- Server Settings -->
     <el-card class="server-settings-card">
+      <!-- Server Settings -> header -->
       <template #header>
         <div class="card-header">
           <span>{{ $t('Server Settings')}}</span>
         </div>
       </template>
 
+      <!-- Server Settings -> body -->
       <el-form :model="ServerConfig" :rules="rules" ref="serverForm" label-width="120px" class="config-form">
+        <!-- Server Settings -> body -> Server IP -->
         <el-form-item :label="$t('Server IP')" prop="ip">
           <el-input v-model="ServerConfig.ip" :placeholder="$t('Enter Server IP')" />
         </el-form-item>
+        <!-- Server Settings -> body -> Server Port -->
         <el-form-item :label="$t('Server Port')" prop="port">
           <el-input v-model="ServerConfig.port" type="number" />
         </el-form-item>
+        <!-- Server Settings -> body -> Save Button -->
         <el-form-item>
           <el-button type="primary" @click="saveConfig">{{ $t('Save & Apply') }}</el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
+    <!-- Server Status -->
     <el-card class="server-status-card">
+      <!-- Server Status -> header -->
       <template #header>
         <div class="card-header">
           <span>{{ $t('Server Status')}}</span>
         </div>
       </template>
+      <!-- Server Status -> body -->
       <div class="status-info">
         <el-descriptions :column="1" border>
+          <!-- Server Status -> body -> Status -->
           <el-descriptions-item :label="$t('Status')">
             <el-tag :class="{'blink-bg': true}" :type="getStatusTagType()">
               {{ serverStatus.connected ? $t('Connected') : $t('Disconnected') }}
             </el-tag>
           </el-descriptions-item>
+          <!-- Server Status -> body -> rtt -->
           <el-descriptions-item :label="$t('RTT')">
             <el-tag :type="getRttTagType(serverStatus.rtt)">
               {{ serverStatus.rtt }} ms
             </el-tag>
           </el-descriptions-item>
+          <!-- Server Status -> body -> location -->
           <el-descriptions-item :label="$t('Location')">
             <el-tag type="info">{{ serverStatus.location }}</el-tag>
           </el-descriptions-item>
+          <!-- Server Status -> body -> Server Version -->
           <el-descriptions-item :label="$t('Server Version')">
             <el-tag type="info">{{ serverStatus.version }}</el-tag>
           </el-descriptions-item>
+          <!-- Server Status -> body -> Service Notice -->
           <el-descriptions-item :label="$t('Notice')">
             <el-tag type="info">{{ serverStatus.notice }}</el-tag>
           </el-descriptions-item>
@@ -73,7 +86,7 @@ export default {
     return {
       ServerConfig: {
         ip: '',
-        port: '65500'
+        port: ''
       },
       serverStatus: {
         connected: false,
@@ -159,24 +172,34 @@ export default {
       }
       callback() // 验证通过
     },
-    // 获取服务器状态
-    fetchServerStatus() {
+    fetchServerIP() {
       this.$oui.call('serverManager', 'getServerIP').then(ip => {
         if (ip) {
-          this.serverStatus.connected = true;
-          // 模拟RTT值，实际应该通过ping或其他方式获取
-          this.serverStatus.rtt = Math.floor(Math.random() * 100);
-          this.serverStatus.location = 'Default Location';
-          this.ServerConfig.ip = ip;
+          this.ServerConfig.ip = ip
         } else {
-          this.serverStatus.connected = false;
-          this.serverStatus.rtt = 0;
+          this.serverStatus.connected = false
+          this.serverStatus.rtt = 0
         }
       }).catch(error => {
-        console.error('Failed to get server IP:', error);
-        this.serverStatus.connected = false;
-        this.serverStatus.rtt = 0;
-      });
+        console.error('Failed to get server IP:', error)
+        this.serverStatus.connected = false
+        this.serverStatus.rtt = 0
+      })
+    },
+    fetchServerPort() {
+      this.$oui.call('serverManager', 'getServerPort').then(port => {
+        if (port) {
+          this.ServerConfig.port = port
+        } else {
+          this.ServerConfig.port = 0
+        }
+      })
+    },
+    // 获取服务器状态
+    fetchServerStatus() {
+      // serverManager.lua -> getServerIP
+      this.fetchServerIP()
+      this.fetchServerPort()
     },
     getRttTagType(rtt) {
       // 根据RTT值返回不同的标签类型
