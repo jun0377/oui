@@ -20,11 +20,11 @@
       <el-form :model="ServerConfig" :rules="rules" ref="serverForm" label-width="120px" class="config-form">
         <!-- Server Settings -> body -> Server IP -->
         <el-form-item :label="$t('Server IP')" prop="ip">
-          <el-input v-model="ServerConfig.ip" :placeholder="$t('Enter Server IP')" />
+          <el-input v-model="ServerConfig.ip" :placeholder="$t('Enter Server IP')" @focus="isEditing = true" @blur="isEditing = false"/>
         </el-form-item>
         <!-- Server Settings -> body -> Server Port -->
         <el-form-item :label="$t('Server Port')" prop="port">
-          <el-input v-model="ServerConfig.port" type="number" />
+          <el-input v-model.number="ServerConfig.port" type="number" :controls="false" @focus="isEditing = true" @blur="isEditing = false"/>
         </el-form-item>
         <!-- Server Settings -> body -> Save Button -->
         <el-form-item>
@@ -86,7 +86,7 @@ export default {
     return {
       ServerConfig: {
         ip: '',
-        port: ''
+        port: 0
       },
       serverStatus: {
         connected: false,
@@ -95,6 +95,7 @@ export default {
         version: '',
         notice: ''
       },
+      isEditing: false, // 用户是否正在编辑
       refreshTimer: null,
       blinkTimer: null,
       isBlinking: false, // 控制状态背景闪烁
@@ -136,12 +137,12 @@ export default {
       // 表单验证
       this.$refs.serverForm.validate((valid) => {
         if (valid) {
-          // 验证通过，保存配置
-          // 实际项目中应该调用API保存配置
           this.$message({
             message: this.$t('Configuration has been applied'),
             type: 'success'
           })
+          this.setServerIP()
+          this.setServerPort()
           // 保存后立即刷新状态
           this.fetchServerStatus()
         } else {
@@ -150,54 +151,53 @@ export default {
         }
       })
     },
+    setServerIP() {
+      console.log('set server ip: ', this.ServerConfig.ip)
+      return this.$oui.call('serverManager', 'setServerIP', this.ServerConfig.ip)
+    },
+    setServerPort() {
+      console.log('set server port: ', this.ServerConfig.port)
+      return this.$oui.call('serverManager', 'setServerPort', this.ServerConfig.port)
+    },
     validateIP(rule, value, callback) {
       // IP地址验证
       if (!value) {
         callback(new Error(this.$t('Server IP is required')))
       }
-      // 简单的IP地址格式验证
-      const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
-      if (!ipPattern.test(value)) {
+      // IP地址验证（格式和范围）
+      const ip = String(value)
+      if (!/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(ip) ||
+        ip.split('.').some(part => parseInt(part, 10) < 0 || parseInt(part, 10) > 255)) {
         callback(new Error(this.$t('Invalid IP address')))
         return
       }
-      // 验证每个段落的范围
-      const parts = value.split('.')
-      for (const part of parts) {
-        const num = parseInt(part, 10)
-        if (num < 0 || num > 255) {
-          callback(new Error(this.$t('Invalid IP address')))
-          return
-        }
-      }
+      this.ServerConfig.ip = ip
       callback() // 验证通过
     },
     fetchServerIP() {
+      if (this.isEditing) // 当输入框处于focus状态时，不要更新
+        return
       this.$oui.call('serverManager', 'getServerIP').then(ip => {
         if (ip) {
           this.ServerConfig.ip = ip
-        } else {
-          this.serverStatus.connected = false
-          this.serverStatus.rtt = 0
         }
       }).catch(error => {
         console.error('Failed to get server IP:', error)
-        this.serverStatus.connected = false
-        this.serverStatus.rtt = 0
       })
     },
     fetchServerPort() {
+      if (this.isEditing) // 当输入框处于focus状态时，不要更新
+        return
       this.$oui.call('serverManager', 'getServerPort').then(port => {
         if (port) {
-          this.ServerConfig.port = port
-        } else {
-          this.ServerConfig.port = 0
+          // this.ServerConfig.port = port
         }
+      }).catch (errno => {
+        console.error('Failed to get server Port:', errno)
       })
     },
     // 获取服务器状态
     fetchServerStatus() {
-      // serverManager.lua -> getServerIP
       this.fetchServerIP()
       this.fetchServerPort()
     },
