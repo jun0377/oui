@@ -20,11 +20,11 @@
       <el-form :model="ServerConfig" :rules="rules" ref="serverForm" label-width="120px" class="config-form">
         <!-- Server Settings -> body -> Server IP -->
         <el-form-item :label="$t('Server IP')" prop="ip">
-          <el-input v-model="ServerConfig.ip" :placeholder="$t('Enter Server IP')" @focus="isEditing = true" @blur="isEditing = false"/>
+          <el-input v-model="ServerConfig.ip" :placeholder="$t('Enter Server IP')" @focus="isEditing = true" @blur="isEditing = false" @input="markUnsavedChanges"/>
         </el-form-item>
         <!-- Server Settings -> body -> Server Port -->
         <el-form-item :label="$t('Server Port')" prop="port">
-          <el-input v-model.number="ServerConfig.port" type="number" :controls="false" @focus="isEditing = true" @blur="isEditing = false"/>
+          <el-input-number v-model="ServerConfig.port" :min="1" :max="65535" :controls="false" @focus="isEditing = true" @blur="isEditing = false" @input="markUnsavedChanges"/>
         </el-form-item>
         <!-- Server Settings -> body -> Save Button -->
         <el-form-item>
@@ -95,6 +95,7 @@ export default {
         version: '',
         notice: ''
       },
+      hasUnsavedChanges: false, // 是否有为保存的配置
       isEditing: false, // 用户是否正在编辑
       refreshTimer: null,
       blinkTimer: null,
@@ -143,6 +144,7 @@ export default {
           })
           this.setServerIP()
           this.setServerPort()
+          this.hasUnsavedChanges = false
           // 保存后立即刷新状态
           this.fetchServerStatus()
         } else {
@@ -177,6 +179,8 @@ export default {
     fetchServerIP() {
       if (this.isEditing) // 当输入框处于focus状态时，不要更新
         return
+      if (this.hasUnsavedChanges) // 当有未保存的配置时，不要更新
+        return
       this.$oui.call('serverManager', 'getServerIP').then(ip => {
         if (ip) {
           this.ServerConfig.ip = ip
@@ -188,9 +192,11 @@ export default {
     fetchServerPort() {
       if (this.isEditing) // 当输入框处于focus状态时，不要更新
         return
+      if (this.hasUnsavedChanges) // 当有未保存的配置时，不要更新
+        return
       this.$oui.call('serverManager', 'getServerPort').then(port => {
         if (port) {
-          // this.ServerConfig.port = port
+          this.ServerConfig.port = port
         }
       }).catch (errno => {
         console.error('Failed to get server Port:', errno)
@@ -220,6 +226,9 @@ export default {
       } else {
         return this.serverStatus.connected ? 'success' : 'danger'
       }
+    },
+    markUnsavedChanges() {
+      this.hasUnsavedChanges = true
     }
   }
 }
