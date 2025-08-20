@@ -107,7 +107,7 @@ export default {
         ],
         port: [
           { required: true, message: this.$t('Server Port is required'), trigger: 'blur' },
-          { type: 'number', min: 1, max: 65535, message: this.$t('Port must be between 1 and 65535'), trigger: 'blur' }
+          { validator: this.validatePort, trigger: 'blur'}
         ]
       }
     }
@@ -154,12 +154,14 @@ export default {
       })
     },
     setServerIP() {
-      console.log('set server ip: ', this.ServerConfig.ip)
-      return this.$oui.call('serverManager', 'setServerIP', this.ServerConfig.ip)
+      const params = { ip: this.ServerConfig.ip }
+      console.log('Calling setServerIP with params:', params)
+      return this.$oui.call('serverManager', 'setServerIP', params)
     },
     setServerPort() {
-      console.log('set server port: ', this.ServerConfig.port)
-      return this.$oui.call('serverManager', 'setServerPort', this.ServerConfig.port)
+      const params = { port: this.ServerConfig.port}
+      console.log('set server port: ', params)
+      return this.$oui.call('serverManager', 'setServerPort', params)
     },
     validateIP(rule, value, callback) {
       // IP地址验证
@@ -176,6 +178,18 @@ export default {
       this.ServerConfig.ip = ip
       callback() // 验证通过
     },
+    validatePort(rule, value, callback) {
+      if (!value) {
+        callback(new Error(this.$t('Server Port is required')))
+      }
+      const port = Number(value)
+      if (port < 0 || port > 65535) {
+        callback(new Error(this.$t('Port must be between 1 and 65535')))
+        return
+      }
+      this.ServerConfig.port = port
+      callback()
+    },
     fetchServerIP() {
       if (this.isEditing) // 当输入框处于focus状态时，不要更新
         return
@@ -184,6 +198,7 @@ export default {
       this.$oui.call('serverManager', 'getServerIP').then(ip => {
         if (ip) {
           this.ServerConfig.ip = ip
+          console.log('getServerIP: ', this.ServerConfig.ip)
         }
       }).catch(error => {
         console.error('Failed to get server IP:', error)
@@ -196,7 +211,8 @@ export default {
         return
       this.$oui.call('serverManager', 'getServerPort').then(port => {
         if (port) {
-          this.ServerConfig.port = port
+          this.ServerConfig.port = parseInt(port)
+          console.log('getServerPort: ', this.ServerConfig.port)
         }
       }).catch (errno => {
         console.error('Failed to get server Port:', errno)
@@ -297,6 +313,19 @@ export default {
   background-color: #909399 !important;
   border-color: #909399 !important;
   color: #fff !important;
+}
+
+/* 输入框文字左对齐 */
+.el-input-number /deep/ .el-input__inner {
+  text-align: left !important;
+}
+
+.el-input-number ::v-deep .el-input__inner {
+  text-align: left !important;
+}
+
+.config-form .el-input-number input {
+  text-align: left !important;
 }
 
 /* 闪烁背景样式 */

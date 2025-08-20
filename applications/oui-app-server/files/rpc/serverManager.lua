@@ -6,24 +6,24 @@ local uci = require 'eco.uci'
 
 
 -- 服务器状态枚举
-local ServerStatus = {
-    -- 未知
-    ServerStatusUnknown = 'Server Status Unknown',
-    -- 未设置服务器
-    ServerNotChoose = 'Server Not Choose',
-    -- 等待拨号成功,没有可用的路由
-    ServerNoRoute = 'No Route to Server',
-    -- 服务器不存在
-    ServerNotExist = 'Server Not Exist',
-    -- 服务器主机存在，但是服务进程不存在
-    ServerProcNotExist = 'Server Porc Not Exist',
-    -- 正在建立连接
-    ServerConnectiong = 'Server Connecting',
-    -- 连接被拒绝
-    ServerConnectNotAllow = 'Server Connect Not Allow',
-    -- 连接成功
-    ServerConnected = 'Server Connected',
-}
+-- local ServerStatus = {
+--     -- 未知
+--     ServerStatusUnknown = 'Server Status Unknown',
+--     -- 未设置服务器
+--     ServerNotChoose = 'Server Not Choose',
+--     -- 等待拨号成功,没有可用的路由
+--     ServerNoRoute = 'No Route to Server',
+--     -- 服务器不存在
+--     ServerNotExist = 'Server Not Exist',
+--     -- 服务器主机存在，但是服务进程不存在
+--     ServerProcNotExist = 'Server Porc Not Exist',
+--     -- 正在建立连接
+--     ServerConnectiong = 'Server Connecting',
+--     -- 连接被拒绝
+--     ServerConnectNotAllow = 'Server Connect Not Allow',
+--     -- 连接成功
+--     ServerConnected = 'Server Connected',
+-- }
 
 -- local function ping(src_ip, dst_ip)
     
@@ -103,9 +103,9 @@ function M.getServerIP()
 end
 
 -- uci set openmptcprouter.vps.ip=xxx.xxx.xxx.xxx
-function M.setServerIP(ip)
+function M.setServerIP(params)
     local c = uci.cursor()
-    c:set('openmptcprouter', 'vps', 'ip', ip)
+    c:set('openmptcprouter', 'vps', 'ip', params.ip)
     return c:commit('openmptcprouter')
 end
 
@@ -116,9 +116,9 @@ function M.getServerPort()
 end
 
 -- uci set openmptcprouter.vps.port=xxx
-function M.setServerPort(port)
+function M.setServerPort(params)
     local c = uci.cursor()
-    c:set('openmptcprouter', 'vps', 'port', port)
+    c:set('openmptcprouter', 'vps', 'port', params.port)
     return c:commit('openmptcprouter')
 end
 
