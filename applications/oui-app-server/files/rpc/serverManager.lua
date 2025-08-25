@@ -1,5 +1,6 @@
 local M = {}
 local uci = require 'eco.uci'
+local util = require 'luci.util'
 -- local nixio = require 'nixio'
 -- local sys = require 'luci.sys'
 -- local socket = require 'socket'
@@ -25,76 +26,48 @@ local uci = require 'eco.uci'
 --     ServerConnected = 'Server Connected',
 -- }
 
--- local function ping(src_ip, dst_ip)
-    
---     local ping_stats = { reachable=false, rtt_ms=0 }
+local function ping(src, dst)
 
---     if not dst_ip then
---         return ping_stats
---     end
-    
---     local ping_cmd = "ping -c 3 -W 3"
-    
---     -- 如果指定了源IP，添加源IP参数
---     if src_ip then
---         ping_cmd = ping_cmd .. " -I " .. src_ip
---     end
-    
---     -- 目的IP
---     ping_cmd = ping_cmd .. " " .. dst_ip
---     local ping_output = sys.exec(ping_cmd)
-    
---     -- 解析ping结果
---     ping_stats.reachable = (ping_output:match("0%% packet loss") ~= nil)
+    local result = { reachable = false, rtt_ms = 0, packet_loss = 0}
+    if nil == dst then
+        return result
+    end
 
---     -- 提取往返时间
---     local rtt = ping_output:match("min/avg/max/mdev = ([%d%.]+)/([%d%.]+)/([%d%.]+)/([%d%.]+)")
---     ping_stats.rtt_ms = rtt and tonumber(rtt) or 0
---     return ping_stats
--- end
+    local ping_cmd = 'ping '
+    if nil ~= src then
+        ping_cmd = ping_cmd .. '-I ' .. src
+    end
+
+    ping_cmd = ping_cmd .. ' ' .. dst .. ' -c 3'
+
+    -- print(ping_cmd)
+
+    ping_state = exec(ping_cmd)
+
+    if nil == ping_state then
+        return result
+    end
+
+    -- print(ping_state)
+    local packet_loss = string.match(ping_state, "(%d+)%% packet loss")
+    -- print(packet_loss)
+    if packet_loss then
+        result.packet_loss = tonumber(packet_loss)
+        result.reachable = result.packet_loss < 100
+    end
+
+    local rttmin, rtt_avg, rtt_max, rtt_mdev = string.match(ping_state, "min/avg/max/mdev = ([%d%.]+)/([%d%.]+)/([%d%.]+)/([%d%.]+) ms")
+    -- print(rtt_avg)
+    if rtt_avg then
+        result.rtt_ms = tonumber(rtt_avg)
+    end
+
+    -- print('result.require=', result.reachable, ' result.rtt_ms=', result.rtt_ms, ' result.packet_loss=', result.packet_loss)
+    return result
+end
 
 -- 服务器连接状态
--- function M.getServerConnectStatus()
 
---     local server = {
---         status = ServerStatusUnknown,
---         connected = false,
---         serverIP = nil,
---         ping = {
---                 reachable = false,
---                 time = 0,
---             }
---     }
-
---     -- 获取服务器IP
---     local serverIP = M.getServerIP()
-
---     -- 未设置服务器
---     if not serverIP or serverIP == "" then
---         server.status = ServerNotChoose
---         return status
---     end
-    
---     -- 检查是否可以ping通
---     server.ping = M.ping(nil, serverIP)
---     if not server.ping.reachable then
---         server.status = ServerStatus.ServerNoRoute
---         return server
---     end
-    
---     -- 检查端口是否开放
---     -- $ nc -z -v 192.168.10.150 1-1000
---     -- 192.168.10.150 [192.168.10.150] 22 (ssh) open
---     -- 192.168.10.150 [192.168.10.150] 139 (netbios-ssn) open
---     -- 192.168.10.150 [192.168.10.150] 445 (microsoft-ds) open
-    
---     -- 检查VPN隧道是否建立
-
-
-    
---     return server
-
--- end
 
 -- uci get openmptcprouter.vps.ip
 function M.getServerIP()
