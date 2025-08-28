@@ -195,7 +195,10 @@ export default {
         return
       if (this.hasUnsavedChanges) // 当有未保存的配置时，不要更新
         return
+      console.log('get Server IP')
+      this.ServerConfig.ip = '127.0.0.1'
       this.$oui.call('serverManager', 'getServerIP').then(ip => {
+        console.log('get Server IP ...')
         if (ip) {
           this.ServerConfig.ip = ip
           console.log('getServerIP: ', this.ServerConfig.ip)
@@ -209,6 +212,8 @@ export default {
         return
       if (this.hasUnsavedChanges) // 当有未保存的配置时，不要更新
         return
+      console.log('get Server Port')
+      this.ServerConfig.port = 0
       this.$oui.call('serverManager', 'getServerPort').then(port => {
         if (port) {
           this.ServerConfig.port = parseInt(port)
