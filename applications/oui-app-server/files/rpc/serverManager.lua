@@ -5,7 +5,7 @@ local log = require 'log'
 -- log
 log.level = 'trace'
 log.usecolor = true
-log.outfile = '/tmp/serverManager.log'
+log.outfile = '/var/log/serverManager.log'
 
 local function exec(command)
     local pp = io.popen(command)
@@ -48,7 +48,7 @@ local function ping(src, dst)
         state.rtt_ms = tonumber(rtt_avg)
     end
 
-    log.info('reachable', state.reachable, 'rtt_ms', state.rtt_ms, 'pkt_loss', state.pkt_loss)
+    -- log.info('reachable', state.reachable, 'rtt_ms', state.rtt_ms, 'pkt_loss', state.pkt_loss)
     return state
 end
 
@@ -78,14 +78,47 @@ function M.setServerPort(params)
     return c:commit('openmptcprouter')
 end
 
--- 获取和服务器的连接状态，通过判断openvpn隧道是否建立来进行判断
-function M.getConnectionState()
-
-    local connState = {host_reachable = false, vpn_reachable = false}
+-- 获取服务器主机是否可达，比较耗时，需要在vue中异步获取
+function M.getHostRtt()
     
-    
+    log.info('getHostRtt...')
 
-    return connState
+    local server = M.getServerIP()
+    return ping(nil, server)
+end
+
+-- 获取VPN隧道的连通性，比较耗时，需要在vue中异步获取
+function M.getVPNrtt()
+    
+    log.info('getVPNrtt...')
+
+    local state = {reachable = false, rtt_ms = 0, pkt_loss = 0}
+
+    local cmd = "cat /proc/net/dev | grep tun0"
+    local res = exec(cmd)
+    if nil == res then
+        log.warn('VPN interface tun0 not exist')
+        return state
+    end
+
+    cmd = "ip addr show dev tun0 | grep \'inet \' | awk \'{print $2}\' | cut -d/ -f1 | tr -d \'\n\'"
+    local src_ip = exec(cmd)
+    if nil == src_ip then
+        log.warn('VPN interface tun0 has no ip')
+        return state
+    end
+
+    -- log.info(src_ip)
+
+    res = ping(src_ip, '10.255.252.1')
+    log.info('reachable = ', res.reachable, ' rtt_ms = ', res.rtt_ms)
+    return res
+end
+
+-- 获取服务器版本
+function M.getServerVersion()
+    local ver = {kernel = '6.6.83', software_version = '0.0.1'}
+    return ver
 end
 
 return M

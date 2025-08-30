@@ -64,6 +64,10 @@
           <el-descriptions-item :label="$t('Server Version')">
             <el-tag type="info">{{ serverStatus.version }}</el-tag>
           </el-descriptions-item>
+          <!-- Server Status -> body -> Server Load -->
+          <el-descriptions-item :label="$t('Server Load')">
+            <el-tag type="info">{{ serverStatus.load }}</el-tag>
+          </el-descriptions-item>
           <!-- Server Status -> body -> Service Notice -->
           <el-descriptions-item :label="$t('Notice')">
             <el-tag type="info">{{ serverStatus.notice }}</el-tag>
@@ -91,6 +95,7 @@ export default {
       serverStatus: {
         connected: false,
         rtt: 0,
+        load: 0, // 服务器负载
         location: '',
         version: '',
         notice: ''
@@ -153,16 +158,19 @@ export default {
         }
       })
     },
+    // 设置服务器ip
     setServerIP() {
       const params = { ip: this.ServerConfig.ip }
       console.log('Calling setServerIP with params:', params)
       return this.$oui.call('serverManager', 'setServerIP', params)
     },
+    // 设置服务器端口
     setServerPort() {
       const params = { port: this.ServerConfig.port}
       console.log('set server port: ', params)
       return this.$oui.call('serverManager', 'setServerPort', params)
     },
+    // ip格式校验
     validateIP(rule, value, callback) {
       // IP地址验证
       if (!value) {
@@ -178,6 +186,7 @@ export default {
       this.ServerConfig.ip = ip
       callback() // 验证通过
     },
+    // 端口范围校验
     validatePort(rule, value, callback) {
       if (!value) {
         callback(new Error(this.$t('Server Port is required')))
@@ -190,15 +199,14 @@ export default {
       this.ServerConfig.port = port
       callback()
     },
+    // 获取服务器ip
     fetchServerIP() {
       if (this.isEditing) // 当输入框处于focus状态时，不要更新
         return
       if (this.hasUnsavedChanges) // 当有未保存的配置时，不要更新
         return
       console.log('get Server IP')
-      this.ServerConfig.ip = '127.0.0.1'
       this.$oui.call('serverManager', 'getServerIP').then(ip => {
-        console.log('get Server IP ...')
         if (ip) {
           this.ServerConfig.ip = ip
           console.log('getServerIP: ', this.ServerConfig.ip)
@@ -207,13 +215,13 @@ export default {
         console.error('Failed to get server IP:', error)
       })
     },
+    // 获取服务器端口
     fetchServerPort() {
       if (this.isEditing) // 当输入框处于focus状态时，不要更新
         return
       if (this.hasUnsavedChanges) // 当有未保存的配置时，不要更新
         return
       console.log('get Server Port')
-      this.ServerConfig.port = 0
       this.$oui.call('serverManager', 'getServerPort').then(port => {
         if (port) {
           this.ServerConfig.port = parseInt(port)
@@ -223,11 +231,80 @@ export default {
         console.error('Failed to get server Port:', errno)
       })
     },
-    // 获取服务器状态
-    fetchServerStatus() {
-      this.fetchServerIP()
-      this.fetchServerPort()
+    // 创建超时Promise
+    createTimeoutPromise(ms, operation) {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          reject(new Error(`${operation} timeout after ${ms}ms`))
+        }, ms)
+      })
     },
+    // 获取服务器连接状态和rtt
+    fetchServerRTT() {
+      console.log('get Server RTT')
+      // 使用Promise.race实现超时机制，5秒超时
+      return Promise.race([
+        this.$oui.call('serverManager', 'getHostRtt'),
+        this.createTimeoutPromise(5000, 'getHostRtt')
+      ]).then(state => {
+        if (!state.reachable) {
+          console.warn('Server Unreachable! Server: ', this.ServerConfig.ip)
+          this.serverStatus.connected = false
+          this.serverStatus.rtt = 0
+          return
+        }
+        this.serverStatus.rtt = parseInt(state.rtt_ms)
+        console.log('getHostRtt', this.serverStatus.rtt)
+      }).catch(error => {
+        console.error('Failed to get server RTT:', error)
+        this.serverStatus.rtt = 0
+        if (error.message.includes('timeout')) {
+          console.warn('get rtt timeout...')
+        }
+      })
+    },
+    // 获取VPN隧道状态和RTT
+    fetchVPNrtt() {
+      console.log('get VPN RTT')
+      return Promise.race([
+        this.$oui.call('serverManager', 'getVPNrtt'),
+        this.createTimeoutPromise(5000, 'getVPNrtt')
+      ]).then(state => {
+        if (!state.reachable) {
+          console.log('Server VPN Unreachable!')
+          this.serverStatus.connected = false
+          this.fetchServerIP()
+          return
+        }
+        this.serverStatus.connected = true
+        this.serverStatus.rtt = parseInt(state.rtt_ms)
+      })
+    },
+    // 获取服务器状态 - 异步并行执行
+    async fetchServerStatus() {
+      try {
+        // 使用 Promise.allSettled 并行执行，避免一个失败影响其他
+        const results = await Promise.allSettled([
+          this.fetchServerIP(),
+          this.fetchServerPort(),
+          // this.fetchServerRTT(),
+          this.fetchVPNrtt()
+        ])
+        // 检查每个操作的结果
+        const operations = ['fetchServerIP', 'fetchServerPort', 'fetchVPNrtt']
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            // console.log(`${operations[index]} completed successfully`)
+          } else {
+            console.error(`${operations[index]} failed:`, result.reason)
+          }
+        })
+        // console.log('Server status fetch completed')
+      } catch (error) {
+        console.error('Unexpected error in fetchServerStatus:', error)
+      }
+    },
+    // 根据rtt判断连接状态
     getRttTagType(rtt) {
       // 根据RTT值返回不同的标签类型
       if (rtt < 50) {
@@ -240,14 +317,15 @@ export default {
         return 'danger' // 很慢
       }
     },
+    // 不同状态使用不同颜色标识
     getStatusTagType() {
-      // 根据闪烁状态和连接状态返回不同的标签类型
       if (this.isBlinking) {
         return this.serverStatus.connected ? 'warning' : 'success'
       } else {
         return this.serverStatus.connected ? 'success' : 'danger'
       }
     },
+    // 有未保存的改动
     markUnsavedChanges() {
       this.hasUnsavedChanges = true
     }

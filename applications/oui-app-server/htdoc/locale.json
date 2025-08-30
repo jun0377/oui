@@ -20,7 +20,8 @@
     "Server Version": "Server Version",
     "Notice": "Notice",
     "Server IP is required" : "Server IP is required",
-    "Server Port is required" : "Server Port is required"
+    "Server Port is required" : "Server Port is required",
+    "Server Load" : "Server Load"
   },
   "zh-CN": {
     "server": "服务器",
@@ -43,7 +44,8 @@
     "Server Version": "服务器版本",
     "Notice": "公告",
     "Server IP is required" : "服务器IP不能为空",
-    "Server Port is required" : "服务器端口不能为空"
+    "Server Port is required" : "服务器端口不能为空",
+    "Server Load": "服务器负载"
   },
   "zh-TW": {
     "server": "服务器",
@@ -66,6 +68,7 @@
     "Server Version": "服务器版本",
     "Notice": "公告",
     "Server IP is required" : "服务器IP不能為空",
-    "Server Port is required" : "服务器端口不能為空"
+    "Server Port is required" : "服务器端口不能為空",
+    "Server Load": "服务器负载"
   }
 }
