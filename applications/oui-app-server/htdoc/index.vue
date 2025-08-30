@@ -273,7 +273,7 @@ export default {
         if (!state.reachable) {
           console.log('Server VPN Unreachable!')
           this.serverStatus.connected = false
-          this.fetchServerIP()
+          this.fetchServerRTT()
           return
         }
         this.serverStatus.connected = true
