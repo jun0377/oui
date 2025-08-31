@@ -162,12 +162,16 @@ export default {
     setServerIP() {
       const params = { ip: this.ServerConfig.ip }
       console.log('Calling setServerIP with params:', params)
+      this.serverStatus.connected = false
+      this.serverStatus.rtt = 0
       return this.$oui.call('serverManager', 'setServerIP', params)
     },
     // 设置服务器端口
     setServerPort() {
       const params = { port: this.ServerConfig.port}
       console.log('set server port: ', params)
+      this.serverStatus.connected = false
+      this.serverStatus.rtt = 0
       return this.$oui.call('serverManager', 'setServerPort', params)
     },
     // ip格式校验
