@@ -115,7 +115,9 @@ end
 local function setVPSip(server_ip)
     log.info('set vps ip: ', server_ip)
     local c = uci.cursor()
-    c:set('openmptcprouter', 'vps', 'ip', server_ip)
+
+    exec("uci del openmptcprouter.vps.ip")
+    exec("uci -q add_list openmptcprouter.vps.ip" .. server_ip)
     c:commit('openmptcprouter')
 
     exec("/etc/init.d/openmptcprouter-vps restart >/dev/null 2>/dev/null")
