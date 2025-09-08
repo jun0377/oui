@@ -30,6 +30,12 @@ function M.get(params, session)
     return c:get(config, section, option)
 end
 
+-- 获取bool类型的配置值
+function M.get_bool(params, session)
+    local val = get(params, session)
+    return (val == "1" or val == "true" or val == "yes" or val == "on")
+end
+
 -- 设置特定的配置值
 function M.set(params, session)
     local c = uci.cursor()

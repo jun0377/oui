@@ -1,5 +1,6 @@
 local M = {}
 local log = require 'log'
+local uci = require 'eco.uci'
 
 log.level = 'trace'
 log.usercolor = true
@@ -14,8 +15,8 @@ local SimStatus = {
         module = '',                            -- 模组名称
         version = '',                           -- 模组版本
         imei = '',                              -- 模组的IMEI码
-        ttyusb = '/dev/ttyUSB2',                -- 拨号节点
-        interface = 'usb0',                     -- 接口名称
+        ttyusb = '',                            -- 拨号节点
+        interface = '',                         -- 接口名称
 
         -- SIM卡可设置的参数
         bandSetting = '',                   -- 设置的频段
@@ -33,7 +34,7 @@ local SimStatus = {
         dhcpRangeGateway = '',              -- DHCP地址池网关
 
         -- SIM卡状态
-        status = 'offline',                 -- 连接状态：离线、未插卡、拨号中、在线
+        status = '',                        -- 连接状态：离线、未插卡、拨号中、在线
         netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
         signal = 0,                         -- 信号强度RSRP
         operator = '',                      -- 运营商
@@ -51,8 +52,8 @@ local SimStatus = {
         module = '',                        -- 模组名称
         version = '',                       -- 模组版本
         imei = '',                          -- 模组的IMEI码
-        ttyusb = '/dev/ttyUSB7',            -- 拨号节点
-        interface = 'usb1',                     -- 接口名称
+        ttyusb = '',                        -- 拨号节点
+        interface = '',                     -- 接口名称
 
         -- SIM卡可设置的参数
         bandSetting = '',                   -- 设置的频段
@@ -82,8 +83,8 @@ local SimStatus = {
         module = '',                        -- 模组名称
         version = '',                       -- 模组版本
         imei = '',                          -- 模组的IMEI码
-        ttyusb = '/dev/ttyUSB12',           -- 拨号节点
-        interface = 'usb2',                 -- 接口名称
+        ttyusb = '',                        -- 拨号节点
+        interface = '',                     -- 接口名称
 
         -- SIM卡可设置的参数
         bandSetting = '',                   -- 设置的频段
@@ -95,7 +96,7 @@ local SimStatus = {
         cellSetting = '',                   -- 锁小区
 
         -- SIM卡状态
-        status = 'offline',                 -- 连接状态：离线、未插卡、拨号中、在线
+        status = '',                        -- 连接状态：离线、未插卡、拨号中、在线
         netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
         signal = 0,                         -- 信号强度RSRP
         operator = '',                      -- 运营商
@@ -111,131 +112,214 @@ local SimStatus = {
 
 -- 获取模组对应的usb端点号
 local function getSimUsb(index)
-    return SimStatus[index].usb
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'usb')
 end
 
--- 获取模组别名
+-- 获取模组别名,如5G-1 5G-2 4G-1 4G-2
 local function getSimAlias(index)
     return SimStatus[index].alias
 end
 
 -- 获取模组对应的模组名称
 local function getSimModuleName(index)
-    return SimStatus[index].module
+
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    local confirmed = c:get_bool('sim', alias, 'confirmed')
+    if not confirmed then
+        -- 执行AT指令获取，获取完毕后保存到/etc/config/sim配置文件中的module选项
+    end
+
+    return c:get('sim', alias, 'module')
 end
 
 -- 获取模组版本
 local function getSimModuleVersion(index)
-    return SimStatus[index].version
+
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    local confirmed = c:get_bool('sim', alias, 'confirmed')
+    if not confirmed then
+        -- 执行AT指令获取，获取完毕后保存到/etc/config/sim配置文件中的moduleVersion选项
+    end
+
+    return c:get('sim', alias, 'moduleVersion')
 end
 
 -- 获取模组拨号节点
 local function getSimNode(index)
-    return SimStatus[index].ttyusb
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'node')
 end
 
 -- 获取模组对应的接口
 local function getSimInterface(index)
-    return SimStatus[index].interface
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'interface')
 end
 
 -- 获取模组IMEI
 local function getSimModuleIMEI(index)
-    return SimStatus[index].imei
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    local confirmed = c:get_bool('sim', alias, 'confirmed')
+    if not confirmed then
+        -- 执行AT指令获取，获取完毕后保存到/etc/config/sim配置文件中的imei选项
+    end
+
+    return c:get('sim', alias, 'imei')
 end
 
 -- 获取模组频段设置
 local function getSimConfBand(index)
-    return SimStatus[index].bandSetting
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'band')
 end
 
 -- 获取模组入网方式设置
 local function getSimConfNet(index)
-    return SimStatus[index].netRealTime
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'net')
 end
 
 -- 获取模组APN设置
 local function getSimConfAPN(index)
-    return SimStatus[index].apn
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'apn')
+end
+
+-- 获取模组鉴权设置
+local function getSimConfAuth(index)
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'auth')
 end
 
 -- 获取模组用户名设置
 local function getSimConfUser(index)
-    return SimStatus[index].user
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'user')
 end
 
 -- 获取模组密码设置
 local function getSimConfPasswd(index)
-    return SimStatus[index].passwd
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'password')
 end
 
 -- 获取模组小区设置
 local function getSimConfCell(index)
-    return SimStatus[index].cellSetting
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'cell')
 end
 
 -- 获取模组DHCP设置
 local function getSimConfDhcpRangeStart(index)
-    return SimStatus[index].dhcpRangeStart
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'dhcpRangeStart')
 end
 
 -- 获取模组DHCP设置
 local function getSimConfDhcpRangeEnd(index)
-    return SimStatus[index].dhcpRanageEnd
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'dhcpRangeEnd')
 end
 
 -- 获取模组DHCP设置
 local function getSimConfDhcpRangeMask(index)
-    return SimStatus[index].dhcpRangeMask
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'dhcpRangeMask')
 end
 
 -- 获取模组DHCP设置
 local function getSimConfDhcpRangeGateway(index)
-    return SimStatus[index].dhcpRangeGateway
+    local alias = SimStatus[index].alias
+    local c = uci.cursor()
+    return c:get('sim', alias, 'dhcpRangeGateway')
 end
 
 -- 获取模组连接状态
 local function getSimStatusConnect(index)
+
+    -- TODO: 通过AT指令获取
+
     return SimStatus[index].status
 end
 
 -- 获取模组实时入网方式
 local function getSimStatusNet(index)
+
+    -- TODO: 通过AT指令获取
+
     return SimStatus[index].netRealTime
 end
 
 -- 获取模组信号强度
 local function getSimStatusSignal(index)
+
+    -- TODO: 通过AT指令获取
+
     return SimStatus[index].signal
 end
 
 -- 获取模组运营商
 local function getSimStatusOperator(index)
+
+    -- TODO: 通过AT指令获取
+
     return SimStatus[index].operator
 end
 
 -- 获取模组实时频段
 local function getSimStatusBand(index)
+
+    -- TODO: 通过AT指令获取
+
     return SimStatus[index].bandRealTime
 end
 
 -- 获取模组实时小区
 local function getSimStatusCell(index)
+
+    -- TODO: 通过AT指令获取
+
     return SimStatus[index].cellRealTime
 end
 
 -- 获取模组ip
 local function getSimStatusIP(index)
+    
+    -- TODO: 通过AT指令获取
+
     return SimStatus[index].ip
 end
 
 -- 获取模组掩码
 local function getSimStatusMask(index)
+    
+    -- TODO: 通过AT指令获取
+
     return SimStatus[index].mask
 end
 
 -- 获取模组网关
 local function getSimStatusGateway(index)
+    
+    -- TODO: 通过AT指令获取
+
     return SimStatus[index].gateway
 end
 
@@ -256,6 +340,7 @@ function M.getSimStatus(params)
     SimStatus[index].bandSetting = getSimConfBand(index)
     SimStatus[index].netSetting = getSimConfNet(index)
     SimStatus[index].apn = getSimConfAPN(index)
+    SimStatus[index].auth = getSimConfAuth(index)
     SimStatus[index].user = getSimConfUser(index)
     SimStatus[index].passwd = getSimConfPasswd(index)
     SimStatus[index].cellSetting = getSimConfCell(index)
