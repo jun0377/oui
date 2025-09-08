@@ -36,7 +36,7 @@
               <text x="10" y="16" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#15803D">{{ index + 1 }}</text>
             </svg>
             <div class="subnet-info-wan">
-              <span>{{ wan.name }}</span>
+              <span>{{ wan.alias }}</span>
               <span>{{ wan.interface }}</span>
               <span>{{ wan.operator }}</span>
               <span>{{ wan.realNetworkAccess }}</span>
@@ -118,9 +118,9 @@ export default {
       selectedWan: null,
       wanLinks: [
         {
-          name: '5G-1',
+          alias: '',
           interface: 'usb0',
-          operator: '中国移动',
+          operator: '',
           realNetworkAccess: 'NR',
           apn: '3gnet',
           band: 'n28',
@@ -128,9 +128,9 @@ export default {
           status: 'connected'
         },
         {
-          name: '5G-2',
+          alias: '',
           interface: 'usb1',
-          operator: '中国联通',
+          operator: '',
           realNetworkAccess: 'NR',
           apn: 'cmnet',
           band: 'n79',
@@ -138,25 +138,25 @@ export default {
           status: 'dialing'
         },
         {
-          name: '5G-3',
+          alias: '',
           interface: 'usb2',
-          operator: '中国电信',
+          operator: '',
           realNetworkAccess: 'NR',
           apn: 'ctnet',
           band: 'b41',
           signal: '-83',
           status: 'disconnected'
-        },
-        {
-          name: '5G-4',
-          interface: 'usb3',
-          operator: '中国广电',
-          realNetworkAccess: 'NR',
-          apn: 'ctnet',
-          band: 'b41',
-          signal: '-83',
-          status: 'nosim'
         }
+        // {
+        //   alias: '5G-4',
+        //   interface: 'usb3',
+        //   operator: '',
+        //   realNetworkAccess: 'NR',
+        //   apn: 'ctnet',
+        //   band: 'b41',
+        //   signal: '-83',
+        //   status: 'nosim'
+        // }
       ],
       subnets: [
         {
@@ -189,13 +189,19 @@ export default {
       }
     },
     getStatusWan() {
-      console.log('get wan status')
+      console.log('Get wan status...')
       this.wanLinks.forEach((wan, index) => {
-        // 暂时注释掉可能导致 500 错误的 RPC 调用
-        // this.$oui.call('sim', 'getSimStatus').then(sta => {
-        //   console.log('index + 1')
-        // })
-        console.log('WAN ' + (index + 1) + ' status checked')
+        this.$oui.call('sim', 'getSimStatus', {'index': index}).then(status => {
+          this.wanLinks[index].alias = status.alias
+          this.wanLinks[index].interface = status.interface
+          this.wanLinks[index].operator = status.operator
+          this.wanLinks[index].realNetworkAccess = status.realNetworkAccess
+          this.wanLinks[index].apn = status.apn
+          this.wanLinks[index].band = status.band
+          this.wanLinks[index].signal = status.signal
+          this.wanLinks[index].status = status.status
+          console.log(this.wanLinks[index])
+        })
       })
     },
     editSubWan(wan) {

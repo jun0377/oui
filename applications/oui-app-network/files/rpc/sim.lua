@@ -1,382 +1,282 @@
 local M = {}
-local nixio = require "nixio"
+local log = require 'log'
+
+log.level = 'trace'
+log.usercolor = true
+log.outfile = '/var/log/sim.log'
 
 -- SIM卡状态
 local SimStatus = {
     [1] = {
-
-        -- USB端口号
-        usb = '1-1',
-
         -- 模组信息
-        module = '',            -- 模组名称
-        version = '',           -- 模组版本
-        imei = '',              -- 模组的IMEI码
-        ttyusb = '',            -- 拨号节点
+        usb = '1-1',                            -- USB端口号
+        alias = '5G-1',                         -- tag
+        module = '',                            -- 模组名称
+        version = '',                           -- 模组版本
+        imei = '',                              -- 模组的IMEI码
+        ttyusb = '/dev/ttyUSB2',                -- 拨号节点
+        interface = 'usb0',                     -- 接口名称
 
         -- SIM卡可设置的参数
-        bandSetting = '',       -- 设置的频段
-        netSetting = '',        -- 入网方式设置：AUTO/SA/NSA/LTE
-        apn = '',               -- apn
-        auth = '',              -- 鉴权
-        user = '',              -- 用户名
-        passwd = '',            -- 密码
-        cellSetting = '',       -- 锁小区
+        bandSetting = '',                   -- 设置的频段
+        netSetting = '',                    -- 入网方式设置：AUTO/SA/NSA/LTE
+        apn = '',                           -- apn
+        auth = '',                          -- 鉴权
+        user = '',                          -- 用户名
+        passwd = '',                        -- 密码
+        cellSetting = '',                   -- 锁小区
 
         -- DHCP地址池设置
-        dhcpRangeStart = '',    -- DHCP地址池起始IP
-        dhcpRanageEnd = '',     -- DHCP地址池终止IP
-        dhcpRangeMask = '',     -- DHCP地址池掩码
-        dhcpRangeGateway = '',  -- DHCP地址池网关
+        dhcpRangeStart = '',                -- DHCP地址池起始IP
+        dhcpRanageEnd = '',                 -- DHCP地址池终止IP
+        dhcpRangeMask = '',                 -- DHCP地址池掩码
+        dhcpRangeGateway = '',              -- DHCP地址池网关
 
         -- SIM卡状态
-        status = 'offline',     -- 连接状态：离线、未插卡、拨号中、在线
-        netRealTime = '',       -- 当设置为AUTO时，实时的入网方式
-        signal = 0,             -- 信号强度RSRP
-        operator = '',          -- 运营商
-        interface = '',         -- 接口名称
-        imsi = '',              -- SIM卡的IMSI
-        bandRealTime = '',      -- 实时频段
-        cellRealTime = '',      -- 实时小区
-        ip = '',                -- IP
-        mask = '',              -- 掩码
-        gateway = '',           -- 网关
+        status = 'offline',                 -- 连接状态：离线、未插卡、拨号中、在线
+        netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
+        signal = 0,                         -- 信号强度RSRP
+        operator = '',                      -- 运营商
+        imsi = '',                          -- SIM卡的IMSI
+        bandRealTime = '',                  -- 实时频段
+        cellRealTime = '',                  -- 实时小区
+        ip = '',                            -- IP
+        mask = '',                          -- 掩码
+        gateway = '',                       -- 网关
     },
     [2] = {
-
-        -- USB端口号
-        usb = '1-2',
-
         -- 模组信息
-        module = '',            -- 模组名称
-        version = '',           -- 模组版本
-        imei = '',              -- 模组的IMEI码
-        ttyusb = '',            -- 拨号节点
+        usb = '1-2',                        -- USB端口号
+        alias = '5G-2',                     -- tag
+        module = '',                        -- 模组名称
+        version = '',                       -- 模组版本
+        imei = '',                          -- 模组的IMEI码
+        ttyusb = '/dev/ttyUSB7',            -- 拨号节点
+        interface = 'usb1',                     -- 接口名称
 
         -- SIM卡可设置的参数
-        bandSetting = '',       -- 设置的频段
-        netSetting = '',        -- 入网方式设置：AUTO/SA/NSA/LTE
-        apn = '',               -- apn
-        auth = '',              -- 鉴权
-        user = '',              -- 用户名
-        passwd = '',            -- 密码
-        cellSetting = '',       -- 锁小区
+        bandSetting = '',                   -- 设置的频段
+        netSetting = '',                    -- 入网方式设置：AUTO/SA/NSA/LTE
+        apn = '',                           -- apn
+        auth = '',                          -- 鉴权
+        user = '',                          -- 用户名
+        passwd = '',                        -- 密码
+        cellSetting = '',                   -- 锁小区
 
         -- SIM卡状态
-        status = 'offline',     -- 连接状态：离线、未插卡、拨号中、在线
-        netRealTime = '',       -- 当设置为AUTO时，实时的入网方式
-        signal = 0,             -- 信号强度RSRP
-        operator = '',          -- 运营商
-        interface = '',         -- 接口名称
-        imsi = '',              -- SIM卡的IMSI
-        bandRealTime = '',      -- 实时频段
-        cellRealTime = '',      -- 实时小区
-        ip = '',                -- IP
-        mask = '',              -- 掩码
-        gateway = '',           -- 网关
+        status = 'offline',                 -- 连接状态：离线、未插卡、拨号中、在线
+        netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
+        signal = 0,                         -- 信号强度RSRP
+        operator = '',                      -- 运营商
+        imsi = '',                          -- SIM卡的IMSI
+        bandRealTime = '',                  -- 实时频段
+        cellRealTime = '',                  -- 实时小区
+        ip = '',                            -- IP
+        mask = '',                          -- 掩码
+        gateway = '',                       -- 网关
     },
     [3] = {
-
-        -- USB端口号
-        usb = '1-3',
-
         -- 模组信息
-        module = '',            -- 模组名称
-        version = '',           -- 模组版本
-        imei = '',              -- 模组的IMEI码
-        ttyusb = '',            -- 拨号节点
+        usb = '1-3',                        -- USB端口号
+        alias = '5G-2',                     -- tag
+        module = '',                        -- 模组名称
+        version = '',                       -- 模组版本
+        imei = '',                          -- 模组的IMEI码
+        ttyusb = '/dev/ttyUSB12',           -- 拨号节点
+        interface = 'usb2',                 -- 接口名称
 
         -- SIM卡可设置的参数
-        bandSetting = '',       -- 设置的频段
-        netSetting = '',        -- 入网方式设置：AUTO/SA/NSA/LTE
-        apn = '',               -- apn
-        auth = '',              -- 鉴权
-        user = '',              -- 用户名
-        passwd = '',            -- 密码
-        cellSetting = '',       -- 锁小区
+        bandSetting = '',                   -- 设置的频段
+        netSetting = '',                    -- 入网方式设置：AUTO/SA/NSA/LTE
+        apn = '',                           -- apn
+        auth = '',                          -- 鉴权
+        user = '',                          -- 用户名
+        passwd = '',                        -- 密码
+        cellSetting = '',                   -- 锁小区
 
         -- SIM卡状态
-        status = 'offline',     -- 连接状态：离线、未插卡、拨号中、在线
-        netRealTime = '',       -- 当设置为AUTO时，实时的入网方式
-        signal = 0,             -- 信号强度RSRP
-        operator = '',          -- 运营商
-        interface = '',         -- 接口名称
-        imsi = '',              -- SIM卡的IMSI
-        bandRealTime = '',      -- 实时频段
-        cellRealTime = '',      -- 实时小区
-        ip = '',                -- IP
-        mask = '',              -- 掩码
-        gateway = '',           -- 网关
+        status = 'offline',                 -- 连接状态：离线、未插卡、拨号中、在线
+        netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
+        signal = 0,                         -- 信号强度RSRP
+        operator = '',                      -- 运营商
+        interface = '',                     -- 接口名称
+        imsi = '',                          -- SIM卡的IMSI
+        bandRealTime = '',                  -- 实时频段
+        cellRealTime = '',                  -- 实时小区
+        ip = '',                            -- IP
+        mask = '',                          -- 掩码
+        gateway = '',                       -- 网关
     }
 }
 
--- 获取接口名称
-local function getModuleInterface(index, usb_point)
-    if SimStatus[index].interface ~= '' then
-        return SimStatus[index].interface
-    end
-
-    -- TODO: 根据usb端口号，从sysfs中获取接口名称
-    local interface = ''
-    return interface
+-- 获取模组对应的usb端点号
+local function getSimUsb(index)
+    return SimStatus[index].usb
 end
 
--- 获取模组名称
-local function getModuleName(index, usb_point)
+-- 获取模组别名
+local function getSimAlias(index)
+    return SimStatus[index].alias
+end
 
-    if SimStatus[index].module ~= '' then
-        return SimStatus[index].module
-    end
+-- 获取模组对应的模组名称
+local function getSimModuleName(index)
+    return SimStatus[index].module
+end
 
-    -- TODO: 根据usb端口号，从sysfs中获取模组名
-    local moduleName = ''
-
-    return moduleName
+-- 获取模组版本
+local function getSimModuleVersion(index)
+    return SimStatus[index].version
 end
 
 -- 获取模组拨号节点
-local function getModuleNode(index, usb_point)
-
-    if SimStatus[index].ttyusb ~= '' then
-        return SimStatus[index].ttyusb
-    end
-
-    -- TODO: 根据usb端口号，从sysfs中获取拨号节点
-    local ttyUSB = ''
-
-    return ttyUSB
+local function getSimNode(index)
+    return SimStatus[index].ttyusb
 end
 
--- 获取模组版本号
-local function getModuleVersion(index, tty)
-
-    if SimStatus[index].version ~= '' then
-        return SimStatus[index].version
-    end
-
-    -- TODO: 通过AT指令获取模组版本号
-    local version = ''
-
-    return version
+-- 获取模组对应的接口
+local function getSimInterface(index)
+    return SimStatus[index].interface
 end
 
 -- 获取模组IMEI
-local function getModuleIMEI(index, tty)
-
-    if SimStatus[index].imei ~= '' then
-        return SimStatus[index].imei
-    end
-
-    -- TODO: 通过AT指令获取IMEI
-    local imei = ''
-
-    return imei
+local function getSimModuleIMEI(index)
+    return SimStatus[index].imei
 end
 
--- 获取模组信息
-local function updateModuleInfo()
-    
-    local moduleCnt = #SimStatus
-    for i = 1, moduleCnt do
-        -- usb端口号
-        local usb = SimStatus[i].usb
-        -- 接口名称
-        SimStatus[i].interface = getModuleInterface(i, usb)
-        -- 获取模组名称
-        SimStatus[i].module = getModuleName(i, usb)
-        -- 获取模组拨号节点
-        SimStatus[i].ttyusb = getModuleNode(i, usb)
-        -- 获取模组版本
-        SimStatus[i].version = getModuleVersion(i, SimStatus[i].ttyusb)
-        -- 获取模组IMEI
-        SimStatus[i].imei = getModuleIMEI(i, SimStatus[i].ttyusb)
-
-    end
-
+-- 获取模组频段设置
+local function getSimConfBand(index)
+    return SimStatus[index].bandSetting
 end
 
--- 获取SIM卡 IMSI
-local function getSimIMSI(index)
-
-    if SimStatus[index].imsi ~= '' then
-        return SimStatus[index].imsi
-    end
-
-    -- TODO: AT指令获取IMSI
-    local imsi = ''
-
-    return imsi
+-- 获取模组入网方式设置
+local function getSimConfNet(index)
+    return SimStatus[index].netRealTime
 end
 
--- 获取SIM卡运营商
-local function getSimOperator(index)
-
-    if SimStatus[index].operator ~= '' then
-        return SimStatus[index].operator
-    end
-
-    -- TODO: AT指令获取IMSI
-    local operator = ''
-
-    return operator
+-- 获取模组APN设置
+local function getSimConfAPN(index)
+    return SimStatus[index].apn
 end
 
--- 获取SIM卡信号强度、实时频段...
-local function updateSimSignal(index)
-
-    -- TODO: AT指令获取信号强度
-
+-- 获取模组用户名设置
+local function getSimConfUser(index)
+    return SimStatus[index].user
 end
 
--- 获取SIM卡IP
-local function updateSimIP(index)
-
-    interface = SimStatus[index].interface
-
-    -- TODO: 获取接口IP
-
+-- 获取模组密码设置
+local function getSimConfPasswd(index)
+    return SimStatus[index].passwd
 end
 
--- 获取SIM卡掩码
-local function updateSimMask(index)
-
-    interface = SimStatus[index].interface
-
-    -- TODO: 获取接口掩码
-
+-- 获取模组小区设置
+local function getSimConfCell(index)
+    return SimStatus[index].cellSetting
 end
 
--- 获取SIM卡网关
-local function updateSimGateway(index)
-
-    interface = SimStatus[index].interface
-
-    -- TODO: 获取接口网关
-
+-- 获取模组DHCP设置
+local function getSimConfDhcpRangeStart(index)
+    return SimStatus[index].dhcpRangeStart
 end
 
--- 获取SIM卡状态
-local function updateSimInfo()
-
-    local moduleCnt = #SimStatus
-    for i = 1, moduleCnt do
-        -- 获取SIM卡 IMSI
-        SimStatus[i].imsi = getSimIMSI(i)
-        -- 获取SIM卡运营商
-        SimStatus[i].operator = getSimOperator(i)
-        -- 获取SIM卡信号强度、实时频段...
-        updateSimSignal(i)
-        -- 获取SIM卡IP
-        SimStatus[i].ip = updateSimIP(i)
-        -- 获取SIM卡掩码
-        SimStatus[i].mask = updateSimMask(i)
-        -- 获取SIM卡网关
-        SimStatus[i].gateway = updateSimGateway(i)
-    end
+-- 获取模组DHCP设置
+local function getSimConfDhcpRangeEnd(index)
+    return SimStatus[index].dhcpRanageEnd
 end
 
--- 更新 模组 及 SIM卡 状态的函数
-local function updateSimStatus()
-    while true do
-        
-        -- 获取模组信息
-        updateModuleInfo()
-        -- 更新SIM卡状态
-        updateSimInfo()
-        -- 等待5秒
-        nixio.nanosleep(5, 0)
-    end
+-- 获取模组DHCP设置
+local function getSimConfDhcpRangeMask(index)
+    return SimStatus[index].dhcpRangeMask
 end
 
--- 设置入网方式
-function M.setSimNet(index, net)
-
-    -- 拨号节点
-    tty = SimStatus[index].ttyusb
-    
-    -- TODO: AT指令设置入网方式
-
+-- 获取模组DHCP设置
+local function getSimConfDhcpRangeGateway(index)
+    return SimStatus[index].dhcpRangeGateway
 end
 
--- 设置入网方式
-function M.setSimAPN(index, APN)
-
-    -- 拨号节点
-    tty = SimStatus[index].ttyusb
-    
-    -- TODO: AT指令设置APN
-
+-- 获取模组连接状态
+local function getSimStatusConnect(index)
+    return SimStatus[index].status
 end
 
--- 设置鉴权方式
-function M.setSimAuth(index, auth)
-
-    -- 拨号节点
-    tty = SimStatus[index].ttyusb
-    
-    -- TODO: AT指令设置鉴权方式
-
+-- 获取模组实时入网方式
+local function getSimStatusNet(index)
+    return SimStatus[index].netRealTime
 end
 
--- 设置鉴权方式
-function M.setSimUser(index, auth)
-
-    -- 拨号节点
-    tty = SimStatus[index].ttyusb
-    
-    -- TODO: AT指令设置用户名、密码
-
+-- 获取模组信号强度
+local function getSimStatusSignal(index)
+    return SimStatus[index].signal
 end
 
--- 设置频段
-function M.setSimUser(index, band)
-
-    -- 拨号节点
-    tty = SimStatus[index].ttyusb
-    
-    -- TODO: AT指令设置频段
-
+-- 获取模组运营商
+local function getSimStatusOperator(index)
+    return SimStatus[index].operator
 end
 
--- 设置小区
-function M.setSimCell(index, cell)
-    
-    -- 拨号节点
-    tty = SimStatus[index].ttyusb
-    
-    -- TODO: AT指令设置小区
-
+-- 获取模组实时频段
+local function getSimStatusBand(index)
+    return SimStatus[index].bandRealTime
 end
 
--- 设置DHCP地址池
-function M.setDhcpRange(index, dhcpRange)
+-- 获取模组实时小区
+local function getSimStatusCell(index)
+    return SimStatus[index].cellRealTime
+end
 
-    -- 拨号节点
-    tty = SimStatus[index].ttyusb
+-- 获取模组ip
+local function getSimStatusIP(index)
+    return SimStatus[index].ip
+end
 
-    -- TODO: AT指令设置DHCP地址池
+-- 获取模组掩码
+local function getSimStatusMask(index)
+    return SimStatus[index].mask
+end
 
-    
+-- 获取模组网关
+local function getSimStatusGateway(index)
+    return SimStatus[index].gateway
 end
 
 -- 获取SIM卡状态：是否插卡、拨号状态、信号强度、运营商、频段、小区...
-function M.getSimStatus(params, section)
-    return SimStatus
+function M.getSimStatus(params)
+
+    local index = tonumber(params.index) + 1
+
+    -- 模组硬件信息
+    SimStatus[index].usb = getSimUsb(index)
+    SimStatus[index].alias = getSimAlias(index)
+    SimStatus[index].module = getSimModuleName(index)
+    SimStatus[index].version = getSimModuleVersion(index)
+    SimStatus[index].imei = getSimModuleIMEI(index)
+    SimStatus[index].ttyusb = getSimNode(index)
+    SimStatus[index].interface = getSimInterface(index)
+    -- 模组配置信息
+    SimStatus[index].bandSetting = getSimConfBand(index)
+    SimStatus[index].netSetting = getSimConfNet(index)
+    SimStatus[index].apn = getSimConfAPN(index)
+    SimStatus[index].user = getSimConfUser(index)
+    SimStatus[index].passwd = getSimConfPasswd(index)
+    SimStatus[index].cellSetting = getSimConfCell(index)
+    -- 模组dhcp设置
+    SimStatus[index].dhcpRangeStart = getSimConfDhcpRangeStart(index)
+    SimStatus[index].dhcpRanageEnd = getSimConfDhcpRangeEnd(index)
+    SimStatus[index].dhcpRangeMask = getSimConfDhcpRangeMask(index)
+    SimStatus[index].dhcpRangeGateway = getSimConfDhcpRangeGateway(index)
+    -- 模组实时状态
+    SimStatus[index].status = getSimStatusConnect(index)
+    SimStatus[index].netRealTime = getSimStatusNet(index)
+    SimStatus[index].signal = getSimStatusSignal(index)
+    SimStatus[index].operator = getSimStatusOperator(index)
+    SimStatus[index].bandRealTime = getSimStatusBand(index)
+    SimStatus[index].cellRealTime = getSimStatusCell(index)
+    SimStatus[index].ip = getSimStatusIP(index)
+    SimStatus[index].mask = getSimStatusMask(index)
+    SimStatus[index].gateway = getSimStatusGateway(index)
+
+    return SimStatus[index]
 end
 
-local statusThread = nil
-
--- 启动状态更新线程
-function M.startStatusThread()
-
-    if not statusThread or coroutine.status(statusThread) == "dead" then
-        statusThread = coroutine.create(updateSimStatus)
-        coroutine.resume(statusThread)
-    end
-
-end
-
--- 自动启动状态更新线程
-M.startStatusThread()
 
 return M
