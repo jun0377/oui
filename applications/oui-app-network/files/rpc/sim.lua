@@ -12,6 +12,7 @@ local SimStatus = {
         -- 模组信息
         usb = '1-1',                            -- USB端口号
         alias = '5G-1',                         -- tag
+        uciSection = 'SIM_5G_1',                -- UCI配置文件section命名规范
         module = '',                            -- 模组名称
         version = '',                           -- 模组版本
         imei = '',                              -- 模组的IMEI码
@@ -49,6 +50,7 @@ local SimStatus = {
         -- 模组信息
         usb = '1-2',                        -- USB端口号
         alias = '5G-2',                     -- tag
+        uciSection = 'SIM_5G_2',            -- UCI配置文件section命名规范
         module = '',                        -- 模组名称
         version = '',                       -- 模组版本
         imei = '',                          -- 模组的IMEI码
@@ -79,7 +81,8 @@ local SimStatus = {
     [3] = {
         -- 模组信息
         usb = '1-3',                        -- USB端口号
-        alias = '5G-2',                     -- tag
+        alias = '5G-3',                     -- tag
+        uciSection = 'SIM_5G_3',            -- UCI配置文件section命名规范
         module = '',                        -- 模组名称
         version = '',                       -- 模组版本
         imei = '',                          -- 模组的IMEI码
@@ -112,9 +115,9 @@ local SimStatus = {
 
 -- 获取模组对应的usb端点号
 local function getSimUsb(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'usb')
+    return c:get('sim', section, 'usb')
 end
 
 -- 获取模组别名,如5G-1 5G-2 4G-1 4G-2
@@ -125,130 +128,130 @@ end
 -- 获取模组对应的模组名称
 local function getSimModuleName(index)
 
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    local confirmed = c:get_bool('sim', alias, 'confirmed')
+    local confirmed = c:get('sim', section, 'confirmed')
     if not confirmed then
         -- 执行AT指令获取，获取完毕后保存到/etc/config/sim配置文件中的module选项
     end
 
-    return c:get('sim', alias, 'module')
+    return c:get('sim', section, 'module')
 end
 
 -- 获取模组版本
 local function getSimModuleVersion(index)
 
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    local confirmed = c:get_bool('sim', alias, 'confirmed')
+    local confirmed = c:get('sim', section, 'confirmed')
     if not confirmed then
         -- 执行AT指令获取，获取完毕后保存到/etc/config/sim配置文件中的moduleVersion选项
     end
 
-    return c:get('sim', alias, 'moduleVersion')
+    return c:get('sim', section, 'moduleVersion')
 end
 
 -- 获取模组拨号节点
 local function getSimNode(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'node')
+    return c:get('sim', section, 'node')
 end
 
 -- 获取模组对应的接口
 local function getSimInterface(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'interface')
+    return c:get('sim', section, 'interface')
 end
 
 -- 获取模组IMEI
 local function getSimModuleIMEI(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    local confirmed = c:get_bool('sim', alias, 'confirmed')
+    local confirmed = c:get('sim', section, 'confirmed')
     if not confirmed then
         -- 执行AT指令获取，获取完毕后保存到/etc/config/sim配置文件中的imei选项
     end
 
-    return c:get('sim', alias, 'imei')
+    return c:get('sim', section, 'imei')
 end
 
 -- 获取模组频段设置
 local function getSimConfBand(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'band')
+    return c:get('sim', section, 'band')
 end
 
 -- 获取模组入网方式设置
 local function getSimConfNet(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'net')
+    return c:get('sim', section, 'net')
 end
 
 -- 获取模组APN设置
 local function getSimConfAPN(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'apn')
+    return c:get('sim', section, 'apn')
 end
 
 -- 获取模组鉴权设置
 local function getSimConfAuth(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'auth')
+    return c:get('sim', section, 'auth')
 end
 
 -- 获取模组用户名设置
 local function getSimConfUser(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'user')
+    return c:get('sim', section, 'user')
 end
 
 -- 获取模组密码设置
 local function getSimConfPasswd(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'password')
+    return c:get('sim', section, 'password')
 end
 
 -- 获取模组小区设置
 local function getSimConfCell(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'cell')
+    return c:get('sim', section, 'cell')
 end
 
 -- 获取模组DHCP设置
 local function getSimConfDhcpRangeStart(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'dhcpRangeStart')
+    return c:get('sim', section, 'dhcpRangeStart')
 end
 
 -- 获取模组DHCP设置
 local function getSimConfDhcpRangeEnd(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'dhcpRangeEnd')
+    return c:get('sim', section, 'dhcpRangeEnd')
 end
 
 -- 获取模组DHCP设置
 local function getSimConfDhcpRangeMask(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'dhcpRangeMask')
+    return c:get('sim', section, 'dhcpRangeMask')
 end
 
 -- 获取模组DHCP设置
 local function getSimConfDhcpRangeGateway(index)
-    local alias = SimStatus[index].alias
+    local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', alias, 'dhcpRangeGateway')
+    return c:get('sim', section, 'dhcpRangeGateway')
 end
 
 -- 获取模组连接状态
