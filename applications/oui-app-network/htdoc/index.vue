@@ -119,44 +119,34 @@ export default {
       wanLinks: [
         {
           alias: '',
-          interface: 'usb0',
+          interface: '',
           operator: '',
-          realNetworkAccess: 'NR',
-          apn: '3gnet',
-          band: 'n28',
-          signal: '-98',
-          status: 'connected'
+          realNetworkAccess: '',
+          apn: '',
+          band: '',
+          signal: '',
+          status: ''
         },
         {
           alias: '',
-          interface: 'usb1',
+          interface: '',
           operator: '',
-          realNetworkAccess: 'NR',
-          apn: 'cmnet',
-          band: 'n79',
-          signal: '-100',
-          status: 'dialing'
+          realNetworkAccess: '',
+          apn: '',
+          band: '',
+          signal: '-',
+          status: ''
         },
         {
           alias: '',
-          interface: 'usb2',
+          interface: '',
           operator: '',
-          realNetworkAccess: 'NR',
-          apn: 'ctnet',
-          band: 'b41',
-          signal: '-83',
-          status: 'disconnected'
+          realNetworkAccess: '',
+          apn: '',
+          band: '',
+          signal: '-',
+          status: ''
         }
-        // {
-        //   alias: '5G-4',
-        //   interface: 'usb3',
-        //   operator: '',
-        //   realNetworkAccess: 'NR',
-        //   apn: 'ctnet',
-        //   band: 'b41',
-        //   signal: '-83',
-        //   status: 'nosim'
-        // }
       ],
       subnets: [
         {
@@ -195,7 +185,7 @@ export default {
           this.wanLinks[index].alias = status.alias
           this.wanLinks[index].interface = status.interface
           this.wanLinks[index].operator = status.operator
-          this.wanLinks[index].realNetworkAccess = status.realNetworkAccess
+          this.wanLinks[index].realNetworkAccess = status.netRealTime
           this.wanLinks[index].apn = status.apn
           this.wanLinks[index].band = status.band
           this.wanLinks[index].signal = status.signal

@@ -291,18 +291,195 @@ end
 
 -- 获取模组实时入网方式
 local function getSimStatusNet(index)
-
-    -- TODO: 通过AT指令获取
-
     return SimStatus[index].netRealTime
 end
 
 -- 获取模组信号强度
 local function getSimStatusSignal(index)
-
-    -- TODO: 通过AT指令获取
-
     return SimStatus[index].signal
+end
+
+-- 提取连接状态
+local function parseSimUE(signal)
+    local ue = signal:match('+QENG: "servingcell","([^"]+)"')
+    -- log.info(ue)
+    return ue
+end
+
+-- 提取SA网络信息
+local function parseSA(signal)
+    local sa = signal:match('.*"NR5G%-SA".*')
+    if nil == sa or "" == sa then
+        return nil
+    end
+
+    -- +QENG: "servingcell","LIMSRV","NR5G-SA","TDD",460,00,31494F003,35,16185B,504990,41,100,-84,-2,8,0,35,1
+    local sa_pattern='"([^"]+)","([^"]+)","([^"]+)","([^"]+)",(%d+),(%d+),([^,]+),(%d+),([^,]+),(%d+),(%d+),(%d+),([%-]?%d+),([%-]?%d+),(%d+),(%d+),(%d+),(%d+)'
+    local servingcell, status, technology, duplex_mode, MCC, MNC, cellID, PCID, TAC, 
+        ARFCN, band, NR_DL_bandwidth, RSRP, RSRQ, SINR, 
+        tx_power, srxlev, SCS = sa:match(sa_pattern)
+
+    return {
+        servingcell = servingcell,
+        status = status,
+        technology = technology,
+        duplex_mode = duplex_mode,
+        MCC = tonumber(MCC),
+        MNC = tonumber(MNC),
+        cellID = cellID,
+        PCID = tonumber(PCID),
+        TAC = TAC,
+        ARFCN = tonumber(ARFCN),
+        band = tonumber(band),
+        NR_DL_bandwidth = tonumber(NR_DL_bandwidth),
+        RSRP = tonumber(RSRP),
+        RSRQ = tonumber(RSRQ),
+        SINR = tonumber(SINR),
+        tx_power = tonumber(tx_power),
+        srxlev = tonumber(srxlev),
+        SCS = tonumber(SCS)
+    }
+end
+
+-- 提取NSA网络信息
+local function parseNSA(signal)
+    local nsa = signal:match('.*"NR5G%-NSA".*')
+    if nil == nsa or "" == nsa then
+        return nil
+    end
+
+    -- +QENG: "servingcell","NR5G-NSA",<MCC>,<MNC>,<PCID>,<cellID>,<TAC>,<band>,<arfcn>,<SCS>,<RSRP>,<RSRQ>,<SINR>
+    local nsa_pattern='"([^"]+)","([^"]+)",(%d+),(%d+),(%d+),([^,]+),([^,]+),(%d+),(%d+),(%d+),([%-]?%d+),([%-]?%d+),([%-]?%d+)'
+    local servingcell, technology, MCC, MNC, PCID, cellID, TAC,
+        band, arfcn, SCS, RSRP, RSRQ, SINR = nsa:match(nsa_pattern)
+
+    return {
+        servingcell = servingcell,
+        technology = technology,
+        MCC = tonumber(MCC),
+        MNC = tonumber(MNC),
+        PCID = tonumber(PCID),
+        cellID = cellID,
+        TAC = TAC,
+        band = tonumber(band),
+        arfcn = tonumber(arfcn),
+        SCS = tonumber(SCS),
+        RSRP = tonumber(RSRP),
+        RSRQ = tonumber(RSRQ),
+        SINR = tonumber(SINR)
+    }
+end
+
+-- 提取LTE网络信息
+local function parseLTE(signal)
+    local lte = signal:match('.*"LTE".*')
+    if nil == lte or "" == lte then
+        return nil
+    end
+
+    -- +QENG: "servingcell",<state>,"LTE",<is_tdd>,<MCC>,<MNC>,<cellID>,<PCID>,<earfcn>,<freq_band_ind>,<UL_bandwidth>,<DL_bandwidth>,<TAC>,<RSRP>,<RSRQ>,<RSSI>,<SINR>,<CQI>,<tx_power>,<srxlev>
+    local lte_pattern='"([^"]+)","([^"]+)","([^"]+)",(%d+),(%d+),(%d+),([^,]+),(%d+),(%d+),(%d+),(%d+),(%d+),([^,]+),([%-]?%d+),([%-]?%d+),([%-]?%d+),([%-]?%d+),(%d+),([%-]?%d+),([%-]?%d+)'
+    local servingcell, state, technology, is_tdd, MCC, MNC, cellID, PCID, earfcn, 
+        freq_band_ind, UL_bandwidth, DL_bandwidth, TAC, RSRP, RSRQ, RSSI, 
+        SINR, CQI, tx_power, srxlev = lte:match(lte_pattern)
+
+    return {
+        servingcell = servingcell,
+        state = state,
+        technology = technology,
+        is_tdd = tonumber(is_tdd),
+        MCC = tonumber(MCC),
+        MNC = tonumber(MNC),
+        cellID = cellID,
+        PCID = tonumber(PCID),
+        earfcn = tonumber(earfcn),
+        freq_band_ind = tonumber(freq_band_ind),
+        UL_bandwidth = tonumber(UL_bandwidth),
+        DL_bandwidth = tonumber(DL_bandwidth),
+        TAC = TAC,
+        RSRP = tonumber(RSRP),
+        RSRQ = tonumber(RSRQ),
+        RSSI = tonumber(RSSI),
+        SINR = tonumber(SINR),
+        CQI = tonumber(CQI),
+        tx_power = tonumber(tx_power),
+        srxlev = tonumber(srxlev)
+    }
+end
+
+-- 查询是否插卡
+local function updateSimInsertStatus(ttyusb)
+    local cmd = string.format("comgt -d %s -s /etc/gcom/getsimin.gcom", ttyusb)
+    local sim = exec(cmd)
+    local s = sim:match('+CPIN:%s*([^%s]+)')
+    return s
+end
+
+-- 更新模组信号强度
+local function updateSimStatusSignal(index)
+    
+    local section = SimStatus[index].uciSection
+    local c = uci.cursor()
+    local ttyusb = c:get('sim', section, 'node')
+    
+    -- sim ready ?
+    local sim = updateSimInsertStatus(ttyusb)
+    if nil == sim or "" == sim then
+        SimStatus[index].status = 'nosim'
+        SimStatus[index].netRealTime = ''
+        SimStatus[index].cellRealTime = ''
+        SimStatus[index].band = ''
+        SimStatus[index].operator = ''
+        SimStatus[index].signal = ''
+        return
+    end
+
+    local cmd = string.format("comgt -d %s -s /etc/gcom/getstrength.gcom", ttyusb)
+    -- log.info(cmd)
+    local signal = exec(cmd)
+    -- log.info(signal)
+    parseSimUE(signal)
+    local sa = parseSA(signal)
+    local nsa = parseNSA(signal)
+    local lte = parseLTE(signal)
+    
+    -- SA
+    if nil ~= sa and nil == nsa and nil == lte then
+        SimStatus[index].netRealTime = 'SA'
+        SimStatus[index].cellRealTime = sa.cellID
+        SimStatus[index].band = 'n'..sa.band
+        SimStatus[index].operator = sa.MCC..sa.MNC
+        SimStatus[index].signal = sa.RSRP
+    -- NSA
+    elseif nil == sa and nil ~= nsa and nil == lte then
+        SimStatus[index].netRealTime = 'NSA'
+        SimStatus[index].cellRealTime = nsa.cellID
+        SimStatus[index].band = 'n'..nsa.band
+        SimStatus[index].operator = nsa.MCC..nsa.MNC
+        SimStatus[index].signal = nsa.RSRP
+    -- NSA
+    elseif nil == sa and nil ~= nsa and nil ~= lte then
+        SimStatus[index].netRealTime = 'NSA'
+        SimStatus[index].cellRealTime = nsa.cellID
+        SimStatus[index].band = 'n'..nsa.band..' | b'..lte.freq_band_ind
+        SimStatus[index].operator = nsa.MCC..nsa.MNC
+        SimStatus[index].signal = nsa.RSRP
+    -- LTE
+    elseif nil == sa and nil == nsa and nil ~= lte then
+        SimStatus[index].netRealTime = 'LTE'
+        SimStatus[index].cellRealTime = lte.cellID
+        SimStatus[index].band = 'b'..lte.freq_band_ind
+        SimStatus[index].operator = lte.MCC..lte.MNC
+        SimStatus[index].signal = lte.RSRP
+    -- OFFLINE
+    elseif nil == sa and nil == nsa and nil == lte then
+        SimStatus[index].netRealTime = ''
+        SimStatus[index].cellRealTime = ''
+        SimStatus[index].band = ''
+        SimStatus[index].operator = ''
+        SimStatus[index].signal = ''
+    end
+
 end
 
 -- 获取模组运营商
@@ -356,6 +533,9 @@ end
 function M.getSimStatus(params)
 
     local index = tonumber(params.index) + 1
+
+    -- 通过AT指令更新实时信号强度、频段、入网方式、小区id
+    updateSimStatusSignal(index)
 
     -- 模组硬件信息
     SimStatus[index].usb = getSimUsb(index)
