@@ -10,7 +10,7 @@ log.outfile = '/var/log/sim.log'
 local SimStatus = {
     [1] = {
         -- 模组信息
-        usb = '1-1',                            -- USB端口号
+        usb = '',                            -- USB端口号
         alias = '5G-1',                         -- tag
         uciSection = 'SIM_5G_1',                -- UCI配置文件section命名规范
         module = '',                            -- 模组名称
@@ -35,7 +35,7 @@ local SimStatus = {
         dhcpRangeGateway = '',              -- DHCP地址池网关
 
         -- SIM卡状态
-        status = '',                        -- 连接状态：离线、未插卡、拨号中、在线
+        status = '',                        -- 连接状态：离线、nosim(未插卡)、拨号中、在线
         netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
         signal = 0,                         -- 信号强度RSRP
         operator = '',                      -- 运营商
@@ -48,7 +48,7 @@ local SimStatus = {
     },
     [2] = {
         -- 模组信息
-        usb = '1-2',                        -- USB端口号
+        usb = '',                        -- USB端口号
         alias = '5G-2',                     -- tag
         uciSection = 'SIM_5G_2',            -- UCI配置文件section命名规范
         module = '',                        -- 模组名称
@@ -67,7 +67,7 @@ local SimStatus = {
         cellSetting = '',                   -- 锁小区
 
         -- SIM卡状态
-        status = 'offline',                 -- 连接状态：离线、未插卡、拨号中、在线
+        status = 'offline',                 -- 连接状态：离线、nosim(未插卡)、拨号中、在线
         netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
         signal = 0,                         -- 信号强度RSRP
         operator = '',                      -- 运营商
@@ -80,7 +80,7 @@ local SimStatus = {
     },
     [3] = {
         -- 模组信息
-        usb = '1-3',                        -- USB端口号
+        usb = '',                        -- USB端口号
         alias = '5G-3',                     -- tag
         uciSection = 'SIM_5G_3',            -- UCI配置文件section命名规范
         module = '',                        -- 模组名称
@@ -99,7 +99,7 @@ local SimStatus = {
         cellSetting = '',                   -- 锁小区
 
         -- SIM卡状态
-        status = '',                        -- 连接状态：离线、未插卡、拨号中、在线
+        status = '',                        -- 连接状态：离线、nosim(未插卡)、拨号中、在线
         netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
         signal = 0,                         -- 信号强度RSRP
         operator = '',                      -- 运营商
@@ -112,6 +112,19 @@ local SimStatus = {
         gateway = '',                       -- 网关
     }
 }
+
+local function exec(command)
+    local pp = io.popen(command)
+    local data = pp:read("*a")
+    pp:close()
+    return data
+end
+
+-- 获取指定网口的IP
+function getInterfaceIP(interface)
+    local cmd = string.format("ip addr show %s | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1  | tr -d '\n'", interface)
+    return exec(cmd)
+end
 
 -- 获取模组对应的usb端点号
 local function getSimUsb(index)
@@ -130,11 +143,6 @@ local function getSimModuleName(index)
 
     local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    local confirmed = c:get('sim', section, 'confirmed')
-    if not confirmed then
-        -- 执行AT指令获取，获取完毕后保存到/etc/config/sim配置文件中的module选项
-    end
-
     return c:get('sim', section, 'module')
 end
 
@@ -143,11 +151,6 @@ local function getSimModuleVersion(index)
 
     local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    local confirmed = c:get('sim', section, 'confirmed')
-    if not confirmed then
-        -- 执行AT指令获取，获取完毕后保存到/etc/config/sim配置文件中的moduleVersion选项
-    end
-
     return c:get('sim', section, 'moduleVersion')
 end
 
@@ -169,12 +172,14 @@ end
 local function getSimModuleIMEI(index)
     local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    local confirmed = c:get('sim', section, 'confirmed')
-    if not confirmed then
-        -- 执行AT指令获取，获取完毕后保存到/etc/config/sim配置文件中的imei选项
-    end
-
     return c:get('sim', section, 'imei')
+end
+
+-- 获取SIM卡IMSI
+local function getSimModuleIMSI(index)
+    local section = SimStatus[index].uciSection
+    local c = uci.cursor()
+    return c:get('sim', section, 'imsi')
 end
 
 -- 获取模组频段设置
@@ -216,7 +221,7 @@ end
 local function getSimConfPasswd(index)
     local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    return c:get('sim', section, 'password')
+    return c:get('sim', section, 'passwd')
 end
 
 -- 获取模组小区设置
@@ -257,7 +262,29 @@ end
 -- 获取模组连接状态
 local function getSimStatusConnect(index)
 
-    -- TODO: 通过AT指令获取
+    -- nosim
+    local imsi = getSimModuleIMSI(index)
+    if nil == imsi or "none" == imsi then
+        SimStatus[index].status = 'nosim'
+        return SimStatus[index].status
+    end
+
+    -- udhcpc
+    local cmd = string.format("ps -w | grep 'udhcpc.*%s' | grep -v grep | awk '{print $1}'", SimStatus[index].interface)
+    local pid = exec(cmd);
+    if nil == pid or "" == pid then
+        SimStatus[index].status = 'disconnected'
+        return SimStatus[index].status
+    end
+
+    -- online
+    local ip = getInterfaceIP(SimStatus[index].interface)
+    if nil == ip or "" == ip then
+        SimStatus[index].status = 'dialing'
+    else
+        log.info(SimStatus[index].interface, "IP:", ip)
+        SimStatus[index].status = 'connected'
+    end
 
     return SimStatus[index].status
 end
@@ -280,10 +307,9 @@ end
 
 -- 获取模组运营商
 local function getSimStatusOperator(index)
-
-    -- TODO: 通过AT指令获取
-
-    return SimStatus[index].operator
+    local section = SimStatus[index].uciSection
+    local c = uci.cursor()
+    return c:get('sim', section, 'operator')
 end
 
 -- 获取模组实时频段
@@ -337,6 +363,7 @@ function M.getSimStatus(params)
     SimStatus[index].module = getSimModuleName(index)
     SimStatus[index].version = getSimModuleVersion(index)
     SimStatus[index].imei = getSimModuleIMEI(index)
+    SimStatus[index].imsi = getSimModuleIMSI(index)
     SimStatus[index].ttyusb = getSimNode(index)
     SimStatus[index].interface = getSimInterface(index)
     -- 模组配置信息
