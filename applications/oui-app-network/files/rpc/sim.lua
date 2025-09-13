@@ -145,6 +145,13 @@ function getInterfaceGateway(interface)
     return nil
 end
 
+-- 获取指定网口的mac地址
+function getInterfaceMAC(interface)
+    local cmd = string.format("ifconfig %s | grep 'HWaddr' | awk '{print $5}' | tr -d '\r\n'", interface)
+    log.info(cmd)
+    return exec(cmd)
+end
+
 -- 获取模组对应的usb端点号
 local function getSimUsb(index)
     local section = SimStatus[index].uciSection
@@ -185,6 +192,11 @@ local function getSimInterface(index)
     local section = SimStatus[index].uciSection
     local c = uci.cursor()
     return c:get('sim', section, 'interface')
+end
+
+-- 获取模组mac地址
+local function getSimMac(index)
+    return getInterfaceMAC(SimStatus[index].interface)
 end
 
 -- 获取模组IMEI
@@ -557,6 +569,7 @@ function M.getSimStatus(params)
     SimStatus[index].imsi = getSimModuleIMSI(index)
     SimStatus[index].ttyusb = getSimNode(index)
     SimStatus[index].interface = getSimInterface(index)
+    SimStatus[index].mac = getSimMac(index)
     -- 模组配置信息
     SimStatus[index].bandSetting = getSimConfBand(index)
     SimStatus[index].netSetting = string.upper(getSimConfNet(index))
