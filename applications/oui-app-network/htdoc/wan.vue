@@ -5,7 +5,7 @@
         <el-icon><ArrowLeft /></el-icon>
         {{ $t('Back') }}
       </el-button>
-      <h2> {{ wanInfo.name }}</h2>
+      <h2> {{ wanInfo.alias }}</h2>
     </div>
 
     <div class="config-section">
@@ -17,14 +17,14 @@
         </template>
         <el-form :model="wanConfig" label-width="120px" class="config-form">
           <el-form-item :label="$t('Label')">
-            <el-input v-model="wanConfig.name" :placeholder="$t('Enter WAN label')" readonly/>
+            <el-input v-model="wanConfig.alias" :placeholder="$t('Enter WAN label')" readonly/>
           </el-form-item>
           <el-form-item :label="$t('Interface')">
             <el-input v-model="wanConfig.interface" :placeholder="$t('Enter interface name')" readonly/>
           </el-form-item>
 
           <el-form-item :label="$t('Network Access')">
-            <el-select v-model="wanConfig.accessType" :placeholder="$t('Select access type')" style="width: 100%">
+            <el-select v-model="wanConfig.settingNetworkAccess" :placeholder="$t('Select access type')" style="width: 100%">
               <el-option :label="$t('AUTO')" value="AUTO"/>
               <el-option label="SA" value="SA"/>
               <el-option label="NSA" value="NSA"/>
@@ -113,7 +113,6 @@
 </template>
 
 <script>
-// 不直接从@element-plus/icons-vue导入，而是使用全局注册的组件
 
 export default {
   name: 'WanConfig',
@@ -174,12 +173,26 @@ export default {
       default: return this.$t('Unknown')
       }
     },
+    // 保存配置
     saveConfig() {
-      // 这里实现保存配置的逻辑
-      this.$message.success(this.$t('Configuration saved successfully'))
+      console.log('saveConfig...')
+      // 验证必填字段
+      if (!this.wanConfig.interface) {
+        console.log('The network interface must be specified!')
+        this.$message.error('The network interface must be specified!')
+        return
+      }
+      // 调用后端API保存配置
+      this.$oui.call('sim', 'changeSimSettings', this.wanConfig).then(response => {
+        console.log('save...')
+        if (response && 0 === response.code){
+          console.log('response...')
+          this.$message.success('Configuration saved successfully')
+        }
+      })
     },
+    // 测试连接
     testConnection() {
-      // 这里实现测试连接的逻辑
       this.$message.info(this.$t('Testing connection...'))
     },
     resetConfig() {

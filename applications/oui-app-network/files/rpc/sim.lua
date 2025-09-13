@@ -123,6 +123,7 @@ end
 -- 获取指定网口的IP
 function getInterfaceIP(interface)
     local cmd = string.format("ip addr show %s | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1  | tr -d '\n'", interface)
+    log.info(cmd)
     return exec(cmd)
 end
 
@@ -271,6 +272,7 @@ local function getSimStatusConnect(index)
 
     -- udhcpc
     local cmd = string.format("ps -w | grep 'udhcpc.*%s' | grep -v grep | awk '{print $1}'", SimStatus[index].interface)
+    log.info(cmd)
     local pid = exec(cmd);
     if nil == pid or "" == pid then
         SimStatus[index].status = 'disconnected'
@@ -410,6 +412,7 @@ end
 -- 查询是否插卡
 local function updateSimInsertStatus(ttyusb)
     local cmd = string.format("comgt -d %s -s /etc/gcom/getsimin.gcom", ttyusb)
+    log.info(cmd)
     local sim = exec(cmd)
     local s = sim:match('+CPIN:%s*([^%s]+)')
     return s
@@ -435,7 +438,7 @@ local function updateSimStatusSignal(index)
     end
 
     local cmd = string.format("comgt -d %s -s /etc/gcom/getstrength.gcom", ttyusb)
-    -- log.info(cmd)
+    log.info(cmd)
     local signal = exec(cmd)
     -- log.info(signal)
     parseSimUE(signal)
@@ -548,7 +551,7 @@ function M.getSimStatus(params)
     SimStatus[index].interface = getSimInterface(index)
     -- 模组配置信息
     SimStatus[index].bandSetting = getSimConfBand(index)
-    SimStatus[index].netSetting = getSimConfNet(index)
+    SimStatus[index].netSetting = string.upper(getSimConfNet(index))
     SimStatus[index].apn = getSimConfAPN(index)
     SimStatus[index].auth = getSimConfAuth(index)
     SimStatus[index].user = getSimConfUser(index)
@@ -571,6 +574,13 @@ function M.getSimStatus(params)
     SimStatus[index].gateway = getSimStatusGateway(index)
 
     return SimStatus[index]
+end
+
+-- 更改配置
+function M.changeSimSettings(params)
+    log.info('change sim settings')
+
+    return { code = 0 }
 end
 
 

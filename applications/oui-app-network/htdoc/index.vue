@@ -122,6 +122,7 @@ export default {
           interface: '',
           operator: '',
           realNetworkAccess: '',
+          settingNetworkAccess: '',
           apn: '',
           band: '',
           signal: '',
@@ -132,6 +133,7 @@ export default {
           interface: '',
           operator: '',
           realNetworkAccess: '',
+          settingNetworkAccess: '',
           apn: '',
           band: '',
           signal: '-',
@@ -142,6 +144,7 @@ export default {
           interface: '',
           operator: '',
           realNetworkAccess: '',
+          settingNetworkAccess: '',
           apn: '',
           band: '',
           signal: '-',
@@ -186,6 +189,7 @@ export default {
           this.wanLinks[index].interface = status.interface
           this.wanLinks[index].operator = status.operator
           this.wanLinks[index].realNetworkAccess = status.netRealTime
+          this.wanLinks[index].settingNetworkAccess = status.netSetting
           this.wanLinks[index].apn = status.apn
           this.wanLinks[index].band = status.band
           this.wanLinks[index].signal = status.signal
@@ -194,13 +198,13 @@ export default {
         })
       })
     },
+    // 切换到WAN配置页面
     editSubWan(wan) {
-      // 切换到WAN配置页面
       this.selectedWan = wan
       this.currentView = 'wan-config'
     },
+    // 返回主页面
     goBackToMain() {
-      // 返回主页面
       this.currentView = 'main'
       this.selectedWan = null
     },
@@ -209,7 +213,7 @@ export default {
     }
   },
   created() {
-    this.$timer.create('wan', this.getStatusWan, { time: 3000, immediate: true, repeat: true})
+    this.$timer.create('wan', this.getStatusWan, { time: 5000, immediate: true, repeat: true})
   }
 }
 </script>
