@@ -18,6 +18,7 @@ local SimStatus = {
         imei = '',                              -- 模组的IMEI码
         ttyusb = '',                            -- 拨号节点
         interface = '',                         -- 接口名称
+        mac = '',                               -- mac地址
 
         -- SIM卡可设置的参数
         bandSetting = '',                   -- 设置的频段
@@ -56,6 +57,7 @@ local SimStatus = {
         imei = '',                          -- 模组的IMEI码
         ttyusb = '',                        -- 拨号节点
         interface = '',                     -- 接口名称
+        mac = '',                               -- mac地址
 
         -- SIM卡可设置的参数
         bandSetting = '',                   -- 设置的频段
@@ -88,6 +90,7 @@ local SimStatus = {
         imei = '',                          -- 模组的IMEI码
         ttyusb = '',                        -- 拨号节点
         interface = '',                     -- 接口名称
+        mac = '',                               -- mac地址
 
         -- SIM卡可设置的参数
         bandSetting = '',                   -- 设置的频段
@@ -123,8 +126,23 @@ end
 -- 获取指定网口的IP
 function getInterfaceIP(interface)
     local cmd = string.format("ip addr show %s | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1  | tr -d '\n'", interface)
-    log.info(cmd)
+    -- log.info(cmd)
     return exec(cmd)
+end
+
+-- 获取指定网口的掩码
+function getInterfaceMask(interface)
+    local cmd = string.format("ifconfig %s | grep 'Mask:' | awk -F 'Mask:' '{print $2}' | tr -d '\n'", interface)
+    -- log.info(cmd)
+    return exec(cmd)
+end
+
+-- 获取指定网口的网关
+function getInterfaceGateway(interface)
+    -- local cmd = string.format("ifconfig %s | grep 'Mask:' | awk -F 'Mask:' '{print $2}' | tr -d '\n'", interface)
+    -- -- log.info(cmd)
+    -- return exec(cmd)
+    return nil
 end
 
 -- 获取模组对应的usb端点号
@@ -503,33 +521,23 @@ end
 -- 获取模组实时小区
 local function getSimStatusCell(index)
 
-    -- TODO: 通过AT指令获取
-
     return SimStatus[index].cellRealTime
 end
 
 -- 获取模组ip
 local function getSimStatusIP(index)
-    
-    -- TODO: 通过AT指令获取
-
+    SimStatus[index].ip = getInterfaceIP(SimStatus[index].interface)
     return SimStatus[index].ip
 end
 
 -- 获取模组掩码
 local function getSimStatusMask(index)
-    
-    -- TODO: 通过AT指令获取
-
-    return SimStatus[index].mask
+    return getInterfaceMask(SimStatus[index].interface)
 end
 
 -- 获取模组网关
 local function getSimStatusGateway(index)
-    
-    -- TODO: 通过AT指令获取
-
-    return SimStatus[index].gateway
+    return getInterfaceGateway(SimStatus[index].gateway)
 end
 
 -- 获取SIM卡状态：是否插卡、拨号状态、信号强度、运营商、频段、小区...
@@ -576,9 +584,128 @@ function M.getSimStatus(params)
     return SimStatus[index]
 end
 
+-- 触发/lib/netifd/proto/ncm.sh，重新拨号
+local function dial(interface)
+    local cmd = string.format("ifdown %s;sleep 1;ifup %s", interface, interface)
+    log.info(cmd)
+    exec(cmd)
+end
+
+-- 更改入网方式
+local function setSimNet(index, net)
+    if nil == net or '' == net then
+        log.error('net is nil!')
+        return false
+    end
+
+    local sim_net = string.lower(net)
+    if 'auto' ~= sim_net and 'sa' ~= sim_net and 'nsa' ~= sim_net and 'lte' ~= sim_net then
+        log.error('unknown net:', sim_net)
+        return false
+    end
+    
+    local old_net = getSimConfNet(index)
+    if sim_net == old_net then
+        log.info(SimStatus[index].alias, "net doesn't changed! net:", sim_net)
+        return true
+    end
+
+    log.info(SimStatus[index].alias, 'set net from', old_net, 'to', sim_net)
+    local section = SimStatus[index].uciSection
+    local c = uci.cursor()
+    c:set("sim", section, 'net', sim_net)
+    c:commit('sim')
+
+    SimStatus[index].interface = c:get('sim', section, 'interface')
+    dial(SimStatus[index].interface)
+end
+
+-- 更改apn
+local function setSimAPN(index, apn)
+    if nil == apn or '' == apn then
+        log.error('apn is nil!')
+        return false
+    end
+
+    local old_apn = getSimConfAPN(index)
+    if old_apn == apn then
+        log.info(SimStatus[index].alias, "apn doesn't changed! apn:", apn)
+        return true
+    end
+
+    log.info(SimStatus[index].alias, 'set apn from ', old_apn, 'to', apn)
+    local section = SimStatus[index].uciSection
+    local c = uci.cursor()
+    c:set("sim", section, 'apn', apn)
+    c:commit('sim')
+
+    SimStatus[index].interface = c:get('sim', section, 'interface')
+    dial(SimStatus[index].interface)
+end
+
+-- 更改频段
+local function setSimBand(index, band)
+    if nil == band or '' == band then
+        log.error('band is nil!')
+        return false
+    end
+
+    local old_band = getSimConfBand(index)
+    if old_band == band then
+        log.info(SimStatus[index].alias, "band doesn't changed! band:", band)
+        return true
+    end
+
+    log.info(SimStatus[index].alias, 'set band from ', old_band, 'to', band)
+    local section = SimStatus[index].uciSection
+    local c = uci.cursor()
+    c:set("sim", section, 'band', band)
+    c:commit('sim')
+
+    SimStatus[index].interface = c:get('sim', section, 'interface')
+    dial(SimStatus[index].interface)
+end
+
+-- 更改小区
+local function setSimCell(index, cell)
+    if nil == cell or '' == cell then
+        log.error('cell is nil!')
+        return false
+    end
+
+    local old_cell = getSimConfCell(index)
+    if old_cell == cell then
+        log.info(SimStatus[index].alias, "cell doesn't changed! cell:", cell)
+        return true
+    end
+
+    log.info(SimStatus[index].alias, 'set cell from ', old_cell, 'to', cell)
+    local section = SimStatus[index].uciSection
+    local c = uci.cursor()
+    c:set("sim", section, 'cell', cell)
+    c:commit('sim')
+
+    SimStatus[index].interface = c:get('sim', section, 'interface')
+    dial(SimStatus[index].interface)
+end
+
 -- 更改配置
 function M.changeSimSettings(params)
-    log.info('change sim settings')
+    
+    log.info(string.format("index:%s %s net: %s apn:%s band:%s cell:%s",
+        params.index + 1,
+        SimStatus[params.index + 1].alias,
+        params.net,
+        params.apn,
+        params.band,
+        params.cell))
+    
+    local index = params.index + 1
+
+    setSimNet(index, params.net)
+    setSimAPN(index, params.apn)
+    setSimBand(index, params.band)
+    setSimCell(index, params.cell)
 
     return { code = 0 }
 end

@@ -118,6 +118,7 @@ export default {
       selectedWan: null,
       wanLinks: [
         {
+          index: '',
           alias: '',
           interface: '',
           operator: '',
@@ -125,10 +126,15 @@ export default {
           settingNetworkAccess: '',
           apn: '',
           band: '',
+          settingsBand: '',
           signal: '',
-          status: ''
+          status: '',
+          ip: '',
+          mask: '',
+          gateway: ''
         },
         {
+          index: '',
           alias: '',
           interface: '',
           operator: '',
@@ -136,10 +142,15 @@ export default {
           settingNetworkAccess: '',
           apn: '',
           band: '',
+          settingsBand: '',
           signal: '-',
-          status: ''
+          status: '',
+          ip: '',
+          mask: '',
+          gateway: ''
         },
         {
+          index: '',
           alias: '',
           interface: '',
           operator: '',
@@ -147,8 +158,12 @@ export default {
           settingNetworkAccess: '',
           apn: '',
           band: '',
+          settingsBand: '',
           signal: '-',
-          status: ''
+          status: '',
+          ip: '',
+          mask: '',
+          gateway: ''
         }
       ],
       subnets: [
@@ -185,6 +200,7 @@ export default {
       console.log('Get wan status...')
       this.wanLinks.forEach((wan, index) => {
         this.$oui.call('sim', 'getSimStatus', {'index': index}).then(status => {
+          this.wanLinks[index].index = index
           this.wanLinks[index].alias = status.alias
           this.wanLinks[index].interface = status.interface
           this.wanLinks[index].operator = status.operator
@@ -192,8 +208,12 @@ export default {
           this.wanLinks[index].settingNetworkAccess = status.netSetting
           this.wanLinks[index].apn = status.apn
           this.wanLinks[index].band = status.band
+          this.wanLinks[index].settingsBand = status.bandSetting
           this.wanLinks[index].signal = status.signal
           this.wanLinks[index].status = status.status
+          this.wanLinks[index].ip = status.ip
+          this.wanLinks[index].mask = status.mask
+          this.wanLinks[index].gateway = status.gateway
           console.log(this.wanLinks[index])
         })
       })

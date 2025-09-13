@@ -24,7 +24,7 @@
           </el-form-item>
 
           <el-form-item :label="$t('Network Access')">
-            <el-select v-model="wanConfig.settingNetworkAccess" :placeholder="$t('Select access type')" style="width: 100%">
+            <el-select v-model="wanConfig.net" :placeholder="$t('Select access type')" style="width: 100%">
               <el-option :label="$t('AUTO')" value="AUTO"/>
               <el-option label="SA" value="SA"/>
               <el-option label="NSA" value="NSA"/>
@@ -60,39 +60,39 @@
         <div class="status-info">
           <div class="status-item">
             <span class="status-label">{{ $t('Current Status') }}:</span>
-            <span :class="['status-value', getStatusClass(wanStatus.status)]">
-              {{ getStatusText(wanStatus.status) }}
+            <span :class="['status-value', getStatusClass(wanInfo.status)]">
+              {{ getStatusText(wanInfo.status) }}
             </span>
           </div>
 
           <div class="status-item">
             <span class="status-label">{{ $t('Operator') }}:</span>
-            <span class="status-value">{{ wanStatus.operator }}</span>
+            <span class="status-value">{{ wanInfo.operator }}</span>
           </div>
 
           <div class="status-item">
             <span class="status-label">{{ $t('Real Network Access') }}:</span>
-            <span class="status-value">{{ wanStatus.realNetworkAccess }}</span>
+            <span class="status-value">{{ wanInfo.realNetworkAccess }}</span>
           </div>
 
           <div class="status-item">
             <span class="status-label">{{ $t('Signal Strength') }}:</span>
-            <span class="status-value">{{ wanStatus.signal }} dBm</span>
+            <span class="status-value">{{ wanInfo.signal }} dBm</span>
           </div>
 
           <div class="status-item">
             <span class="status-label">{{ $t('IP Address') }}:</span>
-            <span class="status-value">{{ wanStatus.ip }}</span>
+            <span class="status-value">{{ wanInfo.ip }}</span>
           </div>
 
           <div class="status-item">
             <span class="status-label">{{ $t('Netmask') }}:</span>
-            <span class="status-value">{{ wanStatus.ip }}</span>
+            <span class="status-value">{{ wanInfo.mask }}</span>
           </div>
 
           <div class="status-item">
             <span class="status-label">{{ $t('Gateway') }}:</span>
-            <span class="status-value">{{ wanStatus.gateway }}</span>
+            <span class="status-value">{{ wanInfo.gateway }}</span>
           </div>
         </div>
       </el-card>
@@ -126,20 +126,13 @@ export default {
     return {
       wanInfo: {},
       wanConfig: {
+        index: '',
         name: '',
         interface: '',
         accessType: '',
         apn: '',
-        band: ''
-      },
-      wanStatus: {
-        operator: '中国移动',
-        realNetworkAccess: 'NR-5G',
-        signal: '-83',
-        status: 'connected',
-        ip: '127.0.0.1',
-        netmask: '255.255.255.255',
-        gateway: '127.0.0.1'
+        band: '',
+        cell: ''
       },
       bandUnlocked: false // 解锁状态，false表示锁定，true表示解锁
     }
@@ -147,8 +140,24 @@ export default {
   created() {
     // 从 props 获取WAN信息
     if (this.wanData) {
-      this.wanInfo = { ...this.wanData }
-      this.wanConfig = { ...this.wanData }
+      // 实时状态
+      this.wanInfo.alias = this.wanData.alias
+      this.wanInfo.interface = this.wanData.interface
+      this.wanInfo.operator = this.wanData.operator
+      this.wanInfo.realNetworkAccess = this.wanData.realNetworkAccess
+      this.wanInfo.signal = this.wanData.signal
+      this.wanInfo.status = this.wanData.status
+      this.wanInfo.ip = this.wanData.ip
+      this.wanInfo.mask = this.wanData.mask
+      this.wanInfo.gateway = this.wanData.gateway
+
+      // 配置信息
+      this.wanConfig.index = this.wanData.index
+      this.wanConfig.alias = this.wanData.alias
+      this.wanConfig.interface = this.wanData.interface
+      this.wanConfig.net = this.wanData.settingNetworkAccess
+      this.wanConfig.apn = this.wanData.apn
+      this.wanConfig.band = this.wanData.settingsBand
     }
   },
   methods: {
@@ -185,7 +194,12 @@ export default {
       // 调用后端API保存配置
       this.$oui.call('sim', 'changeSimSettings', this.wanConfig).then(response => {
         console.log('save...')
-        if (response && 0 === response.code){
+        // console.log('index:', this.wanConfig.index)
+        // console.log('apn:', this.wanConfig.apn)
+        // console.log('net:', this.wanConfig.net)
+        // console.log('band:', this.wanConfig.band)
+        // console.log('cell:', this.wanConfig.cell)
+        if (response && 0 === response.code) {
           console.log('response...')
           this.$message.success('Configuration saved successfully')
         }
