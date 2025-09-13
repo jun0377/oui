@@ -47,6 +47,17 @@
               <el-checkbox v-model="bandUnlocked" @change="handleUnlockChange">解锁</el-checkbox>
             </div>
           </el-form-item>
+
+          <el-form-item :label="$t('Lock Cell')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <el-input
+                v-model="wanConfig.cell"
+                :placeholder="$t('Enter Cell ID')"
+                style="flex: 1;"
+              />
+              <el-checkbox v-model="cellLocked" @change="handleUnlockCell">解锁</el-checkbox>
+            </div>
+          </el-form-item>
         </el-form>
       </el-card>
 
@@ -94,6 +105,12 @@
             <span class="status-label">{{ $t('Gateway') }}:</span>
             <span class="status-value">{{ wanInfo.gateway }}</span>
           </div>
+
+          <div class="status-item">
+            <span class="status-label">{{ $t('MAC') }}:</span>
+            <span class="status-value">{{ wanInfo.mac }}</span>
+          </div>
+
         </div>
       </el-card>
     </div>
@@ -124,7 +141,17 @@ export default {
   },
   data() {
     return {
-      wanInfo: {},
+      wanInfo: {
+        alias: '',
+        interface: '',
+        operator: '',
+        realNetworkAccess: '',
+        status: '',
+        ip: '',
+        mask: '',
+        gateway: '',
+        mac: ''
+      },
       wanConfig: {
         index: '',
         name: '',
@@ -134,7 +161,8 @@ export default {
         band: '',
         cell: ''
       },
-      bandUnlocked: false // 解锁状态，false表示锁定，true表示解锁
+      bandUnlocked: false, // 解锁状态，false表示锁定，true表示解锁
+      cellLocked: false
     }
   },
   created() {
@@ -150,6 +178,7 @@ export default {
       this.wanInfo.ip = this.wanData.ip
       this.wanInfo.mask = this.wanData.mask
       this.wanInfo.gateway = this.wanData.gateway
+      this.wanInfo.mac = this.wanData.mac
 
       // 配置信息
       this.wanConfig.index = this.wanData.index
@@ -223,6 +252,9 @@ export default {
         // 解锁时清空频段值，显示"自动"
         this.wanConfig.band = ''
       }
+    },
+    handleUnlockCell(unlocked) {
+      console.log('Lock cell...')
     }
   }
 }

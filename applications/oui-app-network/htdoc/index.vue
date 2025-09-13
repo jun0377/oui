@@ -131,7 +131,8 @@ export default {
           status: '',
           ip: '',
           mask: '',
-          gateway: ''
+          gateway: '',
+          mac: ''
         },
         {
           index: '',
@@ -147,7 +148,8 @@ export default {
           status: '',
           ip: '',
           mask: '',
-          gateway: ''
+          gateway: '',
+          mac: ''
         },
         {
           index: '',
@@ -163,7 +165,8 @@ export default {
           status: '',
           ip: '',
           mask: '',
-          gateway: ''
+          gateway: '',
+          mac: ''
         }
       ],
       subnets: [
@@ -214,6 +217,7 @@ export default {
           this.wanLinks[index].ip = status.ip
           this.wanLinks[index].mask = status.mask
           this.wanLinks[index].gateway = status.gateway
+          this.wanLinks[index].mac = status.mac
           console.log(this.wanLinks[index])
         })
       })
@@ -233,7 +237,7 @@ export default {
     }
   },
   created() {
-    this.$timer.create('wan', this.getStatusWan, { time: 5000, immediate: true, repeat: true})
+    this.$timer.create('wan', this.getStatusWan, { time: 8000, immediate: true, repeat: true})
   }
 }
 </script>
