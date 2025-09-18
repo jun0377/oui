@@ -42,7 +42,8 @@
     "Select access type": "Select access type",
     "Enter frequency band": "Enter frequency band,like: n28、b41",
     "AUTO": "AUTO",
-    "Enter Cell ID" : "Enter Cell ID"
+    "Enter Cell ID" : "Enter Cell ID",
+    "Real Band": "Real Band"
   },
   "zh-CN": {
     "hello": "你好世界！",
@@ -87,7 +88,8 @@
     "Select access type": "请选择入网方式",
     "Enter frequency band": "请输入频段,如n28、b41",
     "AUTO": "自动",
-    "Enter Cell ID" : "请输入小区ID"
+    "Enter Cell ID" : "请输入小区ID",
+    "Real Band": "实时频段"
   },
   "zh-TW": {
     "hello": "你好世界！",
@@ -132,6 +134,7 @@
     "Select access type": "请选择入网方式",
     "Enter frequency band": "请输入频段,如n28、b41",
     "AUTO": "自动",
-    "Enter Cell ID" : "请输入小区ID"
+    "Enter Cell ID" : "请输入小区ID",
+    "Real Band": "实时频段"
   }
 }

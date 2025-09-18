@@ -40,11 +40,11 @@
             <div style="display: flex; align-items: center; gap: 10px;">
               <el-input
                 v-model="wanConfig.band"
-                :placeholder="bandUnlocked ? '自动' : $t('Enter frequency band')"
-                :readonly="bandUnlocked"
+                :placeholder="bandUnLock ? '自动' : $t('band like: n78、b1...')"
+                :readonly="bandUnLock"
                 style="flex: 1;"
               />
-              <el-checkbox v-model="bandUnlocked" @change="handleUnlockChange">解锁</el-checkbox>
+              <el-checkbox v-model="bandUnLock" @change="handleLockChange">解锁</el-checkbox>
             </div>
           </el-form-item>
 
@@ -52,10 +52,10 @@
             <div style="display: flex; align-items: center; gap: 10px;">
               <el-input
                 v-model="wanConfig.cell"
-                :placeholder="$t('Enter Cell ID')"
+                :placeholder="cellUnLock ? '自动' : $t('Enter Cell ID')"
                 style="flex: 1;"
               />
-              <el-checkbox v-model="cellLocked" @change="handleUnlockCell">解锁</el-checkbox>
+              <el-checkbox v-model="cellUnLock" @change="handleUnlockCell">解锁</el-checkbox>
             </div>
           </el-form-item>
         </el-form>
@@ -78,12 +78,17 @@
 
           <div class="status-item">
             <span class="status-label">{{ $t('Operator') }}:</span>
-            <span class="status-value">{{ wanInfo.operator }}</span>
+            <span class="status-value">{{ getOperatorString(wanInfo.operator) }}</span>
           </div>
 
           <div class="status-item">
             <span class="status-label">{{ $t('Real Network Access') }}:</span>
             <span class="status-value">{{ wanInfo.realNetworkAccess }}</span>
+          </div>
+
+          <div class="status-item">
+            <span class="status-label">{{ $t('Real Band') }}:</span>
+            <span class="status-value">{{ wanInfo.realBand }}</span>
           </div>
 
           <div class="status-item">
@@ -146,6 +151,7 @@ export default {
         interface: '',
         operator: '',
         realNetworkAccess: '',
+        realBand: '',
         status: '',
         ip: '',
         mask: '',
@@ -161,8 +167,8 @@ export default {
         band: '',
         cell: ''
       },
-      bandUnlocked: false, // 解锁状态，false表示锁定，true表示解锁
-      cellLocked: false
+      bandUnLock: true,
+      cellUnLock: true
     }
   },
   created() {
@@ -173,6 +179,7 @@ export default {
       this.wanInfo.interface = this.wanData.interface
       this.wanInfo.operator = this.wanData.operator
       this.wanInfo.realNetworkAccess = this.wanData.realNetworkAccess
+      this.wanInfo.realBand = this.wanData.band
       this.wanInfo.signal = this.wanData.signal
       this.wanInfo.status = this.wanData.status
       this.wanInfo.ip = this.wanData.ip
@@ -192,6 +199,24 @@ export default {
   methods: {
     goBack() {
       this.$emit('go-back')
+    },
+    getOperatorString(operatorID) {
+      switch (operatorID) {
+      case '46000': return '中国移动'
+      case '46002': return '中国移动'
+      case '46004': return '中国移动'
+      case '46007': return '中国移动'
+      case '46008': return '中国移动'
+      case '46001': return '中国联通'
+      case '46006': return '中国联通'
+      case '46009': return '中国联通'
+      case '46003': return '中国电信'
+      case '46005': return '中国电信'
+      case '46011': return '中国电信'
+      case '46015': return '中国广电'
+      case '46020': return '中国铁通'
+      default: return '未知'
+      }
     },
     getStatusClass(status) {
       switch (status) {
@@ -247,7 +272,7 @@ export default {
         this.$message.success(this.$t('Configuration reset successfully'))
       })
     },
-    handleUnlockChange(unlocked) {
+    handleLockChange(unlocked) {
       if (unlocked) {
         // 解锁时清空频段值，显示"自动"
         this.wanConfig.band = ''
