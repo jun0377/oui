@@ -139,10 +139,9 @@ end
 
 -- 获取指定网口的网关
 function getInterfaceGateway(interface)
-    -- local cmd = string.format("ifconfig %s | grep 'Mask:' | awk -F 'Mask:' '{print $2}' | tr -d '\n'", interface)
-    -- -- log.info(cmd)
-    -- return exec(cmd)
-    return nil
+    local cmd = string.format("ip route show default | grep %s | awk '{print $3}'", interface)
+    -- log.info(cmd)
+    return exec(cmd)
 end
 
 -- 获取指定网口的mac地址
@@ -547,7 +546,7 @@ end
 
 -- 获取模组网关
 local function getSimStatusGateway(index)
-    return getInterfaceGateway(SimStatus[index].gateway)
+    return getInterfaceGateway(SimStatus[index].interface)
 end
 
 -- 获取SIM卡状态：是否插卡、拨号状态、信号强度、运营商、频段、小区...
