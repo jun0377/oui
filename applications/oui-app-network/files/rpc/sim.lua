@@ -148,7 +148,7 @@ end
 -- 获取指定网口的mac地址
 function getInterfaceMAC(interface)
     local cmd = string.format("ifconfig %s | grep 'HWaddr' | awk '{print $5}' | tr -d '\r\n'", interface)
-    log.info(cmd)
+    -- log.info(cmd)
     return exec(cmd)
 end
 
@@ -302,7 +302,7 @@ local function getSimStatusConnect(index)
 
     -- udhcpc
     local cmd = string.format("ps -w | grep 'udhcpc.*%s' | grep -v grep | awk '{print $1}'", SimStatus[index].interface)
-    log.info(cmd)
+    -- log.info(cmd)
     local pid = exec(cmd);
     if nil == pid or "" == pid then
         SimStatus[index].status = 'disconnected'
@@ -441,15 +441,15 @@ end
 
 -- 查询是否插卡
 local function updateSimInsertStatus(ttyusb)
-    local cmd = string.format("comgt -d %s -s /etc/gcom/getsimin.gcom", ttyusb)
-    log.info(cmd)
+    local cmd = string.format("echo -e \"AT+CPIN?\r\" | microcom %s -t 100 | tr -d '\r\n'", ttyusb)
+    log.info(ttyusb, "AT+CPIN?")
     local sim = exec(cmd)
     local s = sim:match('+CPIN:%s*([^%s]+)')
     return s
 end
 
 -- 更新模组信号强度
-local function updateSimStatusSignal(index)
+function updateSimStatusSignal(index)
     
     local section = SimStatus[index].uciSection
     local c = uci.cursor()
@@ -467,8 +467,8 @@ local function updateSimStatusSignal(index)
         return
     end
 
-    local cmd = string.format("comgt -d %s -s /etc/gcom/getstrength.gcom", ttyusb)
-    log.info(cmd)
+    local cmd = string.format("echo -e 'AT+QENG=\"servingcell\"\r' | microcom %s -t 100 | tr -d '\r\n'", ttyusb)
+    log.info(ttyusb, "AT+QENG=\"servingcell\"")
     local signal = exec(cmd)
     -- log.info(signal)
     parseSimUE(signal)
@@ -513,6 +513,7 @@ local function updateSimStatusSignal(index)
         SimStatus[index].signal = ''
     end
 
+    return SimStatus[index]
 end
 
 -- 获取模组运营商

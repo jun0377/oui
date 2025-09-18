@@ -16,7 +16,7 @@
               <span>{{ $t('Real Network Access') }}</span>
               <span>APN</span>
               <span>{{ $t('Frequency Band') }}</span>
-              <span>{{ $t('Rsrp') }}</span>
+              <span>{{ $t('Rsrp') }}dbm</span>
               <span class="status-column">{{ $t('Status') }}</span>
               <span> </span>
             </div>
@@ -113,61 +113,30 @@ export default {
     WanConfig
   },
   data() {
+    const createDefaultWanLink = () => ({
+      index: '',
+      alias: '',
+      interface: '',
+      operator: '-',
+      realNetworkAccess: '-',
+      settingNetworkAccess: '',
+      apn: '',
+      band: '-',
+      settingsBand: '',
+      signal: '-',
+      status: '',
+      ip: '-',
+      mask: '-',
+      gateway: '-',
+      mac: '-'
+    })
     return {
       currentView: 'main', // 'main' 或 'wan-config'
       selectedWan: null,
       wanLinks: [
-        {
-          index: '',
-          alias: '',
-          interface: '',
-          operator: '',
-          realNetworkAccess: '',
-          settingNetworkAccess: '',
-          apn: '',
-          band: '',
-          settingsBand: '',
-          signal: '',
-          status: '',
-          ip: '',
-          mask: '',
-          gateway: '',
-          mac: ''
-        },
-        {
-          index: '',
-          alias: '',
-          interface: '',
-          operator: '',
-          realNetworkAccess: '',
-          settingNetworkAccess: '',
-          apn: '',
-          band: '',
-          settingsBand: '',
-          signal: '-',
-          status: '',
-          ip: '',
-          mask: '',
-          gateway: '',
-          mac: ''
-        },
-        {
-          index: '',
-          alias: '',
-          interface: '',
-          operator: '',
-          realNetworkAccess: '',
-          settingNetworkAccess: '',
-          apn: '',
-          band: '',
-          settingsBand: '',
-          signal: '-',
-          status: '',
-          ip: '',
-          mask: '',
-          gateway: '',
-          mac: ''
-        }
+        createDefaultWanLink(0),
+        createDefaultWanLink(1),
+        createDefaultWanLink(2)
       ],
       subnets: [
         {
@@ -237,7 +206,7 @@ export default {
     }
   },
   created() {
-    this.$timer.create('wan', this.getStatusWan, { time: 8000, immediate: true, repeat: true})
+    this.$timer.create('wan', this.getStatusWan, { time: 5000, immediate: true, repeat: true})
   }
 }
 </script>
