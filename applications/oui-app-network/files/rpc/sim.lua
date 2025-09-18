@@ -529,7 +529,6 @@ end
 
 -- 获取模组实时小区
 local function getSimStatusCell(index)
-
     return SimStatus[index].cellRealTime
 end
 

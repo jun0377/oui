@@ -43,7 +43,8 @@
     "Enter frequency band": "Enter frequency band,like: n28、b41",
     "AUTO": "AUTO",
     "Enter Cell ID" : "Enter Cell ID",
-    "Real Band": "Real Band"
+    "Real Band": "Real Band",
+    "Real Cell": "Real Cell"
   },
   "zh-CN": {
     "hello": "你好世界！",
@@ -89,7 +90,8 @@
     "Enter frequency band": "请输入频段,如n28、b41",
     "AUTO": "自动",
     "Enter Cell ID" : "请输入小区ID",
-    "Real Band": "实时频段"
+    "Real Band": "实时频段",
+    "Real Cell": "实时小区"
   },
   "zh-TW": {
     "hello": "你好世界！",
@@ -135,6 +137,7 @@
     "Enter frequency band": "请输入频段,如n28、b41",
     "AUTO": "自动",
     "Enter Cell ID" : "请输入小区ID",
-    "Real Band": "实时频段"
+    "Real Band": "实时频段",
+    "Real Cell": "实时小区"
   }
 }

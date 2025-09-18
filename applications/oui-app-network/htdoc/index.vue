@@ -123,6 +123,8 @@ export default {
       apn: '',
       band: '-',
       settingsBand: '',
+      cell: '-',
+      settingsCell: '',
       signal: '-',
       status: '',
       ip: '-',
@@ -199,6 +201,8 @@ export default {
           this.wanLinks[index].apn = status.apn
           this.wanLinks[index].band = status.bandRealTime
           this.wanLinks[index].settingsBand = status.bandSetting
+          this.wanLinks[index].cell = status.cellRealTime
+          this.wanLinks[index].settingsCell = status.cellSetting
           this.wanLinks[index].signal = status.signal
           this.wanLinks[index].status = status.status
           this.wanLinks[index].ip = status.ip

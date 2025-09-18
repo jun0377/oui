@@ -92,6 +92,11 @@
           </div>
 
           <div class="status-item">
+            <span class="status-label">{{ $t('Real Cell') }}:</span>
+            <span class="status-value">{{ wanInfo.realCell }}</span>
+          </div>
+
+          <div class="status-item">
             <span class="status-label">{{ $t('Signal Strength') }}:</span>
             <span class="status-value">{{ wanInfo.signal }} dBm</span>
           </div>
@@ -152,6 +157,7 @@ export default {
         operator: '',
         realNetworkAccess: '',
         realBand: '',
+        realCell: '',
         status: '',
         ip: '',
         mask: '',
@@ -180,6 +186,7 @@ export default {
       this.wanInfo.operator = this.wanData.operator
       this.wanInfo.realNetworkAccess = this.wanData.realNetworkAccess
       this.wanInfo.realBand = this.wanData.band
+      this.wanInfo.realCell = this.wanData.cell
       this.wanInfo.signal = this.wanData.signal
       this.wanInfo.status = this.wanData.status
       this.wanInfo.ip = this.wanData.ip
@@ -193,7 +200,16 @@ export default {
       this.wanConfig.interface = this.wanData.interface
       this.wanConfig.net = this.wanData.settingNetworkAccess
       this.wanConfig.apn = this.wanData.apn
+
       this.wanConfig.band = this.wanData.settingsBand
+      if (this.wanConfig.band === 'none') {
+        this.wanConfig.bandUnLock = true
+      }
+
+      this.wanConfig.cell = this.wanData.settingsCell
+      if (this.wanConfig.cell === 'none') {
+        this.wanConfig.cellUnLock = true
+      }
     }
   },
   methods: {
