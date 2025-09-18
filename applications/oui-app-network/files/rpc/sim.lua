@@ -441,7 +441,7 @@ end
 
 -- 查询是否插卡
 local function updateSimInsertStatus(ttyusb)
-    local cmd = string.format("echo -e \"AT+CPIN?\r\" | microcom %s -t 100 | tr -d '\r\n'", ttyusb)
+    local cmd = string.format("rm -rf /var/lock/LCK..$(basename ${ttyusb});echo -e \"AT+CPIN?\r\" | microcom %s -t 100 | tr -d '\r\n'", ttyusb)
     log.info(ttyusb, "AT+CPIN?")
     local sim = exec(cmd)
     local s = sim:match('+CPIN:%s*([^%s]+)')
@@ -457,6 +457,7 @@ function updateSimStatusSignal(index)
     
     -- sim ready ?
     local sim = updateSimInsertStatus(ttyusb)
+    -- log.info(sim)
     if nil == sim or "" == sim then
         SimStatus[index].status = 'nosim'
         SimStatus[index].netRealTime = ''
@@ -467,7 +468,7 @@ function updateSimStatusSignal(index)
         return
     end
 
-    local cmd = string.format("echo -e 'AT+QENG=\"servingcell\"\r' | microcom %s -t 100 | tr -d '\r\n'", ttyusb)
+    local cmd = string.format("rm -rf /var/lock/LCK..$(basename ${ttyusb});echo -e 'AT+QENG=\"servingcell\"\r' | microcom %s -t 100 | tr -d '\r\n'", ttyusb)
     log.info(ttyusb, "AT+QENG=\"servingcell\"")
     local signal = exec(cmd)
     -- log.info(signal)
