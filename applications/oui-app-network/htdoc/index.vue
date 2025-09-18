@@ -38,7 +38,7 @@
             <div class="subnet-info-wan">
               <span>{{ wan.alias }}</span>
               <span>{{ wan.interface }}</span>
-              <span>{{ wan.operator }}</span>
+              <span>{{ getOperatorString(wan.operator) }}</span>
               <span>{{ wan.realNetworkAccess }}</span>
               <span>{{ wan.apn }}</span>
               <span>{{ wan.band }}</span>
@@ -165,6 +165,24 @@ export default {
       case 'disconnected': return 'Offline'
       case 'dialing': return 'Dialing'
       case 'nosim': return 'NoSim'
+      default: return '未知'
+      }
+    },
+    getOperatorString(operatorID) {
+      switch (operatorID) {
+      case '46000': return '中国移动'
+      case '46002': return '中国移动'
+      case '46004': return '中国移动'
+      case '46007': return '中国移动'
+      case '46008': return '中国移动'
+      case '46001': return '中国联通'
+      case '46006': return '中国联通'
+      case '46009': return '中国联通'
+      case '46003': return '中国电信'
+      case '46005': return '中国电信'
+      case '46011': return '中国电信'
+      case '46015': return '中国广电'
+      case '46020': return '中国铁通'
       default: return '未知'
       }
     },
