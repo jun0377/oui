@@ -197,7 +197,7 @@ export default {
           this.wanLinks[index].realNetworkAccess = status.netRealTime
           this.wanLinks[index].settingNetworkAccess = status.netSetting
           this.wanLinks[index].apn = status.apn
-          this.wanLinks[index].band = status.band
+          this.wanLinks[index].band = status.bandRealTime
           this.wanLinks[index].settingsBand = status.bandSetting
           this.wanLinks[index].signal = status.signal
           this.wanLinks[index].status = status.status

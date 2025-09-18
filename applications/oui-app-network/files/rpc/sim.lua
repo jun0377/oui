@@ -456,8 +456,7 @@ function updateSimStatusSignal(index)
     local ttyusb = c:get('sim', section, 'node')
     
     -- sim ready ?
-    local sim = updateSimInsertStatus(ttyusb)
-    -- log.info(sim)
+    local sim = updateSimInsertStatus(ttyusb)    
     if nil == sim or "" == sim then
         SimStatus[index].status = 'nosim'
         SimStatus[index].netRealTime = ''
@@ -465,7 +464,7 @@ function updateSimStatusSignal(index)
         SimStatus[index].band = ''
         SimStatus[index].operator = ''
         SimStatus[index].signal = ''
-        return
+        return SimStatus[index]
     end
 
     local cmd = string.format("rm -rf /var/lock/LCK..$(basename ${ttyusb});echo -e 'AT+QENG=\"servingcell\"\r' | microcom %s -t 100 | tr -d '\r\n'", ttyusb)
@@ -481,35 +480,35 @@ function updateSimStatusSignal(index)
     if nil ~= sa and nil == nsa and nil == lte then
         SimStatus[index].netRealTime = 'SA'
         SimStatus[index].cellRealTime = sa.cellID
-        SimStatus[index].band = 'n'..sa.band
+        SimStatus[index].bandRealTime = 'n'..sa.band
         SimStatus[index].operator = sa.MCC..sa.MNC
         SimStatus[index].signal = sa.RSRP
     -- NSA
     elseif nil == sa and nil ~= nsa and nil == lte then
         SimStatus[index].netRealTime = 'NSA'
         SimStatus[index].cellRealTime = nsa.cellID
-        SimStatus[index].band = 'n'..nsa.band
+        SimStatus[index].bandRealTime = 'n'..nsa.band
         SimStatus[index].operator = nsa.MCC..nsa.MNC
         SimStatus[index].signal = nsa.RSRP
     -- NSA
     elseif nil == sa and nil ~= nsa and nil ~= lte then
         SimStatus[index].netRealTime = 'NSA'
         SimStatus[index].cellRealTime = nsa.cellID
-        SimStatus[index].band = 'n'..nsa.band..' | b'..lte.freq_band_ind
+        SimStatus[index].bandRealTime = 'n'..nsa.band..' | b'..lte.freq_band_ind
         SimStatus[index].operator = nsa.MCC..nsa.MNC
         SimStatus[index].signal = nsa.RSRP
     -- LTE
     elseif nil == sa and nil == nsa and nil ~= lte then
         SimStatus[index].netRealTime = 'LTE'
         SimStatus[index].cellRealTime = lte.cellID
-        SimStatus[index].band = 'b'..lte.freq_band_ind
+        SimStatus[index].bandRealTime = 'b'..lte.freq_band_ind
         SimStatus[index].operator = lte.MCC..lte.MNC
         SimStatus[index].signal = lte.RSRP
     -- OFFLINE
     elseif nil == sa and nil == nsa and nil == lte then
         SimStatus[index].netRealTime = ''
         SimStatus[index].cellRealTime = ''
-        SimStatus[index].band = ''
+        SimStatus[index].bandRealTime = ''
         SimStatus[index].operator = ''
         SimStatus[index].signal = ''
     end
@@ -526,9 +525,6 @@ end
 
 -- 获取模组实时频段
 local function getSimStatusBand(index)
-
-    -- TODO: 通过AT指令获取
-
     return SimStatus[index].bandRealTime
 end
 
