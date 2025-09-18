@@ -48,14 +48,14 @@
             </div>
           </el-form-item>
 
-          <el-form-item :label="$t('Lock Cell')">
+          <el-form-item :label="$t('Lock PCI')">
             <div style="display: flex; align-items: center; gap: 10px;">
               <el-input
-                v-model="wanConfig.cell"
-                :placeholder="cellUnLock ? '自动' : $t('Enter Cell ID')"
+                v-model="wanConfig.pci"
+                :placeholder="pciUnlock ? '自动' : $t('Enter PCID')"
                 style="flex: 1;"
               />
-              <el-checkbox v-model="cellUnLock" @change="handleUnlockCell">解锁</el-checkbox>
+              <el-checkbox v-model="pciUnlock" @change="handleUnlockCell">解锁</el-checkbox>
             </div>
           </el-form-item>
         </el-form>
@@ -92,8 +92,8 @@
           </div>
 
           <div class="status-item">
-            <span class="status-label">{{ $t('Real Cell') }}:</span>
-            <span class="status-value">{{ wanInfo.realCell }}</span>
+            <span class="status-label">{{ $t('Real PCID') }}:</span>
+            <span class="status-value">{{ wanInfo.realPCI }}</span>
           </div>
 
           <div class="status-item">
@@ -158,6 +158,7 @@ export default {
         realNetworkAccess: '',
         realBand: '',
         realCell: '',
+        realPCI: '',
         status: '',
         ip: '',
         mask: '',
@@ -171,10 +172,11 @@ export default {
         accessType: '',
         apn: '',
         band: '',
-        cell: ''
+        cell: '',
+        pci: ''
       },
       bandUnLock: true,
-      cellUnLock: true
+      pciUnlock: true
     }
   },
   created() {
@@ -187,6 +189,7 @@ export default {
       this.wanInfo.realNetworkAccess = this.wanData.realNetworkAccess
       this.wanInfo.realBand = this.wanData.band
       this.wanInfo.realCell = this.wanData.cell
+      this.wanInfo.realPCI = this.wanData.pci
       this.wanInfo.signal = this.wanData.signal
       this.wanInfo.status = this.wanData.status
       this.wanInfo.ip = this.wanData.ip
@@ -200,16 +203,25 @@ export default {
       this.wanConfig.interface = this.wanData.interface
       this.wanConfig.net = this.wanData.settingNetworkAccess
       this.wanConfig.apn = this.wanData.apn
-
       this.wanConfig.band = this.wanData.settingsBand
       if (this.wanConfig.band === 'none') {
         this.wanConfig.bandUnLock = true
+      } else {
+        this.wanConfig.bandUnLock = false
+      }
+      this.wanConfig.cell = this.wanData.settingsCell
+      // if (this.wanConfig.cell === 'none') {
+      //   this.wanConfig.cellUnLock = true
+      // } else {
+      //   this.wanConfig.cellUnLock = false
+      // }
+      this.wanConfig.pci = this.wanData.settingsPCI
+      if (this.wanConfig.pci === 'none') {
+        this.wanConfig.pciUnlock = true
+      } else {
+        this.wanConfig.pciUnlock = false
       }
 
-      this.wanConfig.cell = this.wanData.settingsCell
-      if (this.wanConfig.cell === 'none') {
-        this.wanConfig.cellUnLock = true
-      }
     }
   },
   methods: {
@@ -263,14 +275,8 @@ export default {
       }
       // 调用后端API保存配置
       this.$oui.call('sim', 'changeSimSettings', this.wanConfig).then(response => {
-        console.log('save...')
-        // console.log('index:', this.wanConfig.index)
-        // console.log('apn:', this.wanConfig.apn)
-        // console.log('net:', this.wanConfig.net)
-        // console.log('band:', this.wanConfig.band)
-        // console.log('cell:', this.wanConfig.cell)
+        console.log('saveConf index:', this.wanConfig.index, 'apn:', this.wanConfig.apn, 'net:', this.wanConfig.net, 'band:', this.wanConfig.band, 'cell:', this.wanConfig.cell)
         if (response && 0 === response.code) {
-          console.log('response...')
           this.$message.success('Configuration saved successfully')
         }
       })

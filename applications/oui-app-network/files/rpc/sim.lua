@@ -28,6 +28,7 @@ local SimStatus = {
         user = '',                          -- 用户名
         passwd = '',                        -- 密码
         cellSetting = '',                   -- 锁小区
+        pciSetting = '',                    -- 锁物理小区pci
 
         -- DHCP地址池设置
         dhcpRangeStart = '',                -- DHCP地址池起始IP
@@ -43,6 +44,7 @@ local SimStatus = {
         imsi = '',                          -- SIM卡的IMSI
         bandRealTime = '',                  -- 实时频段
         cellRealTime = '',                  -- 实时小区
+        pciRealTime = '',                   -- 物理小区ID
         ip = '',                            -- IP
         mask = '',                          -- 掩码
         gateway = '',                       -- 网关
@@ -67,6 +69,7 @@ local SimStatus = {
         user = '',                          -- 用户名
         passwd = '',                        -- 密码
         cellSetting = '',                   -- 锁小区
+        pciSetting = '',                    -- 锁物理小区pci
 
         -- SIM卡状态
         status = 'offline',                 -- 连接状态：离线、nosim(未插卡)、拨号中、在线
@@ -76,6 +79,7 @@ local SimStatus = {
         imsi = '',                          -- SIM卡的IMSI
         bandRealTime = '',                  -- 实时频段
         cellRealTime = '',                  -- 实时小区
+        pciRealTime = '',                   -- 物理小区ID
         ip = '',                            -- IP
         mask = '',                          -- 掩码
         gateway = '',                       -- 网关
@@ -100,6 +104,7 @@ local SimStatus = {
         user = '',                          -- 用户名
         passwd = '',                        -- 密码
         cellSetting = '',                   -- 锁小区
+        pciSetting = '',                    -- 锁物理小区pci
 
         -- SIM卡状态
         status = '',                        -- 连接状态：离线、nosim(未插卡)、拨号中、在线
@@ -110,6 +115,7 @@ local SimStatus = {
         imsi = '',                          -- SIM卡的IMSI
         bandRealTime = '',                  -- 实时频段
         cellRealTime = '',                  -- 实时小区
+        pciRealTime = '',                   -- 物理小区ID
         ip = '',                            -- IP
         mask = '',                          -- 掩码
         gateway = '',                       -- 网关
@@ -261,6 +267,13 @@ local function getSimConfCell(index)
     return c:get('sim', section, 'cell')
 end
 
+-- 获取模组物理小区PCI设置
+local function getSimConfPCI(index)
+    local section = SimStatus[index].uciSection
+    local c = uci.cursor()
+    return c:get('sim', section, 'pci')
+end
+
 -- 获取模组DHCP设置
 local function getSimConfDhcpRangeStart(index)
     local section = SimStatus[index].uciSection
@@ -344,7 +357,7 @@ local function parseSA(signal)
         return nil
     end
 
-    -- +QENG: "servingcell","LIMSRV","NR5G-SA","TDD",460,00,31494F003,35,16185B,504990,41,100,-84,-2,8,0,35,1
+    -- +QENG: "servingcell",<state>,"NR5G-SA",<duplex_mode>,<MCC>,<MNC>,<cellID>,<PCID>,<TAC>,<ARFCN>,<band>,<NR_DL_bandwidth>,<RSRP>,<RSRQ>,<SINR>,<tx_power>,<srxlev>,<SCS>
     local sa_pattern='"([^"]+)","([^"]+)","([^"]+)","([^"]+)",(%d+),(%d+),([^,]+),(%d+),([^,]+),(%d+),(%d+),(%d+),([%-]?%d+),([%-]?%d+),(%d+),(%d+),(%d+),(%d+)'
     local servingcell, status, technology, duplex_mode, MCC, MNC, cellID, PCID, TAC, 
         ARFCN, band, NR_DL_bandwidth, RSRP, RSRQ, SINR, 
@@ -460,6 +473,7 @@ function updateSimStatusSignal(index)
         SimStatus[index].status = 'nosim'
         SimStatus[index].netRealTime = ''
         SimStatus[index].cellRealTime = ''
+        SimStatus[index].pciRealTime = ''
         SimStatus[index].band = ''
         SimStatus[index].operator = ''
         SimStatus[index].signal = ''
@@ -479,20 +493,28 @@ function updateSimStatusSignal(index)
     if nil ~= sa and nil == nsa and nil == lte then
         SimStatus[index].netRealTime = 'SA'
         SimStatus[index].cellRealTime = sa.cellID
-        SimStatus[index].bandRealTime = 'n'..sa.band
-        SimStatus[index].operator = sa.MCC..sa.MNC
+        if nil ~= sa.band then
+            SimStatus[index].bandRealTime = 'n'..sa.band
+        end
+        SimStatus[index].pciRealTime = sa.PCID
+        
+        if nil ~= sa.MCC and nil ~= sa.MNC then
+            SimStatus[index].operator = sa.MCC..sa.MNC
+        end
         SimStatus[index].signal = sa.RSRP
     -- NSA
     elseif nil == sa and nil ~= nsa and nil == lte then
         SimStatus[index].netRealTime = 'NSA'
         SimStatus[index].cellRealTime = nsa.cellID
         SimStatus[index].bandRealTime = 'n'..nsa.band
+        SimStatus[index].pciRealTime = nsa.PCID
         SimStatus[index].operator = nsa.MCC..nsa.MNC
         SimStatus[index].signal = nsa.RSRP
     -- NSA
     elseif nil == sa and nil ~= nsa and nil ~= lte then
         SimStatus[index].netRealTime = 'NSA'
         SimStatus[index].cellRealTime = nsa.cellID
+        SimStatus[index].pciRealTime = nsa.PCID
         SimStatus[index].bandRealTime = 'n'..nsa.band..' | b'..lte.freq_band_ind
         SimStatus[index].operator = nsa.MCC..nsa.MNC
         SimStatus[index].signal = nsa.RSRP
@@ -500,6 +522,7 @@ function updateSimStatusSignal(index)
     elseif nil == sa and nil == nsa and nil ~= lte then
         SimStatus[index].netRealTime = 'LTE'
         SimStatus[index].cellRealTime = lte.cellID
+        SimStatus[index].pciRealTime = lte.PCID
         SimStatus[index].bandRealTime = 'b'..lte.freq_band_ind
         SimStatus[index].operator = lte.MCC..lte.MNC
         SimStatus[index].signal = lte.RSRP
@@ -507,6 +530,7 @@ function updateSimStatusSignal(index)
     elseif nil == sa and nil == nsa and nil == lte then
         SimStatus[index].netRealTime = ''
         SimStatus[index].cellRealTime = ''
+        SimStatus[index].pciRealTime = ''
         SimStatus[index].bandRealTime = ''
         SimStatus[index].operator = ''
         SimStatus[index].signal = ''
@@ -530,6 +554,11 @@ end
 -- 获取模组实时小区
 local function getSimStatusCell(index)
     return SimStatus[index].cellRealTime
+end
+
+-- 实时物理小区PCID
+local function getSimStatusPCI(index)
+    return SimStatus[index].pciRealTime
 end
 
 -- 获取模组ip
@@ -574,6 +603,7 @@ function M.getSimStatus(params)
     SimStatus[index].user = getSimConfUser(index)
     SimStatus[index].passwd = getSimConfPasswd(index)
     SimStatus[index].cellSetting = getSimConfCell(index)
+    SimStatus[index].pciSetting = getSimConfPCI(index)
     -- 模组dhcp设置
     SimStatus[index].dhcpRangeStart = getSimConfDhcpRangeStart(index)
     SimStatus[index].dhcpRanageEnd = getSimConfDhcpRangeEnd(index)
@@ -586,6 +616,7 @@ function M.getSimStatus(params)
     SimStatus[index].operator = getSimStatusOperator(index)
     SimStatus[index].bandRealTime = getSimStatusBand(index)
     SimStatus[index].cellRealTime = getSimStatusCell(index)
+    SimStatus[index].pciRealTime = getSimStatusPCI(index)
     SimStatus[index].ip = getSimStatusIP(index)
     SimStatus[index].mask = getSimStatusMask(index)
     SimStatus[index].gateway = getSimStatusGateway(index)

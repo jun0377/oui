@@ -44,7 +44,9 @@
     "AUTO": "AUTO",
     "Enter Cell ID" : "Enter Cell ID",
     "Real Band": "Real Band",
-    "Real Cell": "Real Cell"
+    "Real Cell": "Real Cell",
+    "Lock PCI": "Lock PCI",
+    "Real PCID": "Real PCID"
   },
   "zh-CN": {
     "hello": "你好世界！",
@@ -91,7 +93,9 @@
     "AUTO": "自动",
     "Enter Cell ID" : "请输入小区ID",
     "Real Band": "实时频段",
-    "Real Cell": "实时小区"
+    "Real Cell": "实时小区",
+    "Lock PCI": "锁小区PCID",
+    "Real PCID": "实时物理小区PCID"
   },
   "zh-TW": {
     "hello": "你好世界！",
@@ -138,6 +142,8 @@
     "AUTO": "自动",
     "Enter Cell ID" : "请输入小区ID",
     "Real Band": "实时频段",
-    "Real Cell": "实时小区"
+    "Real Cell": "实时小区",
+    "Lock PCI": "锁小区PCID",
+    "Real PCID": "实时物理小区PCID"
   }
 }

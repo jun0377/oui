@@ -125,6 +125,8 @@ export default {
       settingsBand: '',
       cell: '-',
       settingsCell: '',
+      pci: '-',
+      settingsPCI: '-',
       signal: '-',
       status: '',
       ip: '-',
@@ -203,6 +205,8 @@ export default {
           this.wanLinks[index].settingsBand = status.bandSetting
           this.wanLinks[index].cell = status.cellRealTime
           this.wanLinks[index].settingsCell = status.cellSetting
+          this.wanLinks[index].pci = status.pciRealTime
+          this.wanLinks[index].settingsPCI = status.pciSetting
           this.wanLinks[index].signal = status.signal
           this.wanLinks[index].status = status.status
           this.wanLinks[index].ip = status.ip
