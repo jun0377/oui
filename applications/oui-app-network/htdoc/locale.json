@@ -46,7 +46,11 @@
     "Real Band": "Real Band",
     "Real Cell": "Real Cell",
     "Lock PCI": "Lock PCI",
-    "Real PCID": "Real PCID"
+    "Real PCID": "Real PCID",
+    "Authentication": "Authentication",
+    "NONE": "NONE",
+    "USER": "User",
+    "PASSWD": "Password"
   },
   "zh-CN": {
     "hello": "你好世界！",
@@ -95,7 +99,11 @@
     "Real Band": "实时频段",
     "Real Cell": "实时小区",
     "Lock PCI": "锁小区PCID",
-    "Real PCID": "实时物理小区PCID"
+    "Real PCID": "实时物理小区PCID",
+    "Authentication": "鉴权",
+    "NONE": "无鉴权",
+    "USER": "用户名",
+    "PASSWD": "密码"
   },
   "zh-TW": {
     "hello": "你好世界！",
@@ -144,6 +152,10 @@
     "Real Band": "实时频段",
     "Real Cell": "实时小区",
     "Lock PCI": "锁小区PCID",
-    "Real PCID": "实时物理小区PCID"
+    "Real PCID": "实时物理小区PCID",
+    "Authentication": "鉴权",
+    "NONE": "无鉴权",
+    "USER": "用户名",
+    "PASSWD": "密码"
   }
 }

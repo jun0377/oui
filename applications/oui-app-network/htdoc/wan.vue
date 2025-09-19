@@ -32,6 +32,23 @@
             </el-select>
           </el-form-item>
 
+          <el-form-item :label="$t('Authentication')">
+            <el-select v-model="wanConfig.net" :placeholder="$t('Select access type')" style="width: 100%">
+              <el-option :label="$t('AUTO')" value="AUTO"/>
+              <el-option label="PAP" value="PAP"/>
+              <el-option label="CHAP" value="CHAP"/>
+              <el-option :label="$t('NONE')" value="NONE"/>
+            </el-select>
+          </el-form-item>
+
+          <el-form-item :label="$t('USER')">
+            <el-input v-model="wanConfig.username" placeholder="Enter User name"/>
+          </el-form-item>
+
+          <el-form-item :label="$t('PASSWD')">
+            <el-input v-model="wanConfig.password" placeholder="Enter User password"/>
+          </el-form-item>
+
           <el-form-item label="APN">
             <el-input v-model="wanConfig.apn" placeholder="Enter APN"/>
           </el-form-item>
@@ -40,11 +57,11 @@
             <div style="display: flex; align-items: center; gap: 10px;">
               <el-input
                 v-model="wanConfig.band"
-                :placeholder="bandUnLock ? '自动' : $t('band like: n78、b1...')"
-                :readonly="bandUnLock"
+                :placeholder="wanConfig.bandUnLock ? '自动' : $t('band like: n78、b1...')"
+                :readonly="wanConfig.bandUnLock"
                 style="flex: 1;"
               />
-              <el-checkbox v-model="bandUnLock" @change="handleLockChange">解锁</el-checkbox>
+              <el-checkbox v-model="wanConfig.bandUnLock" @change="handleUnlockBand">解锁</el-checkbox>
             </div>
           </el-form-item>
 
@@ -52,10 +69,11 @@
             <div style="display: flex; align-items: center; gap: 10px;">
               <el-input
                 v-model="wanConfig.pci"
-                :placeholder="pciUnlock ? '自动' : $t('Enter PCID')"
+                :placeholder="wanConfig.pciUnlock ? '自动' : $t('Enter PCID')"
+                :readonly="wanConfig.pciUnlock"
                 style="flex: 1;"
               />
-              <el-checkbox v-model="pciUnlock" @change="handleUnlockCell">解锁</el-checkbox>
+              <el-checkbox v-model="wanConfig.pciUnlock" @change="handleUnlockPCI">解锁</el-checkbox>
             </div>
           </el-form-item>
         </el-form>
@@ -172,11 +190,14 @@ export default {
         accessType: '',
         apn: '',
         band: '',
+        bandUnLock: true,
         cell: '',
-        pci: ''
-      },
-      bandUnLock: true,
-      pciUnlock: true
+        pci: '',
+        pciUnlock: true,
+        auth: '',
+        username: '',
+        password: ''
+      }
     }
   },
   created() {
@@ -204,6 +225,9 @@ export default {
       this.wanConfig.net = this.wanData.settingNetworkAccess
       this.wanConfig.apn = this.wanData.apn
       this.wanConfig.band = this.wanData.settingsBand
+      this.wanConfig.auth = this.wanData.auth
+      this.wanConfig.username = this.wanData.username
+      this.wanConfig.password = this.wanData.password
       if (this.wanConfig.band === 'none') {
         this.wanConfig.bandUnLock = true
       } else {
@@ -273,11 +297,21 @@ export default {
         this.$message.error('The network interface must be specified!')
         return
       }
+      if (!this.wanConfig.bandUnLock && ('none' === this.wanConfig.band || '' === this.wanConfig.band)) {
+        console.log('Band locked but not specify the band!')
+        this.$message.error('请设置频段 或 解锁频段!')
+        return
+      }
+      if (!this.wanConfig.pciUnlock && ('none' === this.wanConfig.pci || '' === this.wanConfig.pci)) {
+        console.log('PCI locked but not specify the PCID!')
+        this.$message.error('请设置小区PCID 或 解锁小区!')
+        return
+      }
       // 调用后端API保存配置
       this.$oui.call('sim', 'changeSimSettings', this.wanConfig).then(response => {
-        console.log('saveConf index:', this.wanConfig.index, 'apn:', this.wanConfig.apn, 'net:', this.wanConfig.net, 'band:', this.wanConfig.band, 'cell:', this.wanConfig.cell)
+        console.log('saveConf index:', this.wanConfig.index, 'APN:', this.wanConfig.apn, 'NET:', this.wanConfig.net, 'Band:', this.wanConfig.band, 'PCID:', this.wanConfig.pci)
         if (response && 0 === response.code) {
-          this.$message.success('Configuration saved successfully')
+          this.$message.success('设置成功')
         }
       })
     },
@@ -294,14 +328,21 @@ export default {
         this.$message.success(this.$t('Configuration reset successfully'))
       })
     },
-    handleLockChange(unlocked) {
+    handleUnlockBand(unlocked) {
+      console.log('this.wanConfig.bandUnlock: ', this.wanConfig.bandUnLock)
       if (unlocked) {
-        // 解锁时清空频段值，显示"自动"
         this.wanConfig.band = ''
+      } else {
+        this.wanConfig.band = this.wanData.settingsBand
       }
     },
-    handleUnlockCell(unlocked) {
-      console.log('Lock cell...')
+    handleUnlockPCI(unlocked) {
+      console.log('this.wanConfig.pciUnlock: ', this.wanConfig.pciUnlock)
+      if (unlocked) {
+        this.wanConfig.pci = ''
+      } else {
+        this.wanConfig.pci = this.wanData.settingsPCI
+      }
     }
   }
 }

@@ -132,7 +132,10 @@ export default {
       ip: '-',
       mask: '-',
       gateway: '-',
-      mac: '-'
+      mac: '-',
+      auth: '-',
+      username: '-',
+      password: '-'
     })
     return {
       currentView: 'main', // 'main' 或 'wan-config'
@@ -213,6 +216,9 @@ export default {
           this.wanLinks[index].mask = status.mask
           this.wanLinks[index].gateway = status.gateway
           this.wanLinks[index].mac = status.mac
+          this.wanLinks[index].auth = status.auth
+          this.wanLinks[index].username = status.user
+          this.wanLinks[index].password = status.passwd
           console.log(this.wanLinks[index])
         })
       })

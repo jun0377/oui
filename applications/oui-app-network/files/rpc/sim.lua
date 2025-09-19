@@ -709,22 +709,22 @@ local function setSimBand(index, band)
 end
 
 -- 更改小区
-local function setSimCell(index, cell)
-    if nil == cell or '' == cell then
-        log.error('cell is nil!')
+local function setSimPCID(index, PCID)
+    if nil == PCID or '' == PCID then
+        log.error('PCID is nil!')
         return false
     end
 
-    local old_cell = getSimConfCell(index)
-    if old_cell == cell then
-        log.info(SimStatus[index].alias, "cell doesn't changed! cell:", cell)
+    local old_PCID = getSimConfPCI(index)
+    if old_PCID == PCID then
+        log.info(SimStatus[index].alias, "PCID doesn't changed! PCID:", PCID)
         return true
     end
 
-    log.info(SimStatus[index].alias, 'set cell from ', old_cell, 'to', cell)
+    log.info(SimStatus[index].alias, 'set PCID from ', old_PCID, 'to', PCID)
     local section = SimStatus[index].uciSection
     local c = uci.cursor()
-    c:set("sim", section, 'cell', cell)
+    c:set("sim", section, 'pci', PCID)
     c:commit('sim')
 
     SimStatus[index].interface = c:get('sim', section, 'interface')
@@ -734,20 +734,21 @@ end
 -- 更改配置
 function M.changeSimSettings(params)
     
-    log.info(string.format("index:%s %s net: %s apn:%s band:%s cell:%s",
+    log.info(string.format("index:%s %s net: %s apn:%s band:%s cell:%s pci:%s",
         params.index + 1,
         SimStatus[params.index + 1].alias,
         params.net,
         params.apn,
         params.band,
-        params.cell))
+        params.cell,
+        params.pci))
     
     local index = params.index + 1
 
     setSimNet(index, params.net)
     setSimAPN(index, params.apn)
     setSimBand(index, params.band)
-    setSimCell(index, params.cell)
+    setSimPCID(index, params.pci)
 
     return { code = 0 }
 end
