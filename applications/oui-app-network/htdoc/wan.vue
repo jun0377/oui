@@ -297,19 +297,28 @@ export default {
         this.$message.error('The network interface must be specified!')
         return
       }
+      // 锁频段参数
       if (!this.wanConfig.bandUnLock && ('none' === this.wanConfig.band || '' === this.wanConfig.band)) {
         console.log('Band locked but not specify the band!')
         this.$message.error('请设置频段 或 解锁频段!')
         return
       }
+      // 锁小区参数
       if (!this.wanConfig.pciUnlock && ('none' === this.wanConfig.pci || '' === this.wanConfig.pci)) {
         console.log('PCI locked but not specify the PCID!')
         this.$message.error('请设置小区PCID 或 解锁小区!')
         return
       }
+      console.log('saveConf index:', this.wanConfig.index,
+        'APN:', this.wanConfig.apn,
+        'NET:', this.wanConfig.net,
+        'Band:', this.wanConfig.band,
+        'PCID:', this.wanConfig.pci,
+        'auth', this.wanConfig.auth,
+        'username', this.wanConfig.username,
+        'password', this.wanConfig.password)
       // 调用后端API保存配置
       this.$oui.call('sim', 'changeSimSettings', this.wanConfig).then(response => {
-        console.log('saveConf index:', this.wanConfig.index, 'APN:', this.wanConfig.apn, 'NET:', this.wanConfig.net, 'Band:', this.wanConfig.band, 'PCID:', this.wanConfig.pci)
         if (response && 0 === response.code) {
           this.$message.success('设置成功')
         }

@@ -196,7 +196,18 @@ export default {
     getStatusWan() {
       console.log('Get wan status...')
       this.wanLinks.forEach((wan, index) => {
-        this.$oui.call('sim', 'getSimStatus', {'index': index}).then(status => {
+        // 创建超时Promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Request timeout'))
+          }, 5000)
+        })
+
+        // 使用Promise.race来实现超时控制
+        Promise.race([
+          this.$oui.call('sim', 'getSimStatus', {'index': index}),
+          timeoutPromise
+        ]).then(status => {
           this.wanLinks[index].index = index
           this.wanLinks[index].alias = status.alias
           this.wanLinks[index].interface = status.interface
@@ -219,7 +230,15 @@ export default {
           this.wanLinks[index].auth = status.auth
           this.wanLinks[index].username = status.user
           this.wanLinks[index].password = status.passwd
-          console.log(this.wanLinks[index])
+          console.log(`WAN ${index} status updated:`, this.wanLinks[index])
+        }).catch(error => {
+          const currentTime = new Date().toISOString()
+          if (error.message === 'Request timeout') {
+            console.error(`[${currentTime}] WAN ${index} getSimStatus request timeout`)
+          } else {
+            console.error(`[${currentTime}] WAN ${index} error details:`, error.message || error)
+          }
+
         })
       })
     },

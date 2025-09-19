@@ -453,11 +453,11 @@ end
 
 -- 查询是否插卡
 local function updateSimInsertStatus(ttyusb)
-    local cmd = string.format("rm -rf /var/lock/LCK..$(basename %s);echo -e \"AT+CPIN?\r\" | microcom %s -t 100 | tr -d '\r\n'", ttyusb, ttyusb)
+    local cmd = string.format("rm -rf /var/lock/LCK..$(basename %s);echo -e 'AT+CIMI\r' | microcom %s -t 100 | tr -d '\r\n'", ttyusb, ttyusb)
     log.info(cmd)
     local sim = exec(cmd)
     -- log.info(sim)
-    local s = sim:match('+CPIN:%s*([^%s]+)')
+    local s = sim:find("OK")
     return s
 end
 
@@ -731,17 +731,62 @@ local function setSimPCID(index, PCID)
     dial(SimStatus[index].interface)
 end
 
+-- 更改鉴权、用户名、密码
+local function setSimAuth(index, auth, apn, username, password)
+    if nil == auth or '' == auth then
+        log.error(SimStatus[index].alias, 'unknown auth')
+        return
+    end
+
+    local old_auth = getSimConfAuth(index)
+    local old_apn = getSimConfAPN(index)
+    local old_username = getSimConfUser(index)
+    local old_password = getSimConfPasswd(index)
+
+    if old_auth == auth and old_apn == apn and old_username == username and old_password == password then
+        log.info(SimStatus[index].alias, 'Auth settings not chenged! return now...')
+        return
+    end
+
+    if nil == apn then
+        apn = ''
+    end
+
+    if nil == username then
+        username = ''
+    end
+
+    if nil == password then
+        password = ''
+    end
+
+    local section = SimStatus[index].uciSection
+    local c = uci.cursor()
+    c:set("sim", section, 'auth', auth)
+    c:set("sim", section, 'apn', apn)
+    c:set("sim", section, 'user', username)
+    c:set("sim", section, 'passwd', password)
+    c:commit('sim')
+
+    SimStatus[index].interface = c:get('sim', section, 'interface')
+    dial(SimStatus[index].interface)
+
+end
+
 -- 更改配置
 function M.changeSimSettings(params)
     
-    log.info(string.format("index:%s %s net: %s apn:%s band:%s cell:%s pci:%s",
+    log.info(string.format("index:%s %s net: %s apn:%s band:%s cell:%s pci:%s auth:%s username:%s password:%s",
         params.index + 1,
         SimStatus[params.index + 1].alias,
         params.net,
         params.apn,
         params.band,
         params.cell,
-        params.pci))
+        params.pci,
+        params.auth,
+        params.username,
+        params.password))
     
     local index = params.index + 1
 
@@ -749,9 +794,9 @@ function M.changeSimSettings(params)
     setSimAPN(index, params.apn)
     setSimBand(index, params.band)
     setSimPCID(index, params.pci)
+    setSimAuth(index, params.auth, params.apn, params.username, params.password)
 
     return { code = 0 }
 end
-
 
 return M
