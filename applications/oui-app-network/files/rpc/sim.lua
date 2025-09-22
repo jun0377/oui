@@ -453,10 +453,11 @@ end
 
 -- 查询是否插卡
 local function updateSimInsertStatus(ttyusb)
-    local cmd = string.format("rm -rf /var/lock/LCK..$(basename %s);echo -e 'AT+CIMI\r' | microcom %s -t 100 | tr -d '\r\n'", ttyusb, ttyusb)
+    local basename = string.match(ttyusb, "ttyUSB%d*")
+    local cmd = string.format("[ ! -f \"/var/lock/LCK..%s\" ] && { echo -e 'AT+CIMI\r' | microcom %s -t 100 | tr -d '\r\n'; }", basename, ttyusb)
     log.info(cmd)
     local sim = exec(cmd)
-    -- log.info(sim)
+    log.info(sim)
     local s = sim:find("OK")
     return s
 end
@@ -482,7 +483,8 @@ function updateSimStatusSignal(index)
         return SimStatus[index]
     end
 
-    local cmd = string.format("rm -rf /var/lock/LCK..$(basename %s);echo -e 'AT+QENG=\"servingcell\"\r' | microcom %s -t 100 | tr -d '\r\n'", ttyusb, ttyusb)
+    local basename = string.match(ttyusb, "ttyUSB%d*")
+    local cmd = string.format("[ ! -f \"/var/lock/LCK..%s\" ] && { echo -e 'AT+QENG=\"servingcell\"\r' | microcom %s -t 100 | tr -d '\r\n'; }", basename, ttyusb)
     log.info(ttyusb, "AT+QENG=\"servingcell\"")
     local signal = exec(cmd)
     log.info(signal)
