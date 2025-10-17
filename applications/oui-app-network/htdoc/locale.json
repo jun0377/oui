@@ -50,7 +50,10 @@
     "Authentication": "Authentication",
     "NONE": "NONE",
     "USER": "User",
-    "PASSWD": "Password"
+    "PASSWD": "Password",
+    "DHCP Service": "DHCP Service",
+    "DHCP Pool Start IP": "DHCP Pool Start IP",
+    "DHCP Pool End IP": "DHCP Pool End IP"
   },
   "zh-CN": {
     "hello": "你好世界！",
@@ -103,7 +106,10 @@
     "Authentication": "鉴权",
     "NONE": "无鉴权",
     "USER": "用户名",
-    "PASSWD": "密码"
+    "PASSWD": "密码",
+    "DHCP Service": "DHCP服务",
+    "DHCP Pool Start IP": "起始IP",
+    "DHCP Pool End IP": "结束IP"
   },
   "zh-TW": {
     "hello": "你好世界！",
@@ -156,6 +162,9 @@
     "Authentication": "鉴权",
     "NONE": "无鉴权",
     "USER": "用户名",
-    "PASSWD": "密码"
+    "PASSWD": "密码",
+    "DHCP Service": "DHCP服务",
+    "DHCP Pool Start IP": "起始IP",
+    "DHCP Pool End IP": "结束IP"
   }
 }

@@ -102,15 +102,19 @@
 
     <!-- WAN配置页面 -->
     <WanConfig v-else-if="currentView === 'wan-config'" :wan-data="selectedWan" @go-back="goBackToMain" />
+    <!-- DHCP配置页面 -->
+    <DhcpConfig v-else-if="currentView === 'dhcp'" @go-back="goBackToMain" />
   </div>
 </template>
 
 <script>
 import WanConfig from './wan.vue'
+import DhcpConfig from './dhcp.vue'
 
 export default {
   components: {
-    WanConfig
+    WanConfig,
+    DhcpConfig
   },
   data() {
     const createDefaultWanLink = () => ({
@@ -147,7 +151,7 @@ export default {
       ],
       subnets: [
         {
-          name: 'Wire Lan'
+          name: 'DHCP Service'
         },
         {
           name: 'Wireless Lan'
@@ -253,7 +257,11 @@ export default {
       this.selectedWan = null
     },
     editSubNet(lan) {
-      alert('修改LAN设置: ' + lan.name)
+      if (lan.name === 'DHCP Service') {
+        this.currentView = 'dhcp'
+      } else {
+        alert('修改LAN设置: ' + lan.name)
+      }
     }
   },
   created() {
