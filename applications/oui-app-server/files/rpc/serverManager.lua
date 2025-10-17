@@ -107,7 +107,9 @@ local function setOpenVpnIP(server_ip)
     cmd = "uci -q add_list openvpn.omr.remote=" .. server_ip
     log.info(cmd)
     exec(cmd)
-
+    cmd = "uci commit openvpn"
+    log.info(cmd)
+    exec(cmd)
     exec("/etc/init.d/openvpn restart >/dev/null 2>/dev/null")
 end
 
