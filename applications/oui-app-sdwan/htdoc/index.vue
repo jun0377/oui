@@ -58,10 +58,10 @@ export default {
   data() {
     return {
       settings: {
-        remote_ip: '127.0.0.1',
+        remote_ip: '',
         remote_port: 0,
-        virtual_net: '255.255.255.0',
-        local_ip: '10.255.252.2',
+        virtual_net: '',
+        local_ip: '',
         local_port: 0
       },
       status: {

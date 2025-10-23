@@ -61,8 +61,10 @@ end
 
 -- get interface tun0 port
 function M.getLocalPort(prams)
-    -- TODO: 通过ss命令获取使用的本地端口
-    return 0
+    -- ss -tnp | grep openvpn | awk '{print $4}' | awk -F':' '{print $2}'
+    local cmd = string.format("ss -tnp | grep openvpn | awk '{print $4}' | awk -F':' '{print $2}'")
+    -- log.info(cmd)
+    return exec(cmd)
 end
 
 return M
