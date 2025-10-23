@@ -29,6 +29,9 @@
         <el-form-item :label="$t('本地端口')">
           <el-input :placeholder="$t('本地端口')" v-model="settings.local_port" disabled></el-input>
         </el-form-item>
+        <el-form-item :label="$t('子网地址')">
+          <el-input :placeholder="$t('子网地址')" v-model="settings.subnet" disabled></el-input>
+        </el-form-item>
       </el-form>
 
     </el-card>
@@ -43,8 +46,8 @@
         <el-descriptions :column="1" border>
           <el-descriptions-item :label="$t('组网状态')"><el-tag type="info">正常</el-tag></el-descriptions-item>
           <el-descriptions-item :label="$t('RTT')"><el-tag type="info">10ms</el-tag></el-descriptions-item>
-          <el-descriptions-item :label="$t('上行流量')"><el-tag type="info">10MB</el-tag></el-descriptions-item>
-          <el-descriptions-item :label="$t('下行流量')"><el-tag type="info">99KB</el-tag></el-descriptions-item>
+          <el-descriptions-item :label="$t('上行流量')"><el-tag type="info">{{ status.tx_bytes.toFixed(2) }} MB</el-tag></el-descriptions-item>
+          <el-descriptions-item :label="$t('下行流量')"><el-tag type="info">{{ status.rx_bytes.toFixed(2) }} MB</el-tag></el-descriptions-item>
         </el-descriptions>
       </div>
     </el-card>
@@ -62,13 +65,14 @@ export default {
         remote_port: 0,
         virtual_net: '',
         local_ip: '',
-        local_port: 0
+        local_port: 0,
+        subnet: ''
       },
       status: {
         connected: false,
         rtt: 0,
-        tx_bytes: 99,
-        rx_bytes: 200
+        tx_bytes: 0,
+        rx_bytes: 0
       },
       refreshTimer: null
     }
@@ -76,6 +80,11 @@ export default {
   created() {
     this.fetchRemoteIP()
     this.fetchRemotePort()
+    this.fetchVirtualNet()
+    this.fetchLocalIP()
+    this.fetchLocalPort()
+    this.fetchSubNet()
+    this.fetchTransBytes()
 
     this.refreshTimer = setInterval(() => {
       this.fetchRemoteIP()
@@ -83,6 +92,8 @@ export default {
       this.fetchVirtualNet()
       this.fetchLocalIP()
       this.fetchLocalPort()
+      this.fetchSubNet()
+      this.fetchTransBytes()
     }, 3000)
   },
   beforeUmount() {
@@ -124,6 +135,22 @@ export default {
       this.$oui.call('sdwan', 'getLocalPort').then(port => {
         this.settings.local_port = port
         console.log('fetchLocalPort: ', this.settings.local_port)
+      })
+    },
+    fetchSubNet() {
+      console.log('fetch subnet')
+      this.$oui.call('sdwan', 'getSubnet').then(sublan => {
+        this.settings.subnet = sublan
+        console.log('fetchLocalPort: ', this.settings.subnet)
+      })
+    },
+    fetchTransBytes() {
+      console.log('fetch trans data bytes')
+      this.$oui.call('sdwan', 'getTransBytes').then(bytes => {
+        this.status.tx_bytes = bytes.tx_bytes / 1024 / 1024
+        this.status.rx_bytes = bytes.rx_bytes / 1024 / 1024
+        console.log('fetchTransBytes tx_bytes: ', this.status.tx_bytes)
+        console.log('fetchTransBytes rx_bytes: ', this.status.rx_bytes)
       })
     }
   }

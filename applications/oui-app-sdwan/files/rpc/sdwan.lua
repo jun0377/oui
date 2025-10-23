@@ -60,11 +60,30 @@ function M.getLocalIP(params)
 end
 
 -- get interface tun0 port
-function M.getLocalPort(prams)
+function M.getLocalPort(params)
     -- ss -tnp | grep openvpn | awk '{print $4}' | awk -F':' '{print $2}'
     local cmd = string.format("ss -tnp | grep openvpn | awk '{print $4}' | awk -F':' '{print $2}'")
     -- log.info(cmd)
     return exec(cmd)
+end
+
+function M.getSubnet(params)
+    local c = uci.cursor()
+    local ip = c:get('network', 'lan', 'ipaddr')
+    local mask = c:get('network', 'lan', 'netmask')
+    local addr = string.format("%s / %s", ip, mask)
+    return addr     -- "192.168.100.1/255.255.255.0"
+end
+
+function M.getTransBytes(params)
+    local cmd = "ifconfig tun0 | grep 'TX bytes' | awk '{print $6}' | cut -d':' -f2"
+    local tx = exec(cmd)
+    cmd = "ifconfig tun0 | grep 'TX bytes' | awk '{print $2}' | cut -d':' -f2"
+    local rx = exec(cmd)
+    return {
+            tx_bytes = tx, 
+            rx_bytes = rx
+        }
 end
 
 return M
