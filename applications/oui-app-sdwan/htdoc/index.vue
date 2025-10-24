@@ -87,8 +87,8 @@ export default {
         subnet: ''
       },
       status: {
-        // openvpnDead - 进程未启动; 
-        // openvpnBroken - 未连接; 
+        // openvpnDead - 进程未启动
+        // openvpnBroken - 未连接
         // openvpnNormal - 正常
         // openvpnUnknownStatus - 用于调试
         connected: '',
@@ -119,7 +119,7 @@ export default {
       clearInterval(this.refreshSettingsTimer)
     }
 
-    if(this.refreshStatusTimer){
+    if (this.refreshStatusTimer) {
       clearInterval(this.refreshStatusTimer)
     }
   },
@@ -192,18 +192,18 @@ export default {
     },
     fetchStatusConnectStatus() {
       this.$oui.call('sdwan', 'getStatusConnectStatus').then(status => {
-        switch(status) {
-          case 'openvpnDead':
-            this.status.connected = '未启动'
-            break;
-          case 'openvpnBroken':
-            this.status.connected = '连接断开'
-            break;
-          case 'openvpnNormal':
-            this.status.connected = '正常'
-            break;
-          default:
-            this.status.connected = '未知状态'
+        switch (status) {
+        case 'openvpnDead' :
+          this.status.connected = '未启动'
+          break
+        case 'openvpnBroken':
+          this.status.connected = '连接断开'
+          break
+        case 'openvpnNormal':
+          this.status.connected = '正常'
+          break
+        default:
+          this.status.connected = '未知状态'
         }
       })
     },
