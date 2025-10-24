@@ -114,7 +114,7 @@ export default {
       this.refreshStatus()
     }, 3000)
   },
-  beforeUmount() {
+  beforeUnmount() {
     if (this.refreshSettingsTimer) {
       clearInterval(this.refreshSettingsTimer)
     }
