@@ -14,23 +14,41 @@
       </template>
 
       <el-form class="settings-form" label-width="120px" label-position="left">
+
         <el-form-item :label="$t('中继服务器')">
-          <el-input :placeholder="$t('中继服务器IP')" v-model="settings.remote_ip" disabled />
+          <el-tooltip :content="$t('暂不开放,和服务器IP相同')" placement="top">
+            <el-input :placeholder="$t('中继服务器IP')" v-model="settings.remote_ip" disabled />
+          </el-tooltip>
         </el-form-item>
+
         <el-form-item :label="$t('中继服务器端口')">
-          <el-input :placeholder="$t('中继节点端口')" v-model="settings.remote_port" disabled></el-input>
+          <el-tooltip :content="$t('赞不支持手动设置,后续版本完善')" placement="top">
+            <el-input :placeholder="$t('中继节点端口')" v-model="settings.remote_port" disabled></el-input>
+          </el-tooltip>
         </el-form-item>
+
         <el-form-item :label="$t('组网网段')">
-          <el-input :placeholder="$t('虚拟网络网络号')" v-model="settings.virtual_net" disabled></el-input>
+          <el-tooltip :content="$t('此配置在服务器端进行设置')" placement="top">
+            <el-input :placeholder="$t('虚拟网络网络号')" v-model="settings.virtual_net" disabled></el-input>
+          </el-tooltip>
         </el-form-item>
+
         <el-form-item :label="$t('本地虚拟IP')">
-          <el-input :placeholder="$t('本地虚拟IP')" v-model="settings.local_ip" disabled></el-input>
+          <el-tooltip :content="$t('暂不支持手动设置,由服务器自动分配')" placement="top">
+            <el-input :placeholder="$t('本地虚拟IP')" v-model="settings.local_ip" disabled></el-input>
+          </el-tooltip>
         </el-form-item>
+
         <el-form-item :label="$t('本地端口')">
-          <el-input :placeholder="$t('本地端口')" v-model="settings.local_port" disabled></el-input>
+          <el-tooltip :content="$t('暂不支持手动设置,由系统自动分配')" placement="top">
+            <el-input :placeholder="$t('本地端口')" v-model="settings.local_port" disabled></el-input>
+          </el-tooltip>
         </el-form-item>
+
         <el-form-item :label="$t('子网地址')">
-          <el-input :placeholder="$t('子网地址')" v-model="settings.subnet" disabled></el-input>
+          <el-tooltip :content="$t('DHCP地址池设置,由服务器自动分配')" placement="top">
+            <el-input :placeholder="$t('子网地址')" v-model="settings.subnet" disabled></el-input>
+          </el-tooltip>
         </el-form-item>
       </el-form>
 
@@ -44,10 +62,10 @@
       </template>
       <div class="status-info">
         <el-descriptions :column="1" border>
-          <el-descriptions-item :label="$t('组网状态')"><el-tag type="info">正常</el-tag></el-descriptions-item>
-          <el-descriptions-item :label="$t('RTT')"><el-tag type="info">10ms</el-tag></el-descriptions-item>
-          <el-descriptions-item :label="$t('上行流量')"><el-tag type="info">{{ status.tx_bytes.toFixed(2) }} MB</el-tag></el-descriptions-item>
-          <el-descriptions-item :label="$t('下行流量')"><el-tag type="info">{{ status.rx_bytes.toFixed(2) }} MB</el-tag></el-descriptions-item>
+          <el-descriptions-item :label="$t('组网状态')"><el-tag type="info">{{ status.connected }}</el-tag></el-descriptions-item>
+          <el-descriptions-item :label="$t('RTT')"><el-tag type="info">{{ status.rtt }}ms</el-tag></el-descriptions-item>
+          <el-descriptions-item :label="$t('上行流量(本次连接)')"><el-tag type="info">{{ status.tx_MB }} MB</el-tag></el-descriptions-item>
+          <el-descriptions-item :label="$t('下行流量(本地连接)')"><el-tag type="info">{{ status.rx_MB }} MB</el-tag></el-descriptions-item>
         </el-descriptions>
       </div>
     </el-card>
@@ -69,88 +87,129 @@ export default {
         subnet: ''
       },
       status: {
-        connected: false,
+        // openvpnDead - 进程未启动; 
+        // openvpnBroken - 未连接; 
+        // openvpnNormal - 正常
+        // openvpnUnknownStatus - 用于调试
+        connected: '',
         rtt: 0,
-        tx_bytes: 0,
-        rx_bytes: 0
+        tx_MB: 0,
+        rx_MB: 0
       },
-      refreshTimer: null
+      refreshSettingsTimer: null,
+      refreshStatusTimer: null
     }
   },
   created() {
-    this.fetchRemoteIP()
-    this.fetchRemotePort()
-    this.fetchVirtualNet()
-    this.fetchLocalIP()
-    this.fetchLocalPort()
-    this.fetchSubNet()
-    this.fetchTransBytes()
+    this.refreshSettings()
+    this.refreshStatus()
 
-    this.refreshTimer = setInterval(() => {
-      this.fetchRemoteIP()
-      this.fetchRemotePort()
-      this.fetchVirtualNet()
-      this.fetchLocalIP()
-      this.fetchLocalPort()
-      this.fetchSubNet()
-      this.fetchTransBytes()
+    this.refreshSettingsTimer = setInterval(() => {
+      console.log('Get Settings...')
+      this.refreshSettings()
+    }, 10000)
+
+    this.refreshStatusTimer = setInterval(() => {
+      console.log('Get Status...')
+      this.refreshStatus()
     }, 3000)
   },
   beforeUmount() {
-    if (this.refreshTimer) {
-      clearInterval(this.refreshTimer)
+    if (this.refreshSettingsTimer) {
+      clearInterval(this.refreshSettingsTimer)
+    }
+
+    if(this.refreshStatusTimer){
+      clearInterval(this.refreshStatusTimer)
     }
   },
   methods: {
-    fetchRemoteIP() {
-      console.log('fetch remote ip')
+    refreshSettings() {
+      this.fetchSettingsRemoteIP()
+      this.fetchSettingsRemotePort()
+      this.fetchSettingsVirtualNet()
+      this.fetchSettingsLocalIP()
+      this.fetchSettingsLocalPort()
+      this.fetchSettingsSubNet()
+      this.fetchSettingsTransBytes()
+      console.log(this.settings)
+    },
+    fetchSettingsRemoteIP() {
+      // console.log('fetch remote ip')
       this.$oui.call('sdwan', 'getRemoteIP').then(ip => {
-        this.settings.remote_ip = ip
-        console.log('fetchRtemoteIP: ', this.settings.remote_ip)
+        this.settings.remote_ip = ip[0]
+        // console.log('fetchSettingsRemoteIP: ', this.settings.remote_ip)
       })
     },
-    fetchRemotePort() {
-      console.log('fetch remote port')
+    fetchSettingsRemotePort() {
+      // console.log('fetch remote port')
       this.$oui.call('sdwan', 'getRemotePort').then(port => {
         this.settings.remote_port = Number(port)
-        console.log('fetchRemotePort: ', this.settings.remote_port)
+        // console.log('fetchSettingsRemotePort: ', this.settings.remote_port)
       })
     },
-    fetchVirtualNet() {
-      console.log('fetch virtual net')
+    fetchSettingsVirtualNet() {
+      // console.log('fetch virtual net')
       this.$oui.call('sdwan', 'getVirtualNet').then(ip => {
         this.settings.virtual_net = ip
-        console.log('fetchVirtualNet: ', this.settings.virtual_net)
+        // console.log('fetchSettingsVirtualNet: ', this.settings.virtual_net)
       })
     },
-    fetchLocalIP() {
-      console.log('fetch local ip')
+    fetchSettingsLocalIP() {
+      // console.log('fetch local ip')
       this.$oui.call('sdwan', 'getLocalIP').then(ip => {
         this.settings.local_ip = ip
-        console.log('fetchLocalIP: ', this.settings.local_ip)
+        // console.log('fetchSettingsLocalIP: ', this.settings.local_ip)
       })
     },
-    fetchLocalPort() {
-      console.log('fetch local port')
+    fetchSettingsLocalPort() {
+      // console.log('fetch local port')
       this.$oui.call('sdwan', 'getLocalPort').then(port => {
         this.settings.local_port = port
-        console.log('fetchLocalPort: ', this.settings.local_port)
+        // console.log('fetchSettingsLocalPort: ', this.settings.local_port)
       })
     },
-    fetchSubNet() {
-      console.log('fetch subnet')
+    fetchSettingsSubNet() {
+      // console.log('fetch subnet')
       this.$oui.call('sdwan', 'getSubnet').then(sublan => {
         this.settings.subnet = sublan
-        console.log('fetchLocalPort: ', this.settings.subnet)
+        // console.log('fetchSettingsSubNet: ', this.settings.subnet)
       })
     },
-    fetchTransBytes() {
-      console.log('fetch trans data bytes')
+    fetchSettingsTransBytes() {
+      // console.log('fetch trans data bytes')
       this.$oui.call('sdwan', 'getTransBytes').then(bytes => {
-        this.status.tx_bytes = bytes.tx_bytes / 1024 / 1024
-        this.status.rx_bytes = bytes.rx_bytes / 1024 / 1024
-        console.log('fetchTransBytes tx_bytes: ', this.status.tx_bytes)
-        console.log('fetchTransBytes rx_bytes: ', this.status.rx_bytes)
+        this.status.tx_MB = (bytes.tx_bytes / 1024 / 1024).toFixed(2)
+        this.status.rx_MB = (bytes.rx_bytes / 1024 / 1024).toFixed(2)
+        // console.log('fetchSettingsTransBytes tx_MB: ', this.status.tx_bytes)
+        // console.log('fetchSettingsTransBytes rx_MB: ', this.status.rx_bytes)
+      })
+    },
+    refreshStatus() {
+      this.fetchStatusConnectStatus()
+      this.fetchStatusRTT()
+      console.log(this.status)
+    },
+    fetchStatusConnectStatus() {
+      this.$oui.call('sdwan', 'getStatusConnectStatus').then(status => {
+        switch(status) {
+          case 'openvpnDead':
+            this.status.connected = '未启动'
+            break;
+          case 'openvpnBroken':
+            this.status.connected = '连接断开'
+            break;
+          case 'openvpnNormal':
+            this.status.connected = '正常'
+            break;
+          default:
+            this.status.connected = '未知状态'
+        }
+      })
+    },
+    fetchStatusRTT() {
+      this.$oui.call('sdwan', 'getStatusRTT').then(rtt_ms => {
+        this.status.rtt = rtt_ms.toFixed(2)
       })
     }
   }

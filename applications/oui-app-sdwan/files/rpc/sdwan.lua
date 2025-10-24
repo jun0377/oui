@@ -86,4 +86,51 @@ function M.getTransBytes(params)
         }
 end
 
+function M.getStatusConnectStatus()
+    
+    connectStatus = {
+        dead = 'openvpnDead',                           -- openvpnDead  - 进程未启动;
+        broken = 'openvpnBroken',                       -- openvpnBroken - 未连接;
+        normal = 'openvpnNormal',                       -- openvpnNormal - 正常
+        unknown = 'openvpnUnknownStatus',               -- 未知状态,用于调试
+    }
+
+    -- 进程是否存在
+    local cmd = "pidof openvpn"
+    local pid = exec(cmd)
+    if nil == pid or ' ' == pid then
+        return connectStatus.dead
+    end
+
+    -- 接口是否存在,接口存在说明连接正常
+    cmd = "ls /sys/class/net/ | grep tun0"
+    local exist = exec(cmd)
+    if nil == exist or ' ' == exist then
+        return connectStatus.broken
+    else
+        return connectStatus.normal
+    end
+
+    return connectStatus.unknown
+end
+
+function M.getStatusRTT()
+
+    local local_ip = getInterfaceIP('tun0')
+    if nil == local_ip or ' ' == local_ip then
+        return 0
+    end
+
+    local remote_ip = '10.255.252.1'
+    local cmd = string.format("ping -W 2 -c 1 -I %s %s | awk -F'/' 'END {print $5}' | tr -d '\n'", local_ip, remote_ip)
+    local rtt_ms = exec(cmd)
+    log.info('cmd: ', cmd)
+    log.info('rtt_ms ', rtt_ms)
+    if nil == rtt_ms or ' ' == rtt_ms then
+        return 9999
+    end
+
+    return tonumber(rtt_ms)
+end
+
 return M
