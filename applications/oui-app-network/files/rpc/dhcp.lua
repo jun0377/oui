@@ -29,17 +29,17 @@ end
 function M.getDHCPSettings()
 
     local gateway = getGateway()
-    local ip1, ip2, ip3, ip4 = gateway:match("(%d+)%.(%d+)%.(%d+)%.(%d+)")
+    local gw1, gw2, gw3, gw4 = gateway:match("(%d+)%.(%d+)%.(%d+)%.(%d+)")
     local netmask = getMask()
     local mask1, mask2, mask3, mask4 = netmask:match("(%d+)%.(%d+)%.(%d+)%.(%d+)")
-    local lanStart = getLanStart()
-    local lanEnd = getLanLimit()
+    local start = getLanStart()
+    local limit = getLanLimit()
 
     gateway = {
-        section1 = ip1,
-        section2 = ip2,
-        section3 = ip3,
-        section4 = ip4
+        section1 = gw1,
+        section2 = gw2,
+        section3 = gw3,
+        section4 = gw4
     }
 
     netmask = {
@@ -47,6 +47,20 @@ function M.getDHCPSettings()
         section2 = mask2,
         section3 = mask3,
         section4 = mask4
+    }
+
+    lanStart = {
+        section1 = gw1,
+        section2 = gw2,
+        section3 = gw3,
+        section4 = start
+    }
+
+    lanEnd = {
+        section1 = gw1,
+        section2 = gw2,
+        section3 = gw3,
+        section4 = limit
     }
 
     return  {
@@ -60,21 +74,24 @@ end
 function M.setDHCPSettings(params)
 
     local gateway = params.gw
-    local netmask = params.mask
+    local mask = params.mask
     local dhcpStart = params.dhcpStart
     local dhcpEnd = params.dhcpEnd
 
     local ipaddr = string.format("%s.%s.%s.%s", gateway.section1, gateway.section2, gateway.section3, gateway.section4)
-    local mask = string.format("%s.%s.%s.%s", netmask.section1, netmask.section2, netmask.section3, netmask.section4)
+    local netmask = string.format("%s.%s.%s.%s", mask.section1, mask.section2, mask.section3, mask.section4)
     local start = dhcpStart.section4
     local limit = dhcpEnd.section4
 
     local c = uci.cursor()
-    c:set('network', 'lan', 'ipaddr', gw)                 -- uci set network.lan.ipaddr=192.168.100.1
-    c:set("network", lan, 'apn', apn)                       -- uci get network.lan.netmask=255.255.255.0
-    c:set("sim", section, 'user', username)
-    c:set("sim", section, 'passwd', password)
+    c:set('network', 'lan', 'ipaddr', ipaddr)               -- uci set network.lan.ipaddr=192.168.100.1
+    c:set("network", 'lan', 'netmask', netmask)             -- uci set network.lan.netmask=255.255.255.0
+    c:commit('network')
+    c:set("dhcp", 'lan', 'start', start)                    -- uci get dhcp.lan.start
+    c:set("dhcp", 'lan', 'limit', limit)                    -- uci get dhcp.lan.limit
+    c:commit('dhcp')
 
+    return 0
 end
 
 return M
