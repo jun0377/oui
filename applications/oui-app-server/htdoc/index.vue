@@ -17,7 +17,7 @@
       </template>
 
       <!-- Server Settings -> body -->
-      <el-form :model="ServerConfig" :rules="rules" ref="serverForm" label-width="120px" class="config-form">
+      <el-form :model="ServerConfig" :rules="rules" ref="serverForm" label-width="120px" label-position="left" class="config-form">
         <!-- Server Settings -> body -> Server IP -->
         <el-form-item :label="$t('Server IP')" prop="ip">
           <el-input v-model="ServerConfig.ip" :placeholder="$t('Enter Server IP')" @focus="isEditing = true" @blur="isEditing = false" @input="markUnsavedChanges"/>
