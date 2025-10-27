@@ -118,6 +118,8 @@ export default {
     }
   },
   created() {
+    this.fetchServerIP()
+    this.fetchServerPort()
     // 初始加载服务器状态
     this.fetchServerStatus()
     // 设置定时刷新，每5秒刷新一次
@@ -164,7 +166,8 @@ export default {
       console.log('Calling setServerIP with params:', params)
       this.serverStatus.connected = false
       this.serverStatus.rtt = 0
-      return this.$oui.call('serverManager', 'setServerIP', params)
+      this.$oui.call('serverManager', 'setServerIP', params)
+      this.fetchServerIP()
     },
     // 设置服务器端口
     setServerPort() {
@@ -172,7 +175,8 @@ export default {
       console.log('set server port: ', params)
       this.serverStatus.connected = false
       this.serverStatus.rtt = 0
-      return this.$oui.call('serverManager', 'setServerPort', params)
+      this.$oui.call('serverManager', 'setServerPort', params)
+      this.fetchServerPort()
     },
     // ip格式校验
     validateIP(rule, value, callback) {
@@ -289,13 +293,11 @@ export default {
       try {
         // 使用 Promise.allSettled 并行执行，避免一个失败影响其他
         const results = await Promise.allSettled([
-          this.fetchServerIP(),
-          this.fetchServerPort(),
           // this.fetchServerRTT(),
           this.fetchVPNrtt()
         ])
         // 检查每个操作的结果
-        const operations = ['fetchServerIP', 'fetchServerPort', 'fetchVPNrtt']
+        const operations = ['fetchVPNrtt']
         results.forEach((result, index) => {
           if (result.status === 'fulfilled') {
             // console.log(`${operations[index]} completed successfully`)

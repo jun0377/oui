@@ -156,6 +156,8 @@ function M.setServerIP(params)
     exec("/etc/init.d/omr-6in4 restart >/dev/null 2>/dev/null")
     exec("/etc/init.d/vnstat restart >/dev/null 2>/dev/null")
     exec("/etc/init.d/sysntpd restart >/dev/null 2>/dev/null")
+
+    return 0
 end
 
 -- uci get openmptcprouter.vps.port
