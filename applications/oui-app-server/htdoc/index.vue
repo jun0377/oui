@@ -120,6 +120,7 @@ export default {
   created() {
     this.fetchServerIP()
     this.fetchServerPort()
+    this.fetchServerNode()
     // 初始加载服务器状态
     this.fetchServerStatus()
     // 设置定时刷新，每5秒刷新一次
@@ -237,6 +238,15 @@ export default {
         }
       }).catch (errno => {
         console.error('Failed to get server Port:', errno)
+      })
+    },
+    // 获取服务器节点信息
+    fetchServerNode() {
+      this.$oui.call('serverManager', 'getServerNode').then(node => {
+        console.log(node)
+        if (node) {
+          this.serverStatus.location = node
+        }
       })
     },
     // 创建超时Promise

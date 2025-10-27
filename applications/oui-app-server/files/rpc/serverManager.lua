@@ -216,4 +216,39 @@ function M.getServerVersion()
     return ver
 end
 
+-- 获取服务器节点信息
+function M.getServerNode()
+
+    local isp = exec("jq -r '.isp' /etc/vps_info")
+    if not isp then
+        log.error('/etc/vps_info json parse failed!')
+        return nil
+    end
+
+    local regionName = exec("jq -r '.regionName' /etc/vps_info")
+    if not regionName then
+        log.error('/etc/vps_info json parse failed!')
+        return nil
+    end
+
+    -- {    
+    --      "status":"success",
+    --      "country":"China",
+    --      "countryCode":"CN",
+    --      "region":"SH",
+    --      "regionName":"Shanghai",
+    --      "city":"Shanghai",
+    --      "zip":"",
+    --      "lat":31.2222,
+    --      "lon":121.4581,
+    --      "timezone":"Asia/Shanghai",
+    --      "isp":"Hangzhou Alibaba Advertising Co., Ltd.",
+    --      "org":"Alibaba.com LLC",
+    --      "as":"AS37963 Hangzhou Alibaba Advertising Co.,Ltd.",
+    --      "query":"8.153.200.211"
+    -- }
+
+    return isp .. ' ' .. regionName
+end
+
 return M
