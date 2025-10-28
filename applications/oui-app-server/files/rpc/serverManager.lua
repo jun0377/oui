@@ -210,12 +210,6 @@ function M.getVPNrtt()
     return res
 end
 
--- 获取服务器版本
-function M.getServerVersion()
-    local ver = {kernel = '6.6.83', software_version = '0.0.1'}
-    return ver
-end
-
 -- 获取服务器节点信息
 function M.getServerNode()
 
@@ -263,6 +257,20 @@ function M.getServerVersion()
     file:close()
 
     return version
+end
+
+-- 获取服务器公告信息
+function M.getServerAnnourcement()
+    local file = io.open('/etc/vps_annourcement', 'r')
+    if not file then
+        log.error('/etc/vps_annourcementn not exist!')
+        return 'none'
+    end
+
+    local annourcement = file:read('*a')
+    file:close()
+
+    return annourcement
 end
 
 return M

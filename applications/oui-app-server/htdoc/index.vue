@@ -122,6 +122,7 @@ export default {
     this.fetchServerPort()
     this.fetchServerNode()
     this.fetchServerVersion()
+    this.fetchServerAnnourcement()
     // 初始加载服务器状态
     this.fetchServerStatus()
     // 设置定时刷新，每5秒刷新一次
@@ -256,6 +257,14 @@ export default {
         console.log(version)
         if (version) {
           this.serverStatus.version = version
+        }
+      })
+    },
+    // 获取服务器公告
+    fetchServerAnnourcement() {
+      this.$oui.call('serverManager', 'getServerAnnourcement').then(annourcement => {
+        if (annourcement) {
+          this.serverStatus.notice = annourcement
         }
       })
     },
