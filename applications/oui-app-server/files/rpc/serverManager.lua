@@ -251,4 +251,18 @@ function M.getServerNode()
     return isp .. ' ' .. regionName
 end
 
+-- 获取服务器版本
+function M.getServerVersion()
+    local file = io.open('/etc/vps_version', 'r')
+    if not file then
+        log.error('/etc/vps_version not exist!')
+        return 'unknown'
+    end
+
+    local version = file:read('*a')
+    file:close()
+
+    return version
+end
+
 return M
