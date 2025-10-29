@@ -170,6 +170,11 @@
           </div>
 
           <div class="status-item">
+            <span class="status-label">{{ $t('模组版本') }}:</span>
+            <span class="status-value">{{ wanInfo.version }}</span>
+          </div>
+
+          <div class="status-item">
             <span class="status-label">{{ $t('IP Address') }}:</span>
             <span class="status-value">{{ wanInfo.ip }}</span>
           </div>
@@ -226,6 +231,7 @@ export default {
       wanInfo: {
         alias: '',
         interface: '',
+        version: '',
         imsi: '',
         imei: '',
         operator: '',
@@ -291,6 +297,7 @@ export default {
       // 实时状态
       this.wanInfo.alias = data.alias
       this.wanInfo.interface = data.interface
+      this.wanInfo.version = data.version
       this.wanInfo.imsi = data.imsi
       this.wanInfo.imei = data.imei
       this.wanInfo.operator = data.operator

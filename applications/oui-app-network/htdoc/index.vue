@@ -126,6 +126,7 @@ export default {
       enable: true,
       alias: '',
       interface: '',
+      version: '',
       imsi: '',
       imei: '',
       operator: '-',
@@ -209,7 +210,6 @@ export default {
       }
     },
     getStatusWan() {
-      console.log('Get wan status...')
       this.wanLinks.forEach((wan, index) => {
         // 创建超时Promise
         const timeoutPromise = new Promise((_, reject) => {
@@ -226,6 +226,7 @@ export default {
           this.wanLinks[index].index = index
           this.wanLinks[index].alias = status.alias
           this.wanLinks[index].interface = status.interface
+          this.wanLinks[index].version = status.version
           this.wanLinks[index].imsi = status.imsi
           this.wanLinks[index].imei = status.imei
           this.wanLinks[index].operator = status.operator
