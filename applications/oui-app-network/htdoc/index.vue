@@ -123,17 +123,24 @@ export default {
   data() {
     const createDefaultWanLink = () => ({
       index: '',
+      enable: true,
       alias: '',
       interface: '',
+      imsi: '',
+      imei: '',
       operator: '-',
       realNetworkAccess: '-',
       settingNetworkAccess: '',
       apn: '',
       band: '-',
       settingsBand: '',
-      cell: '-',
+      cell_nr: '-',
+      cell_lte: '-',
       settingsCell: '',
-      pci: '-',
+      pcid_nr: '--',
+      pcid_lte: '--',
+      rsrp_nr: '-',
+      rsrp_lte: '-',
       settingsPCI: '-',
       signal: '-',
       status: '',
@@ -219,17 +226,23 @@ export default {
           this.wanLinks[index].index = index
           this.wanLinks[index].alias = status.alias
           this.wanLinks[index].interface = status.interface
+          this.wanLinks[index].imsi = status.imsi
+          this.wanLinks[index].imei = status.imei
           this.wanLinks[index].operator = status.operator
           this.wanLinks[index].realNetworkAccess = status.netRealTime
           this.wanLinks[index].settingNetworkAccess = status.netSetting
           this.wanLinks[index].apn = status.apn
           this.wanLinks[index].band = status.bandRealTime
           this.wanLinks[index].settingsBand = status.bandSetting
-          this.wanLinks[index].cell = status.cellRealTime
+          this.wanLinks[index].cell_nr = status.cell_nr
+          this.wanLinks[index].cell_lte = status.cell_lte
           this.wanLinks[index].settingsCell = status.cellSetting
-          this.wanLinks[index].pci = status.pciRealTime
+          this.wanLinks[index].pcid_nr = status.pciRealTimeNR
+          this.wanLinks[index].pcid_lte = status.pciRealTimeLTE
           this.wanLinks[index].settingsPCI = status.pciSetting
           this.wanLinks[index].signal = status.signal
+          this.wanLinks[index].rsrp_nr = status.rsrp_nr
+          this.wanLinks[index].rsrp_lte = status.rsrp_lte
           this.wanLinks[index].status = status.status
           this.wanLinks[index].ip = status.ip
           this.wanLinks[index].mask = status.mask

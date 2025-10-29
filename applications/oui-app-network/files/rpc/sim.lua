@@ -39,12 +39,17 @@ local SimStatus = {
         -- SIM卡状态
         status = '',                        -- 连接状态：离线、nosim(未插卡)、拨号中、在线
         netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
-        signal = 0,                         -- 信号强度RSRP
+        rsrp_nr = 0,                        -- 5G信号强度RSRP
+        rsrp_lte = 0,                       -- LTE信号强度RSRP
+        sinr_nr = 0,                        -- 5G信噪比
+        sinr_lte = 0,                       -- LTE信噪比
         operator = '',                      -- 运营商
         imsi = '',                          -- SIM卡的IMSI
         bandRealTime = '',                  -- 实时频段
-        cellRealTime = '',                  -- 实时小区
-        pciRealTime = '',                   -- 物理小区ID
+        cell_nr = '',                -- 5G实时小区
+        cell_lte = '',               -- LTE实时小区
+        pciRealTimeNR = '',                 -- 5G物理小区ID
+        pciRealTimeLTE = '',                -- LTE物理小区ID
         ip = '',                            -- IP
         mask = '',                          -- 掩码
         gateway = '',                       -- 网关
@@ -59,7 +64,7 @@ local SimStatus = {
         imei = '',                          -- 模组的IMEI码
         ttyusb = '',                        -- 拨号节点
         interface = '',                     -- 接口名称
-        mac = '',                               -- mac地址
+        mac = '',                           -- mac地址
 
         -- SIM卡可设置的参数
         bandSetting = '',                   -- 设置的频段
@@ -74,12 +79,17 @@ local SimStatus = {
         -- SIM卡状态
         status = 'offline',                 -- 连接状态：离线、nosim(未插卡)、拨号中、在线
         netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
-        signal = 0,                         -- 信号强度RSRP
+        rsrp_nr = 0,                        -- 5G信号强度RSRP
+        rsrp_lte = 0,                       -- LTE信号强度RSRP
+        sinr_nr = 0,                        -- 5G信噪比
+        sinr_lte = 0,                       -- LTE信噪比
         operator = '',                      -- 运营商
         imsi = '',                          -- SIM卡的IMSI
         bandRealTime = '',                  -- 实时频段
-        cellRealTime = '',                  -- 实时小区
-        pciRealTime = '',                   -- 物理小区ID
+        cell_nr = '',                -- 5G实时小区
+        cell_lte = '',               -- LTE实时小区
+        pciRealTimeNR = '',                 -- 5G物理小区ID
+        pciRealTimeLTE = '',                -- LTE物理小区ID
         ip = '',                            -- IP
         mask = '',                          -- 掩码
         gateway = '',                       -- 网关
@@ -109,13 +119,18 @@ local SimStatus = {
         -- SIM卡状态
         status = '',                        -- 连接状态：离线、nosim(未插卡)、拨号中、在线
         netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
-        signal = 0,                         -- 信号强度RSRP
+        rsrp_nr = 0,                        -- 5G信号强度RSRP
+        rsrp_lte = 0,                       -- LTE信号强度RSRP
+        sinr_nr = 0,                        -- 5G信噪比
+        sinr_lte = 0,                       -- LTE信噪比
         operator = '',                      -- 运营商
         interface = '',                     -- 接口名称
         imsi = '',                          -- SIM卡的IMSI
         bandRealTime = '',                  -- 实时频段
-        cellRealTime = '',                  -- 实时小区
-        pciRealTime = '',                   -- 物理小区ID
+        cell_nr = '',                -- 5G实时小区
+        cell_lte = '',               -- LTE实时小区
+        pciRealTimeNR = '',                 -- 5G物理小区ID
+        pciRealTimeLTE = '',                -- LTE物理小区ID
         ip = '',                            -- IP
         mask = '',                          -- 掩码
         gateway = '',                       -- 网关
@@ -206,16 +221,12 @@ end
 
 -- 获取模组IMEI
 local function getSimModuleIMEI(index)
-    local section = SimStatus[index].uciSection
-    local c = uci.cursor()
-    return c:get('sim', section, 'imei')
+    return SimStatus[index].imei
 end
 
--- 获取SIM卡IMSI
+-- -- 获取SIM卡IMSI
 local function getSimModuleIMSI(index)
-    local section = SimStatus[index].uciSection
-    local c = uci.cursor()
-    return c:get('sim', section, 'imsi')
+    return SimStatus[index].imsi
 end
 
 -- 获取模组频段设置
@@ -338,9 +349,24 @@ local function getSimStatusNet(index)
     return SimStatus[index].netRealTime
 end
 
--- 获取模组信号强度
-local function getSimStatusSignal(index)
-    return SimStatus[index].signal
+-- 获取5G RSRP
+local function getSimStatusRsrpNr(index)
+    return SimStatus[index].rsrp_nr
+end
+
+-- 获取LTE RSRP
+local function getSimStatusRsrpLte(index)
+    return SimStatus[index].rsrp_lte
+end
+
+-- 获取5G SINR
+local function getSimStatusSinrNr(index)
+    return SimStatus[index].sinr_nr
+end
+
+-- 获取LTE SINR
+local function getSimStatusSinrLte(index)
+    return SimStatus[index].sinr_lte
 end
 
 -- 提取连接状态
@@ -452,14 +478,12 @@ local function parseLTE(signal)
 end
 
 -- 查询是否插卡
-local function updateSimInsertStatus(ttyusb)
-    local basename = string.match(ttyusb, "ttyUSB%d*")
-    local cmd = string.format("[ ! -f \"/var/lock/LCK..%s\" ] && { echo -e 'AT+CIMI\r' | microcom %s -t 100 | tr -d '\r\n'; }", basename, ttyusb)
-    log.info(cmd)
-    local sim = exec(cmd)
-    log.info(sim)
-    local s = sim:find("OK")
-    return s
+local function updateSimInsertStatus(interface)
+    
+    local file = '/var/'..interface..'.json'
+    local simInsert = exec(string.format("jq '.sim' %s | tr -d '\r\n'", file))  -- jq '.sim' /var/usb0.json
+    -- log.info('simInsert:', simInsert)
+    return "true" == simInsert
 end
 
 -- 更新模组信号强度
@@ -469,76 +493,42 @@ function updateSimStatusSignal(index)
     local c = uci.cursor()
     local ttyusb = c:get('sim', section, 'node')
     
+    local interface = c:get('sim', section, 'interface')
+    local file = '/var/'..interface..'.json'
+    
     -- sim ready ?
-    local sim = updateSimInsertStatus(ttyusb)    
-    if nil == sim or "" == sim then
+    local simReady = updateSimInsertStatus(interface)    
+    if not simReady then
         log.info(SimStatus[index].alias, 'sim not insert!')
         SimStatus[index].status = 'nosim'
         SimStatus[index].netRealTime = ''
-        SimStatus[index].cellRealTime = ''
-        SimStatus[index].pciRealTime = ''
+        SimStatus[index].cell_nr = ''
+        SimStatus[index].cell_lte = ''
+        SimStatus[index].pciRealTimeNR = ''
+        SimStatus[index].pciRealTimeLTE = ''
         SimStatus[index].band = ''
         SimStatus[index].operator = ''
-        SimStatus[index].signal = ''
+        SimStatus[index].rsrp_nr = ''
+        SimStatus[index].rsrp_lte = ''
+        SimStatus[index].sinr_nr = ''
+        SimStatus[index].sinr_lte = ''
         return SimStatus[index]
     end
 
-    local basename = string.match(ttyusb, "ttyUSB%d*")
-    local cmd = string.format("[ ! -f \"/var/lock/LCK..%s\" ] && { echo -e 'AT+QENG=\"servingcell\"\r' | microcom %s -t 100 | tr -d '\r\n'; }", basename, ttyusb)
-    log.info(ttyusb, "AT+QENG=\"servingcell\"")
-    local signal = exec(cmd)
-    log.info(signal)
-    parseSimUE(signal)
-    local sa = parseSA(signal)
-    local nsa = parseNSA(signal)
-    local lte = parseLTE(signal)
-    
-    -- SA
-    if nil ~= sa and nil == nsa and nil == lte then
-        SimStatus[index].netRealTime = 'SA'
-        SimStatus[index].cellRealTime = sa.cellID
-        if nil ~= sa.band then
-            SimStatus[index].bandRealTime = 'n'..sa.band
-        end
-        SimStatus[index].pciRealTime = sa.PCID
-        
-        if nil ~= sa.MCC and nil ~= sa.MNC then
-            SimStatus[index].operator = sa.MCC..sa.MNC
-        end
-        SimStatus[index].signal = sa.RSRP
-    -- NSA
-    elseif nil == sa and nil ~= nsa and nil == lte then
-        SimStatus[index].netRealTime = 'NSA'
-        SimStatus[index].cellRealTime = nsa.cellID
-        SimStatus[index].bandRealTime = 'n'..nsa.band
-        SimStatus[index].pciRealTime = nsa.PCID
-        SimStatus[index].operator = nsa.MCC..nsa.MNC
-        SimStatus[index].signal = nsa.RSRP
-    -- NSA
-    elseif nil == sa and nil ~= nsa and nil ~= lte then
-        SimStatus[index].netRealTime = 'NSA'
-        SimStatus[index].cellRealTime = nsa.cellID
-        SimStatus[index].pciRealTime = nsa.PCID
-        SimStatus[index].bandRealTime = 'n'..nsa.band..' | b'..lte.freq_band_ind
-        SimStatus[index].operator = nsa.MCC..nsa.MNC
-        SimStatus[index].signal = nsa.RSRP
-    -- LTE
-    elseif nil == sa and nil == nsa and nil ~= lte then
-        SimStatus[index].netRealTime = 'LTE'
-        SimStatus[index].cellRealTime = lte.cellID
-        SimStatus[index].pciRealTime = lte.PCID
-        SimStatus[index].bandRealTime = 'b'..lte.freq_band_ind
-        SimStatus[index].operator = lte.MCC..lte.MNC
-        SimStatus[index].signal = lte.RSRP
-    -- OFFLINE
-    elseif nil == sa and nil == nsa and nil == lte then
-        SimStatus[index].netRealTime = ''
-        SimStatus[index].cellRealTime = ''
-        SimStatus[index].pciRealTime = ''
-        SimStatus[index].bandRealTime = ''
-        SimStatus[index].operator = ''
-        SimStatus[index].signal = ''
-    end
+    SimStatus[index].imsi = exec(string.format("jq -r '.imsi' %s | tr -d '\r\n'", file))                        -- jq -r '.imsi' /var/usb0.json
+    SimStatus[index].imei = exec(string.format("jq -r '.imei' %s | tr -d '\r\n'", file))                        -- jq -r '.imei' /var/usb0.json 
+    SimStatus[index].netRealTime = exec(string.format("jq -r '.net' %s | tr -d '\r\n'", file))                  -- jq -r '.net' /var/usb0.json
+    SimStatus[index].bandRealTime = exec(string.format("jq -r '.band' %s | tr -d '\r\n'", file))                -- jq -r '.band' /var/usb0.json
+    SimStatus[index].cell_nr = exec(string.format("jq -r '.cell_nr' %s | tr -d '\r\n'", file))           -- jq -r '.cell_nr' /var/usb0.json
+    SimStatus[index].cell_lte = exec(string.format("jq -r '.cell_lte' %s | tr -d '\r\n'", file))         -- jq -r '.cell_lte' /var/usb0.json
+    SimStatus[index].pciRealTimeNR = exec(string.format("jq -r '.pcid_nr' %s | tr -d '\r\n'", file))            -- jq -r '.pcid_nr' /var/usb0.json
+    SimStatus[index].pciRealTimeLTE = exec(string.format("jq -r '.pcid_lte' %s | tr -d '\r\n'", file))          -- jq -r '.pcid_lte' /var/usb0.json
+    SimStatus[index].band = exec(string.format("jq -r '.band' %s | tr -d '\r\n'", file))                        -- jq -r '.band' /var/usb0.json
+    SimStatus[index].operator = exec(string.format("jq -r '.operator' %s | tr -d '\r\n'", file))                -- jq -r '.operator' /var/usb0.json
+    SimStatus[index].rsrp_nr = exec(string.format("jq -r '.rsrp_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.rsrp_nr' /var/usb0.json
+    SimStatus[index].rsrp_lte = exec(string.format("jq -r '.rsrp_lte' %s | tr -d '\r\n'", file))                -- jq -r '.rsrp_lte' /var/usb0.json
+    SimStatus[index].sinr_nr = exec(string.format("jq -r '.sinr_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.sinr_nr' /var/usb0.json
+    SimStatus[index].sinr_lte = exec(string.format("jq -r '.sinr_lte' %s | tr -d '\r\n'", file))                -- jq -r '.sinr_lte' /var/usb0.json
 
     return SimStatus[index]
 end
@@ -555,14 +545,24 @@ local function getSimStatusBand(index)
     return SimStatus[index].bandRealTime
 end
 
--- 获取模组实时小区
-local function getSimStatusCell(index)
-    return SimStatus[index].cellRealTime
+-- 获取模组5G实时小区
+local function getSimStatusCellNR(index)
+    return SimStatus[index].cell_nr
 end
 
--- 实时物理小区PCID
-local function getSimStatusPCI(index)
-    return SimStatus[index].pciRealTime
+-- 获取模组LTE实时小区
+local function getSimStatusCellLte(index)
+    return SimStatus[index].cell_lte
+end
+
+-- 5G实时物理小区PCID
+local function getSimStatusPCIDNR(index)
+    return SimStatus[index].pciRealTimeNR
+end
+
+-- LTE实时物理小区PCID
+local function getSimStatusPCIDLTE(index)
+    return SimStatus[index].pciRealTimeLTE
 end
 
 -- 获取模组ip
@@ -616,11 +616,16 @@ function M.getSimStatus(params)
     -- 模组实时状态
     SimStatus[index].status = getSimStatusConnect(index)
     SimStatus[index].netRealTime = getSimStatusNet(index)
-    SimStatus[index].signal = getSimStatusSignal(index)
+    SimStatus[index].rsrp_nr = getSimStatusRsrpNr(index)
+    SimStatus[index].rsrp_lte = getSimStatusRsrpLte(index)
+    SimStatus[index].sinr_nr = getSimStatusSinrNr(index)
+    SimStatus[index].sinr_lte = getSimStatusSinrLte(index)
     SimStatus[index].operator = getSimStatusOperator(index)
     SimStatus[index].bandRealTime = getSimStatusBand(index)
-    SimStatus[index].cellRealTime = getSimStatusCell(index)
-    SimStatus[index].pciRealTime = getSimStatusPCI(index)
+    SimStatus[index].cell_nr = getSimStatusCellNR(index)
+    SimStatus[index].cell_lte = getSimStatusCellLte(index)
+    SimStatus[index].pciRealTimeNR = getSimStatusPCIDNR(index)
+    SimStatus[index].pciRealTimeLTE = getSimStatusPCIDLTE(index)
     SimStatus[index].ip = getSimStatusIP(index)
     SimStatus[index].mask = getSimStatusMask(index)
     SimStatus[index].gateway = getSimStatusGateway(index)
@@ -746,7 +751,7 @@ local function setSimAuth(index, auth, apn, username, password)
     local old_password = getSimConfPasswd(index)
 
     if old_auth == auth and old_apn == apn and old_username == username and old_password == password then
-        log.info(SimStatus[index].alias, 'Auth settings not chenged! return now...')
+        log.info(SimStatus[index].alias, 'Auth settings not changed! return now...')
         return
     end
 
@@ -799,6 +804,34 @@ function M.changeSimSettings(params)
     setSimAuth(index, params.auth, params.apn, params.username, params.password)
 
     return { code = 0 }
+end
+
+-- 更改链路使能
+function M.changeSimEnable(params)
+    
+    local index = params.index + 1
+    log.info('params.enable', params.enable)
+    log.info(string.format("index:%s enable:%s", tostring(index), tostring(params.enable)))
+    
+    local c = uci.cursor()
+    local section = SimStatus[index].uciSection
+    local interface = c:get('sim', section, 'interface')
+    local cmd = ''
+    if params.enable then
+        c:set("sim", section, 'enable', '1')
+        c:commit('sim')
+
+        cmd = string.format('ifup %s', interface)
+        exec(cmd)
+    else
+        c:set("sim", section, 'enable', '0')
+        c:commit('sim')
+        
+        cmd = string.format('ifdown %s', interface)
+        exec(cmd)
+    end
+
+    return 0
 end
 
 return M

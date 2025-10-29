@@ -53,7 +53,8 @@
     "PASSWD": "Password",
     "DHCP Service": "DHCP Service",
     "DHCP Pool Start IP": "DHCP Pool Start IP",
-    "DHCP Pool End IP": "DHCP Pool End IP"
+    "DHCP Pool End IP": "DHCP Pool End IP",
+    "Enable" : "Enable"
   },
   "zh-CN": {
     "hello": "你好世界！",
@@ -109,7 +110,8 @@
     "PASSWD": "密码",
     "DHCP Service": "DHCP服务",
     "DHCP Pool Start IP": "起始IP",
-    "DHCP Pool End IP": "结束IP"
+    "DHCP Pool End IP": "结束IP",
+    "Enable" : "链路开关"
   },
   "zh-TW": {
     "hello": "你好世界！",
@@ -165,6 +167,7 @@
     "PASSWD": "密码",
     "DHCP Service": "DHCP服务",
     "DHCP Pool Start IP": "起始IP",
-    "DHCP Pool End IP": "结束IP"
+    "DHCP Pool End IP": "结束IP",
+    "Enable" : "链路开关"
   }
 }

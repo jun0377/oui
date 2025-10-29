@@ -1,10 +1,6 @@
 <template>
   <div class="wan-config-container">
     <div class="header">
-      <el-button @click="goBack" type="primary" plain>
-        <el-icon><ArrowLeft /></el-icon>
-        {{ $t('Back') }}
-      </el-button>
       <h2> {{ wanInfo.alias }}</h2>
     </div>
 
@@ -15,12 +11,12 @@
             <span>{{ $t('Basic Settings') }}</span>
           </div>
         </template>
-        <el-form :model="wanConfig" label-width="120px" class="config-form">
+        <el-form :model="wanConfig" label-width="120px" class="config-form" label-align="left" label-position="left">
           <el-form-item :label="$t('Label')">
-            <el-input v-model="wanConfig.alias" :placeholder="$t('Enter WAN label')" readonly/>
+            <el-input v-model="wanConfig.alias" :placeholder="$t('Enter WAN label')" readonly disabled/>
           </el-form-item>
           <el-form-item :label="$t('Interface')">
-            <el-input v-model="wanConfig.interface" :placeholder="$t('Enter interface name')" readonly/>
+            <el-input v-model="wanConfig.interface" :placeholder="$t('Enter interface name')" readonly disabled/>
           </el-form-item>
 
           <el-form-item :label="$t('Network Access')">
@@ -33,7 +29,7 @@
           </el-form-item>
 
           <el-form-item :label="$t('Authentication')">
-            <el-select v-model="wanConfig.net" :placeholder="$t('Select access type')" style="width: 100%">
+            <el-select v-model="wanConfig.auth" :placeholder="$t('Select auth type')" style="width: 100%">
               <el-option :label="$t('AUTO')" value="AUTO"/>
               <el-option label="PAP" value="PAP"/>
               <el-option label="CHAP" value="CHAP"/>
@@ -76,6 +72,18 @@
               <el-checkbox v-model="wanConfig.pciUnlock" @change="handleUnlockPCI">解锁</el-checkbox>
             </div>
           </el-form-item>
+
+          <el-form-item :label="$t('Enable')">
+            <el-switch
+              v-model="wanConfig.enable"
+              inline-prompt
+              :active-text="'开'"
+              :inactive-text="'关'"
+              @change="handleEnableChange"
+              class="wan-enable-switch"
+            />
+          </el-form-item>
+
         </el-form>
       </el-card>
 
@@ -100,6 +108,16 @@
           </div>
 
           <div class="status-item">
+            <span class="status-label">{{ $t('IMSI') }}:</span>
+            <span class="status-value">{{ wanInfo.imsi }}</span>
+          </div>
+
+          <div class="status-item">
+            <span class="status-label">{{ $t('IMEI') }}:</span>
+            <span class="status-value">{{ wanInfo.imei }}</span>
+          </div>
+
+          <div class="status-item">
             <span class="status-label">{{ $t('Real Network Access') }}:</span>
             <span class="status-value">{{ wanInfo.realNetworkAccess }}</span>
           </div>
@@ -110,13 +128,45 @@
           </div>
 
           <div class="status-item">
-            <span class="status-label">{{ $t('Real PCID') }}:</span>
-            <span class="status-value">{{ wanInfo.realPCI }}</span>
+            <span class="status-label">{{ $t('Cell ID') }}:</span>
+            <div class="status-value-multi">
+              <div class="status-value-line">
+                <span class="status-value-label">5G:</span>
+                <span class="status-value status-fixed-10ch">{{ wanInfo.cell_nr }}</span>
+              </div>
+              <div class="status-value-line">
+                <span class="status-value-label">4G:</span>
+                <span class="status-value status-fixed-10ch">{{ wanInfo.cell_lte }}</span>
+              </div>
+            </div>
           </div>
 
-          <div class="status-item">
+          <div class="status-item status-item-pcid">
+            <span class="status-label">{{ $t('Physical Cell ID(PCID)') }}:</span>
+            <div class="status-value-multi">
+              <div class="status-value-line">
+                <span class="status-value-label">5G:</span>
+                <span class="status-value status-fixed-5ch">{{ wanInfo.realPCINR }}</span>
+              </div>
+              <div class="status-value-line">
+                <span class="status-value-label">4G:</span>
+                <span class="status-value status-fixed-5ch">{{ wanInfo.realPCILTE }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="status-item status-item-rsrp">
             <span class="status-label">{{ $t('Signal Strength') }}:</span>
-            <span class="status-value">{{ wanInfo.signal }} dBm</span>
+            <div class="status-value-multi">
+              <div class="status-value-line">
+                <span class="status-value-label">5G: </span>
+                <span class="status-value"><span class="status-fixed-5ch">{{ wanInfo.rsrp_nr }}</span> dBm</span>
+              </div>
+              <div class="status-value-line">
+                <span class="status-value-label">4G: </span>
+                <span class="status-value"><span class="status-fixed-5ch">{{ wanInfo.rsrp_lte }}</span> dBm</span>
+              </div>
+            </div>
           </div>
 
           <div class="status-item">
@@ -147,11 +197,15 @@
       <el-button @click="saveConfig" type="primary" size="large">
         {{ $t('Save Configuration') }}
       </el-button>
-      <el-button @click="testConnection" type="success" size="large">
+      <el-button @click="testConnection" type="success" size="large" disabled>
         {{ $t('Test Connection') }}
       </el-button>
-      <el-button @click="resetConfig" type="warning" size="large">
+      <el-button @click="resetConfig" type="warning" size="large" disabled>
         {{ $t('Reset to Default') }}
+      </el-button>
+      <el-button @click="goBack" type="primary" size="large">
+        <el-icon><ArrowLeft /></el-icon>
+        {{ $t('Back') }}
       </el-button>
     </div>
   </div>
@@ -172,11 +226,20 @@ export default {
       wanInfo: {
         alias: '',
         interface: '',
+        imsi: '',
+        imei: '',
         operator: '',
         realNetworkAccess: '',
         realBand: '',
         realCell: '',
         realPCI: '',
+        realPCINR: '',
+        realPCILTE: '',
+        rsrp_nr: '',
+        rsrp_lte: '',
+        cell_nr: '',
+        cell_lte: '',
+        signal: '',
         status: '',
         ip: '',
         mask: '',
@@ -185,8 +248,11 @@ export default {
       },
       wanConfig: {
         index: '',
+        enable: true,
+        alias: '',
         name: '',
         interface: '',
+        net: '',
         accessType: '',
         apn: '',
         band: '',
@@ -201,57 +267,88 @@ export default {
     }
   },
   created() {
-    // 从 props 获取WAN信息
+    // 初始化一次
     if (this.wanData) {
-      // 实时状态
-      this.wanInfo.alias = this.wanData.alias
-      this.wanInfo.interface = this.wanData.interface
-      this.wanInfo.operator = this.wanData.operator
-      this.wanInfo.realNetworkAccess = this.wanData.realNetworkAccess
-      this.wanInfo.realBand = this.wanData.band
-      this.wanInfo.realCell = this.wanData.cell
-      this.wanInfo.realPCI = this.wanData.pci
-      this.wanInfo.signal = this.wanData.signal
-      this.wanInfo.status = this.wanData.status
-      this.wanInfo.ip = this.wanData.ip
-      this.wanInfo.mask = this.wanData.mask
-      this.wanInfo.gateway = this.wanData.gateway
-      this.wanInfo.mac = this.wanData.mac
-
-      // 配置信息
-      this.wanConfig.index = this.wanData.index
-      this.wanConfig.alias = this.wanData.alias
-      this.wanConfig.interface = this.wanData.interface
-      this.wanConfig.net = this.wanData.settingNetworkAccess
-      this.wanConfig.apn = this.wanData.apn
-      this.wanConfig.band = this.wanData.settingsBand
-      this.wanConfig.auth = this.wanData.auth
-      this.wanConfig.username = this.wanData.username
-      this.wanConfig.password = this.wanData.password
-      if (this.wanConfig.band === 'none') {
-        this.wanConfig.bandUnLock = true
-      } else {
-        this.wanConfig.bandUnLock = false
-      }
-      this.wanConfig.cell = this.wanData.settingsCell
-      // if (this.wanConfig.cell === 'none') {
-      //   this.wanConfig.cellUnLock = true
-      // } else {
-      //   this.wanConfig.cellUnLock = false
-      // }
-      this.wanConfig.pci = this.wanData.settingsPCI
-      if (this.wanConfig.pci === 'none') {
-        this.wanConfig.pciUnlock = true
-      } else {
-        this.wanConfig.pciUnlock = false
-      }
-
+      this.applyWanData(this.wanData)
+    }
+  },
+  watch: {
+    // 监听父组件传入的 wanData，实时更新界面
+    wanData: {
+      handler(newVal) {
+        if (newVal) {
+          this.applyWanData(newVal)
+        }
+      },
+      deep: true,
+      immediate: true
     }
   },
   methods: {
+    // 将 props.wanData 映射到本地状态（wanInfo / wanConfig）
+    applyWanData(data) {
+      if (!data) return
+      // 实时状态
+      this.wanInfo.alias = data.alias
+      this.wanInfo.interface = data.interface
+      this.wanInfo.imsi = data.imsi
+      this.wanInfo.imei = data.imei
+      this.wanInfo.operator = data.operator
+      this.wanInfo.realNetworkAccess = data.realNetworkAccess
+      this.wanInfo.realBand = data.band
+      this.wanInfo.realCell = data.cell
+      this.wanInfo.cell_nr = data.cell_nr
+      this.wanInfo.cell_lte = data.cell_lte
+      this.wanInfo.realPCINR = data.pcid_nr
+      this.wanInfo.realPCILTE = data.pcid_lte
+      this.wanInfo.signal = data.signal
+      this.wanInfo.rsrp_nr = data.rsrp_nr
+      this.wanInfo.rsrp_lte = data.rsrp_lte
+      this.wanInfo.status = data.status
+      this.wanInfo.ip = data.ip
+      this.wanInfo.mask = data.mask
+      this.wanInfo.gateway = data.gateway
+      this.wanInfo.mac = data.mac
+
+      // 配置信息
+      this.wanConfig.index = data.index
+      this.wanConfig.enable = typeof data.enable === 'boolean' ? data.enable : true
+      this.wanConfig.alias = data.alias
+      this.wanConfig.interface = data.interface
+      this.wanConfig.net = data.settingNetworkAccess
+      this.wanConfig.apn = data.apn
+      this.wanConfig.band = data.settingsBand
+      this.wanConfig.auth = data.auth
+      this.wanConfig.username = data.username
+      this.wanConfig.password = data.password
+
+      this.wanConfig.bandUnLock = (this.wanConfig.band === 'none' || this.wanConfig.band === '')
+      this.wanConfig.cell = data.settingsCell
+      this.wanConfig.pci = data.settingsPCI
+      this.wanConfig.pciUnlock = (this.wanConfig.pci === 'none' || this.wanConfig.pci === '')
+    },
     goBack() {
       this.$emit('go-back')
     },
+    // 使能
+    handleEnableChange(enabled) {
+      this.wanConfig.enable = enabled
+      this.$oui.call('sim', 'changeSimEnable', this.wanConfig).then(response => {
+        if (0 === response) {
+          if (enabled) {
+            this.$message.success('已开启')
+          } else {
+            this.$message.warning('已关闭')
+          }
+        } else {
+          this.$message.error('设置失败')
+        }
+      }).catch((err) => {
+        console.error('changeSimEnable error:', err)
+        this.$message.error('设置失败')
+      })
+    },
+    // 运营商
     getOperatorString(operatorID) {
       switch (operatorID) {
       case '46000': return '中国移动'
@@ -421,6 +518,81 @@ export default {
   font-weight: 600;
 }
 
+.status-value-multi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* 使 5G/4G 标签固定宽度对齐，值列随内容自适应 */
+.status-value-line {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.status-value-label {
+  width: 34px; /* 固定标签宽度，保障两行对齐 */
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* 让 RSRP 两行在同一右边界对齐，标签列固定宽度 */
+.status-item-rsrp .status-value-multi {
+  display: grid;
+  grid-template-columns: 34px auto;
+  justify-content: end;
+  row-gap: 4px;
+}
+.status-item-rsrp .status-value-line {
+  display: contents; /* 让 label/value 直接参与 grid 布局 */
+}
+.status-item-rsrp .status-value {
+  text-align: right; /* 值列右对齐，保持两行最右侧对齐 */
+}
+
+/* PCID 行：右侧多行值保持顶部对齐，左侧 label 垂直居中 */
+.status-item-pcid {
+  align-items: flex-start;
+}
+.status-item-pcid .status-label {
+  align-self: center;
+}
+
+/* PCID 两行与 RSRP 一致：固定 34px 标签列 + 值列右对齐 */
+.status-item-pcid .status-value-multi {
+  display: grid;
+  grid-template-columns: 34px auto;
+  justify-content: end;
+  row-gap: 4px;
+}
+.status-item-pcid .status-value-line {
+  display: contents;
+}
+.status-item-pcid .status-value {
+  text-align: right;
+}
+
+/* 固定占 5 个字符宽度，数字右对齐，使用等宽字体 */
+.status-fixed-5ch {
+  display: inline-block;
+  width: 5ch;
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 固定占 10 个字符宽度（用于 cell_nr / cell_lte） */
+.status-fixed-10ch {
+  display: inline-block;
+  width: 10ch;
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .status-connected {
   color: var(--el-color-success);
   animation: blink 1s infinite linear;
@@ -460,6 +632,14 @@ export default {
   display: flex;
   justify-content: center;
   gap: 15px;
+}
+
+/* 让“关”字在未开启状态下显示为红色 */
+:deep(.wan-enable-switch.el-switch:not(.is-checked) .el-switch__inner .is-text) {
+  color: var(--el-color-danger);
+}
+:deep(.wan-enable-switch:not(.is-checked) .el-switch__inner .is-text) {
+  color: var(--el-color-danger);
 }
 
 @media (max-width: 768px) {
