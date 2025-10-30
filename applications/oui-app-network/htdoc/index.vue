@@ -127,6 +127,7 @@ export default {
       alias: '',
       interface: '',
       version: '',
+      timestamp: '',
       imsi: '',
       imei: '',
       operator: '-',
@@ -142,6 +143,8 @@ export default {
       pcid_lte: '--',
       rsrp_nr: '-',
       rsrp_lte: '-',
+      sinr_nr: '-',
+      sinr_lte: '-',
       settingsPCI: '-',
       signal: '-',
       status: '',
@@ -215,7 +218,7 @@ export default {
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => {
             reject(new Error('Request timeout'))
-          }, 5000)
+          }, 2000)
         })
 
         // 使用Promise.race来实现超时控制
@@ -227,6 +230,7 @@ export default {
           this.wanLinks[index].alias = status.alias
           this.wanLinks[index].interface = status.interface
           this.wanLinks[index].version = status.version
+          this.wanLinks[index].timestamp = status.timestamp
           this.wanLinks[index].imsi = status.imsi
           this.wanLinks[index].imei = status.imei
           this.wanLinks[index].operator = status.operator
@@ -244,6 +248,8 @@ export default {
           this.wanLinks[index].signal = status.signal
           this.wanLinks[index].rsrp_nr = status.rsrp_nr
           this.wanLinks[index].rsrp_lte = status.rsrp_lte
+          this.wanLinks[index].sinr_nr = status.sinr_nr
+          this.wanLinks[index].sinr_lte = status.sinr_lte
           this.wanLinks[index].status = status.status
           this.wanLinks[index].ip = status.ip
           this.wanLinks[index].mask = status.mask

@@ -101,6 +101,11 @@
               {{ getStatusText(wanInfo.status) }}
             </span>
           </div>
+          
+          <div class="status-item">
+            <span class="status-label">{{ $t('状态更新时间') }}:</span>
+            <span class="status-value">{{ wanInfo.timestamp }}</span>
+          </div>
 
           <div class="status-item">
             <span class="status-label">{{ $t('Operator') }}:</span>
@@ -127,15 +132,15 @@
             <span class="status-value">{{ wanInfo.realBand }}</span>
           </div>
 
-          <div class="status-item">
+          <div class="status-item status-item-cellid">
             <span class="status-label">{{ $t('Cell ID') }}:</span>
             <div class="status-value-multi">
               <div class="status-value-line">
-                <span class="status-value-label">5G:</span>
+                <span class="status-value-label">NR:</span>
                 <span class="status-value status-fixed-10ch">{{ wanInfo.cell_nr }}</span>
               </div>
               <div class="status-value-line">
-                <span class="status-value-label">4G:</span>
+                <span class="status-value-label">LTE:</span>
                 <span class="status-value status-fixed-10ch">{{ wanInfo.cell_lte }}</span>
               </div>
             </div>
@@ -145,11 +150,11 @@
             <span class="status-label">{{ $t('Physical Cell ID(PCID)') }}:</span>
             <div class="status-value-multi">
               <div class="status-value-line">
-                <span class="status-value-label">5G:</span>
+                <span class="status-value-label">NR:</span>
                 <span class="status-value status-fixed-5ch">{{ wanInfo.realPCINR }}</span>
               </div>
               <div class="status-value-line">
-                <span class="status-value-label">4G:</span>
+                <span class="status-value-label">LTE:</span>
                 <span class="status-value status-fixed-5ch">{{ wanInfo.realPCILTE }}</span>
               </div>
             </div>
@@ -159,12 +164,26 @@
             <span class="status-label">{{ $t('Signal Strength') }}:</span>
             <div class="status-value-multi">
               <div class="status-value-line">
-                <span class="status-value-label">5G: </span>
+                <span class="status-value-label">NR: </span>
                 <span class="status-value"><span class="status-fixed-5ch">{{ wanInfo.rsrp_nr }}</span> dBm</span>
               </div>
               <div class="status-value-line">
-                <span class="status-value-label">4G: </span>
+                <span class="status-value-label">LTE: </span>
                 <span class="status-value"><span class="status-fixed-5ch">{{ wanInfo.rsrp_lte }}</span> dBm</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="status-item status-item-rsrp">
+            <span class="status-label">{{ $t('信噪比') }}:</span>
+            <div class="status-value-multi">
+              <div class="status-value-line">
+                <span class="status-value-label">NR: </span>
+                <span class="status-value"><span class="status-fixed-5ch">{{ wanInfo.sinr_nr }}</span> dB</span>
+              </div>
+              <div class="status-value-line">
+                <span class="status-value-label">LTE: </span>
+                <span class="status-value"><span class="status-fixed-5ch">{{ wanInfo.sinr_lte }}</span> dB</span>
               </div>
             </div>
           </div>
@@ -231,6 +250,7 @@ export default {
       wanInfo: {
         alias: '',
         interface: '',
+        timestamp: '',
         version: '',
         imsi: '',
         imei: '',
@@ -243,6 +263,8 @@ export default {
         realPCILTE: '',
         rsrp_nr: '',
         rsrp_lte: '',
+        sinr_nr: '',
+        sinr_lte: '',
         cell_nr: '',
         cell_lte: '',
         signal: '',
@@ -298,6 +320,7 @@ export default {
       this.wanInfo.alias = data.alias
       this.wanInfo.interface = data.interface
       this.wanInfo.version = data.version
+      this.wanInfo.timestamp = data.timestamp
       this.wanInfo.imsi = data.imsi
       this.wanInfo.imei = data.imei
       this.wanInfo.operator = data.operator
@@ -311,6 +334,8 @@ export default {
       this.wanInfo.signal = data.signal
       this.wanInfo.rsrp_nr = data.rsrp_nr
       this.wanInfo.rsrp_lte = data.rsrp_lte
+      this.wanInfo.sinr_nr = data.sinr_nr
+      this.wanInfo.sinr_lte = data.sinr_lte
       this.wanInfo.status = data.status
       this.wanInfo.ip = data.ip
       this.wanInfo.mask = data.mask
@@ -466,6 +491,8 @@ export default {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  /* 统一右侧值列宽度，保证 NR/LTE 在三项中对齐 */
+  --status-value-col-width: 10ch;
 }
 
 .header {
@@ -547,7 +574,7 @@ export default {
 /* 让 RSRP 两行在同一右边界对齐，标签列固定宽度 */
 .status-item-rsrp .status-value-multi {
   display: grid;
-  grid-template-columns: 34px auto;
+  grid-template-columns: 34px var(--status-value-col-width);
   justify-content: end;
   row-gap: 4px;
 }
@@ -569,7 +596,7 @@ export default {
 /* PCID 两行与 RSRP 一致：固定 34px 标签列 + 值列右对齐 */
 .status-item-pcid .status-value-multi {
   display: grid;
-  grid-template-columns: 34px auto;
+  grid-template-columns: 34px var(--status-value-col-width);
   justify-content: end;
   row-gap: 4px;
 }
@@ -577,6 +604,28 @@ export default {
   display: contents;
 }
 .status-item-pcid .status-value {
+  text-align: right;
+}
+
+/* Cell ID 两行与 PCID/RSRP 一致：固定 34px 标签列 + 值列右对齐 */
+.status-item-cellid .status-value-multi {
+  display: grid;
+  grid-template-columns: 34px var(--status-value-col-width);
+  justify-content: end;
+  row-gap: 4px;
+}
+.status-item-cellid .status-value-line {
+  display: contents;
+}
+.status-item-cellid .status-value {
+  text-align: right;
+}
+
+/* 三个区块的值列统一固定宽度并右对齐，确保 NR/LTE 对齐 */
+.status-item-rsrp .status-value,
+.status-item-pcid .status-value,
+.status-item-cellid .status-value {
+  width: var(--status-value-col-width);
   text-align: right;
 }
 

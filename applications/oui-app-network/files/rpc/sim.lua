@@ -10,7 +10,7 @@ log.outfile = '/var/log/sim.log'
 local SimStatus = {
     [1] = {
         -- 模组信息
-        usb = '',                            -- USB端口号
+        usb = '',                               -- USB端口号
         alias = '5G-1',                         -- tag
         uciSection = 'SIM_5G_1',                -- UCI配置文件section命名规范
         module = '',                            -- 模组名称
@@ -21,119 +21,125 @@ local SimStatus = {
         mac = '',                               -- mac地址
 
         -- SIM卡可设置的参数
-        bandSetting = '',                   -- 设置的频段
-        netSetting = '',                    -- 入网方式设置：AUTO/SA/NSA/LTE
-        apn = '',                           -- apn
-        auth = '',                          -- 鉴权
-        user = '',                          -- 用户名
-        passwd = '',                        -- 密码
-        cellSetting = '',                   -- 锁小区
-        pciSetting = '',                    -- 锁物理小区pci
+        bandSetting = '',                       -- 设置的频段
+        netSetting = '',                        -- 入网方式设置：AUTO/SA/NSA/LTE
+        apn = '',                               -- apn
+        auth = '',                              -- 鉴权
+        user = '',                              -- 用户名
+        passwd = '',                            -- 密码
+        cellSetting = '',                       -- 锁小区
+        pciSetting = '',                        -- 锁物理小区pci
 
         -- DHCP地址池设置
-        dhcpRangeStart = '',                -- DHCP地址池起始IP
-        dhcpRanageEnd = '',                 -- DHCP地址池终止IP
-        dhcpRangeMask = '',                 -- DHCP地址池掩码
-        dhcpRangeGateway = '',              -- DHCP地址池网关
+        dhcpRangeStart = '',                    -- DHCP地址池起始IP
+        dhcpRanageEnd = '',                     -- DHCP地址池终止IP
+        dhcpRangeMask = '',                     -- DHCP地址池掩码
+        dhcpRangeGateway = '',                  -- DHCP地址池网关
 
         -- SIM卡状态
-        status = '',                        -- 连接状态：离线、nosim(未插卡)、拨号中、在线
-        netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
-        rsrp_nr = 0,                        -- 5G信号强度RSRP
-        rsrp_lte = 0,                       -- LTE信号强度RSRP
-        sinr_nr = 0,                        -- 5G信噪比
-        sinr_lte = 0,                       -- LTE信噪比
-        operator = '',                      -- 运营商
-        imsi = '',                          -- SIM卡的IMSI
-        bandRealTime = '',                  -- 实时频段
-        cell_nr = '',                -- 5G实时小区
-        cell_lte = '',               -- LTE实时小区
-        pciRealTimeNR = '',                 -- 5G物理小区ID
-        pciRealTimeLTE = '',                -- LTE物理小区ID
-        ip = '',                            -- IP
-        mask = '',                          -- 掩码
-        gateway = '',                       -- 网关
+        status = '',                            -- 连接状态：离线、nosim(未插卡)、拨号中、在线
+        timestamp = '',                         -- 状态更新时间
+        rtt_ms = 0,                             -- 到服务器的延时
+        netRealTime = '',                       -- 当设置为AUTO时，实时的入网方式
+        rsrp_nr = 0,                            -- 5G信号强度RSRP
+        rsrp_lte = 0,                           -- LTE信号强度RSRP
+        sinr_nr = 0,                            -- 5G信噪比
+        sinr_lte = 0,                           -- LTE信噪比
+        operator = '',                          -- 运营商
+        imsi = '',                              -- SIM卡的IMSI
+        bandRealTime = '',                      -- 实时频段
+        cell_nr = '',                           -- 5G实时小区
+        cell_lte = '',                          -- LTE实时小区
+        pciRealTimeNR = '',                     -- 5G物理小区ID
+        pciRealTimeLTE = '',                    -- LTE物理小区ID
+        ip = '',                                -- IP
+        mask = '',                              -- 掩码
+        gateway = '',                           -- 网关
     },
     [2] = {
         -- 模组信息
-        usb = '',                        -- USB端口号
-        alias = '5G-2',                     -- tag
-        uciSection = 'SIM_5G_2',            -- UCI配置文件section命名规范
-        module = '',                        -- 模组名称
-        version = '',                       -- 模组版本
-        imei = '',                          -- 模组的IMEI码
-        ttyusb = '',                        -- 拨号节点
-        interface = '',                     -- 接口名称
-        mac = '',                           -- mac地址
-
-        -- SIM卡可设置的参数
-        bandSetting = '',                   -- 设置的频段
-        netSetting = '',                    -- 入网方式设置：AUTO/SA/NSA/LTE
-        apn = '',                           -- apn
-        auth = '',                          -- 鉴权
-        user = '',                          -- 用户名
-        passwd = '',                        -- 密码
-        cellSetting = '',                   -- 锁小区
-        pciSetting = '',                    -- 锁物理小区pci
-
-        -- SIM卡状态
-        status = 'offline',                 -- 连接状态：离线、nosim(未插卡)、拨号中、在线
-        netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
-        rsrp_nr = 0,                        -- 5G信号强度RSRP
-        rsrp_lte = 0,                       -- LTE信号强度RSRP
-        sinr_nr = 0,                        -- 5G信噪比
-        sinr_lte = 0,                       -- LTE信噪比
-        operator = '',                      -- 运营商
-        imsi = '',                          -- SIM卡的IMSI
-        bandRealTime = '',                  -- 实时频段
-        cell_nr = '',                -- 5G实时小区
-        cell_lte = '',               -- LTE实时小区
-        pciRealTimeNR = '',                 -- 5G物理小区ID
-        pciRealTimeLTE = '',                -- LTE物理小区ID
-        ip = '',                            -- IP
-        mask = '',                          -- 掩码
-        gateway = '',                       -- 网关
-    },
-    [3] = {
-        -- 模组信息
-        usb = '',                        -- USB端口号
-        alias = '5G-3',                     -- tag
-        uciSection = 'SIM_5G_3',            -- UCI配置文件section命名规范
-        module = '',                        -- 模组名称
-        version = '',                       -- 模组版本
-        imei = '',                          -- 模组的IMEI码
-        ttyusb = '',                        -- 拨号节点
-        interface = '',                     -- 接口名称
+        usb = '',                               -- USB端口号
+        alias = '5G-2',                         -- tag
+        uciSection = 'SIM_5G_2',                -- UCI配置文件section命名规范
+        module = '',                            -- 模组名称
+        version = '',                           -- 模组版本
+        imei = '',                              -- 模组的IMEI码
+        ttyusb = '',                            -- 拨号节点
+        interface = '',                         -- 接口名称
         mac = '',                               -- mac地址
 
         -- SIM卡可设置的参数
-        bandSetting = '',                   -- 设置的频段
-        netSetting = '',                    -- 入网方式设置：AUTO/SA/NSA/LTE
-        apn = '',                           -- apn
-        auth = '',                          -- 鉴权
-        user = '',                          -- 用户名
-        passwd = '',                        -- 密码
-        cellSetting = '',                   -- 锁小区
-        pciSetting = '',                    -- 锁物理小区pci
+        bandSetting = '',                       -- 设置的频段
+        netSetting = '',                        -- 入网方式设置：AUTO/SA/NSA/LTE
+        apn = '',                               -- apn
+        auth = '',                              -- 鉴权
+        user = '',                              -- 用户名
+        passwd = '',                            -- 密码
+        cellSetting = '',                       -- 锁小区
+        pciSetting = '',                        -- 锁物理小区pci
 
         -- SIM卡状态
-        status = '',                        -- 连接状态：离线、nosim(未插卡)、拨号中、在线
-        netRealTime = '',                   -- 当设置为AUTO时，实时的入网方式
-        rsrp_nr = 0,                        -- 5G信号强度RSRP
-        rsrp_lte = 0,                       -- LTE信号强度RSRP
-        sinr_nr = 0,                        -- 5G信噪比
-        sinr_lte = 0,                       -- LTE信噪比
-        operator = '',                      -- 运营商
-        interface = '',                     -- 接口名称
-        imsi = '',                          -- SIM卡的IMSI
-        bandRealTime = '',                  -- 实时频段
-        cell_nr = '',                -- 5G实时小区
-        cell_lte = '',               -- LTE实时小区
-        pciRealTimeNR = '',                 -- 5G物理小区ID
-        pciRealTimeLTE = '',                -- LTE物理小区ID
-        ip = '',                            -- IP
-        mask = '',                          -- 掩码
-        gateway = '',                       -- 网关
+        status = 'offline',                     -- 连接状态：离线、nosim(未插卡)、拨号中、在线
+        timestamp = '',                         -- 状态更新时间
+        rtt_ms = 0,                             -- 到服务器的延时
+        netRealTime = '',                       -- 当设置为AUTO时，实时的入网方式
+        rsrp_nr = 0,                            -- 5G信号强度RSRP
+        rsrp_lte = 0,                           -- LTE信号强度RSRP
+        sinr_nr = 0,                            -- 5G信噪比
+        sinr_lte = 0,                           -- LTE信噪比
+        operator = '',                          -- 运营商
+        imsi = '',                              -- SIM卡的IMSI
+        bandRealTime = '',                      -- 实时频段
+        cell_nr = '',                           -- 5G实时小区
+        cell_lte = '',                          -- LTE实时小区
+        pciRealTimeNR = '',                     -- 5G物理小区ID
+        pciRealTimeLTE = '',                    -- LTE物理小区ID
+        ip = '',                                -- IP
+        mask = '',                              -- 掩码
+        gateway = '',                           -- 网关
+    },
+    [3] = {
+        -- 模组信息
+        usb = '',                               -- USB端口号
+        alias = '5G-3',                         -- tag
+        uciSection = 'SIM_5G_3',                -- UCI配置文件section命名规范
+        module = '',                            -- 模组名称
+        version = '',                           -- 模组版本
+        imei = '',                              -- 模组的IMEI码
+        ttyusb = '',                            -- 拨号节点
+        interface = '',                         -- 接口名称
+        mac = '',                               -- mac地址
+
+        -- SIM卡可设置的参数
+        bandSetting = '',                       -- 设置的频段
+        netSetting = '',                        -- 入网方式设置：AUTO/SA/NSA/LTE
+        apn = '',                               -- apn
+        auth = '',                              -- 鉴权
+        user = '',                              -- 用户名
+        passwd = '',                            -- 密码
+        cellSetting = '',                       -- 锁小区
+        pciSetting = '',                        -- 锁物理小区pci
+
+        -- SIM卡状态
+        status = '',                            -- 连接状态：离线、nosim(未插卡)、拨号中、在线
+        timestamp = '',                         -- 状态更新时间
+        rtt_ms = 0,                             -- 到服务器的延时
+        netRealTime = '',                       -- 当设置为AUTO时，实时的入网方式
+        rsrp_nr = 0,                            -- 5G信号强度RSRP
+        rsrp_lte = 0,                           -- LTE信号强度RSRP
+        sinr_nr = 0,                            -- 5G信噪比
+        sinr_lte = 0,                           -- LTE信噪比
+        operator = '',                          -- 运营商
+        interface = '',                         -- 接口名称
+        imsi = '',                              -- SIM卡的IMSI
+        bandRealTime = '',                      -- 实时频段
+        cell_nr = '',                           -- 5G实时小区
+        cell_lte = '',                          -- LTE实时小区
+        pciRealTimeNR = '',                     -- 5G物理小区ID
+        pciRealTimeLTE = '',                    -- LTE物理小区ID
+        ip = '',                                -- IP
+        mask = '',                              -- 掩码
+        gateway = '',                           -- 网关
     }
 }
 
@@ -501,6 +507,7 @@ function updateSimStatusSignal(index)
     if not simReady then
         log.info(SimStatus[index].alias, 'sim not insert!')
         SimStatus[index].status = 'nosim'
+        SimStatus[index].timestamp = ''
         SimStatus[index].netRealTime = ''
         SimStatus[index].cell_nr = ''
         SimStatus[index].cell_lte = ''
@@ -512,15 +519,19 @@ function updateSimStatusSignal(index)
         SimStatus[index].rsrp_lte = ''
         SimStatus[index].sinr_nr = ''
         SimStatus[index].sinr_lte = ''
+        SimStatus[index].ip = ''
+        SimStatus[index].mask = ''
+        SimStatus[index].gateway=''
         return SimStatus[index]
     end
 
+    SimStatus[index].timestamp = exec(string.format("jq -r '.date' %s | tr -d '\r\n'", file))                   -- jq -r '.date' /var/usb0.json
     SimStatus[index].imsi = exec(string.format("jq -r '.imsi' %s | tr -d '\r\n'", file))                        -- jq -r '.imsi' /var/usb0.json
     SimStatus[index].imei = exec(string.format("jq -r '.imei' %s | tr -d '\r\n'", file))                        -- jq -r '.imei' /var/usb0.json 
     SimStatus[index].netRealTime = exec(string.format("jq -r '.net' %s | tr -d '\r\n'", file))                  -- jq -r '.net' /var/usb0.json
     SimStatus[index].bandRealTime = exec(string.format("jq -r '.band' %s | tr -d '\r\n'", file))                -- jq -r '.band' /var/usb0.json
-    SimStatus[index].cell_nr = exec(string.format("jq -r '.cell_nr' %s | tr -d '\r\n'", file))           -- jq -r '.cell_nr' /var/usb0.json
-    SimStatus[index].cell_lte = exec(string.format("jq -r '.cell_lte' %s | tr -d '\r\n'", file))         -- jq -r '.cell_lte' /var/usb0.json
+    SimStatus[index].cell_nr = exec(string.format("jq -r '.cell_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.cell_nr' /var/usb0.json
+    SimStatus[index].cell_lte = exec(string.format("jq -r '.cell_lte' %s | tr -d '\r\n'", file))                -- jq -r '.cell_lte' /var/usb0.json
     SimStatus[index].pciRealTimeNR = exec(string.format("jq -r '.pcid_nr' %s | tr -d '\r\n'", file))            -- jq -r '.pcid_nr' /var/usb0.json
     SimStatus[index].pciRealTimeLTE = exec(string.format("jq -r '.pcid_lte' %s | tr -d '\r\n'", file))          -- jq -r '.pcid_lte' /var/usb0.json
     SimStatus[index].band = exec(string.format("jq -r '.band' %s | tr -d '\r\n'", file))                        -- jq -r '.band' /var/usb0.json
@@ -529,6 +540,9 @@ function updateSimStatusSignal(index)
     SimStatus[index].rsrp_lte = exec(string.format("jq -r '.rsrp_lte' %s | tr -d '\r\n'", file))                -- jq -r '.rsrp_lte' /var/usb0.json
     SimStatus[index].sinr_nr = exec(string.format("jq -r '.sinr_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.sinr_nr' /var/usb0.json
     SimStatus[index].sinr_lte = exec(string.format("jq -r '.sinr_lte' %s | tr -d '\r\n'", file))                -- jq -r '.sinr_lte' /var/usb0.json
+    SimStatus[index].ip = exec(string.format("jq -r '.ip' %s | tr -d '\r\n'", file))                            -- jq -r '.ip' /var/usb0.json
+    SimStatus[index].mask = exec(string.format("jq -r '.mask' %s | tr -d '\r\n'", file))                        -- jq -r '.mask' /var/usb0.json
+    SimStatus[index].gateway = exec(string.format("jq -r '.gw' %s | tr -d '\r\n'", file))                       -- jq -r '.gw' /var/usb0.json
 
     return SimStatus[index]
 end
@@ -567,18 +581,17 @@ end
 
 -- 获取模组ip
 local function getSimStatusIP(index)
-    SimStatus[index].ip = getInterfaceIP(SimStatus[index].interface)
     return SimStatus[index].ip
 end
 
 -- 获取模组掩码
 local function getSimStatusMask(index)
-    return getInterfaceMask(SimStatus[index].interface)
+    return SimStatus[index].mask
 end
 
 -- 获取模组网关
 local function getSimStatusGateway(index)
-    return getInterfaceGateway(SimStatus[index].interface)
+    return SimStatus[index].gateway
 end
 
 -- 获取SIM卡状态：是否插卡、拨号状态、信号强度、运营商、频段、小区...
