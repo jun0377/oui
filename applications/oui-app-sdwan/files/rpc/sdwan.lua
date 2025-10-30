@@ -61,10 +61,11 @@ end
 
 -- get interface tun0 port
 function M.getLocalPort(params)
-    -- ss -tnp | grep openvpn | awk '{print $4}' | awk -F':' '{print $2}'
-    local cmd = string.format("ss -tnp | grep openvpn | awk '{print $4}' | awk -F':' '{print $2}'")
-    -- log.info(cmd)
-    return exec(cmd)
+    -- -- ss -tnp | grep openvpn | awk '{print $4}' | awk -F':' '{print $2}'
+    -- local cmd = string.format("ss -tnp | grep openvpn | awk '{print $4}' | awk -F':' '{print $2}'")
+    -- -- log.info(cmd)
+    -- return exec(cmd)
+    return 0
 end
 
 function M.getSubnet(params)

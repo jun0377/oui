@@ -22,7 +22,7 @@
         </el-form-item>
 
         <el-form-item :label="$t('中继服务器端口')">
-          <el-tooltip :content="$t('赞不支持手动设置,后续版本完善')" placement="top">
+          <el-tooltip :content="$t('暂不支持手动设置,后续版本完善')" placement="top">
             <el-input :placeholder="$t('中继节点端口')" v-model="settings.remote_port" disabled></el-input>
           </el-tooltip>
         </el-form-item>
