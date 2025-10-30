@@ -36,16 +36,16 @@
               <text x="10" y="16" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#15803D">{{ index + 1 }}</text>
             </svg>
             <div class="subnet-info-wan">
-              <span>{{ wan.alias }}</span>
-              <span>{{ wan.interface }}</span>
-              <span>{{ getOperatorString(wan.operator) }}</span>
-              <span>{{ wan.realNetworkAccess }}</span>
-              <span>{{ wan.apn }}</span>
-              <span>{{ wan.band }}</span>
-              <span>{{ wan.signal }}</span>
+              <span>{{ wan.settings.alias }}</span>
+              <span>{{ wan.settings.interface }}</span>
+              <span>{{ getOperatorString(wan.status.operator) }}</span>
+              <span>{{ wan.status.net }}</span>
+              <span>{{ wan.settings.apn }}</span>
+              <span>{{ wan.status.band }}</span>
+              <span>{{ (wan.status.rsrp_nr === '' || wan.status.rsrp_nr == null || +wan.status.rsrp_nr === 0) ? wan.status.rsrp_lte : wan.status.rsrp_nr }}</span>
               <span class="status-column">
-                <span :class="['status-text', getStatusClass(wan.status)]">
-                  {{ $t(getStatusText(wan.status)) }}
+                <span :class="['status-text', getStatusClass(wan.status.status)]">
+                  {{ $t(getStatusText(wan.status.status)) }}
                 </span>
               </span>
               <span class="subnet-arrow">›</span>
@@ -122,39 +122,41 @@ export default {
   },
   data() {
     const createDefaultWanLink = () => ({
-      index: '',
-      enable: true,
-      alias: '',
-      interface: '',
-      version: '',
-      timestamp: '',
-      imsi: '',
-      imei: '',
-      operator: '-',
-      realNetworkAccess: '-',
-      settingNetworkAccess: '',
-      apn: '',
-      band: '-',
-      settingsBand: '',
-      cell_nr: '-',
-      cell_lte: '-',
-      settingsCell: '',
-      pcid_nr: '--',
-      pcid_lte: '--',
-      rsrp_nr: '-',
-      rsrp_lte: '-',
-      sinr_nr: '-',
-      sinr_lte: '-',
-      settingsPCI: '-',
-      signal: '-',
-      status: '',
-      ip: '-',
-      mask: '-',
-      gateway: '-',
-      mac: '-',
-      auth: '-',
-      username: '-',
-      password: '-'
+      settings: {
+        index: '',
+        enable: true,
+        alias: '',
+        interface: '',
+        net: '',
+        band: '-',
+        pcid: '-',
+        apn: '',
+        auth: '-',
+        username: '-',
+        password: '-'
+      },
+      status: {
+        version: '',
+        timestamp: '',
+        imsi: '',
+        imei: '',
+        operator: '-',
+        net: '-',
+        band: '',
+        cell_nr: '-',
+        cell_lte: '-',
+        pcid_nr: '--',
+        pcid_lte: '--',
+        rsrp_nr: '-',
+        rsrp_lte: '-',
+        sinr_nr: '-',
+        sinr_lte: '-',
+        status: '',
+        ip: '-',
+        mask: '-',
+        gateway: '-',
+        mac: '-'
+      }
     })
     return {
       currentView: 'main', // 'main' 或 'wan-config'
@@ -212,53 +214,52 @@ export default {
       default: return '未知'
       }
     },
-    getStatusWan() {
+    getSimSettings() {
       this.wanLinks.forEach((wan, index) => {
-        // 创建超时Promise
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => {
-            reject(new Error('Request timeout'))
-          }, 2000)
+        this.$oui.call('sim', 'getSimStatus', {'index': index}).then(sim => {
+          this.wanLinks[index].settings.index = index
+          this.wanLinks[index].settings.alias = sim.settings.alias
+          this.wanLinks[index].settings.interface = sim.settings.interface
+          this.wanLinks[index].settings.net = sim.settings.net
+          this.wanLinks[index].settings.apn = sim.settings.apn
+          this.wanLinks[index].settings.band = sim.settings.band
+          this.wanLinks[index].settings.auth = sim.settings.auth
+          this.wanLinks[index].settings.username = sim.settings.user
+          this.wanLinks[index].settings.password = sim.settings.passwd
         })
+      })
+    },
+    getSimStatus() {
+      this.wanLinks.forEach((wan, index) => {
+        this.$oui.call('sim', 'getSimStatus', {'index': index}).then(sim => {
 
-        // 使用Promise.race来实现超时控制
-        Promise.race([
-          this.$oui.call('sim', 'getSimStatus', {'index': index}),
-          timeoutPromise
-        ]).then(status => {
-          this.wanLinks[index].index = index
-          this.wanLinks[index].alias = status.alias
-          this.wanLinks[index].interface = status.interface
-          this.wanLinks[index].version = status.version
-          this.wanLinks[index].timestamp = status.timestamp
-          this.wanLinks[index].imsi = status.imsi
-          this.wanLinks[index].imei = status.imei
-          this.wanLinks[index].operator = status.operator
-          this.wanLinks[index].realNetworkAccess = status.netRealTime
-          this.wanLinks[index].settingNetworkAccess = status.netSetting
-          this.wanLinks[index].apn = status.apn
-          this.wanLinks[index].band = status.bandRealTime
-          this.wanLinks[index].settingsBand = status.bandSetting
-          this.wanLinks[index].cell_nr = status.cell_nr
-          this.wanLinks[index].cell_lte = status.cell_lte
-          this.wanLinks[index].settingsCell = status.cellSetting
-          this.wanLinks[index].pcid_nr = status.pciRealTimeNR
-          this.wanLinks[index].pcid_lte = status.pciRealTimeLTE
-          this.wanLinks[index].settingsPCI = status.pciSetting
-          this.wanLinks[index].signal = status.signal
-          this.wanLinks[index].rsrp_nr = status.rsrp_nr
-          this.wanLinks[index].rsrp_lte = status.rsrp_lte
-          this.wanLinks[index].sinr_nr = status.sinr_nr
-          this.wanLinks[index].sinr_lte = status.sinr_lte
-          this.wanLinks[index].status = status.status
-          this.wanLinks[index].ip = status.ip
-          this.wanLinks[index].mask = status.mask
-          this.wanLinks[index].gateway = status.gateway
-          this.wanLinks[index].mac = status.mac
-          this.wanLinks[index].auth = status.auth
-          this.wanLinks[index].username = status.user
-          this.wanLinks[index].password = status.passwd
-          console.log(`WAN ${index} status updated:`, this.wanLinks[index])
+          if ('error' === sim.status) {
+            console.warn(this.wanLinks[index].settings.alias, this.wanLinks[index].settings.interface, 'get status failed!')
+            return
+          }
+
+          this.wanLinks[index].status.version = sim.status.version
+          this.wanLinks[index].status.timestamp = sim.status.timestamp
+          this.wanLinks[index].status.imsi = sim.status.imsi
+          this.wanLinks[index].status.imei = sim.status.imei
+          this.wanLinks[index].status.operator = sim.status.operator
+          this.wanLinks[index].status.net = sim.status.net
+          this.wanLinks[index].status.band = sim.status.band
+          this.wanLinks[index].status.cell_nr = sim.status.cell_nr
+          this.wanLinks[index].status.cell_lte = sim.status.cell_lte
+          this.wanLinks[index].status.pcid_nr = sim.status.pcid_nr
+          this.wanLinks[index].status.pcid_lte = sim.status.pcid_lte
+          this.wanLinks[index].status.rsrp_nr = sim.status.rsrp_nr
+          this.wanLinks[index].status.rsrp_lte = sim.status.rsrp_lte
+          this.wanLinks[index].status.sinr_nr = sim.status.sinr_nr
+          this.wanLinks[index].status.sinr_lte = sim.status.sinr_lte
+          this.wanLinks[index].status.status = sim.status.status
+          this.wanLinks[index].status.ip = sim.status.ip
+          this.wanLinks[index].status.mask = sim.status.mask
+          this.wanLinks[index].status.gateway = sim.status.gateway
+          this.wanLinks[index].status.mac = sim.status.mac
+          // console.log(this.wanLinks[index].settings.alias, this.wanLinks[index].settings.interface, this.wanLinks[index].settings)
+          console.log(this.wanLinks[index].settings.alias, this.wanLinks[index].settings.interface, this.wanLinks[index].status)
         }).catch(error => {
           const currentTime = new Date().toISOString()
           if (error.message === 'Request timeout') {
@@ -291,7 +292,9 @@ export default {
     }
   },
   created() {
-    this.$timer.create('wan', this.getStatusWan, { time: 5000, immediate: true, repeat: true})
+    this.getSimSettings()
+    this.getSimStatus()
+    this.$timer.create('wan', this.getSimStatus, { time: 5000, immediate: true, repeat: true})
   }
 }
 </script>
