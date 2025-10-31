@@ -448,7 +448,7 @@ function M.getSimStatus(params)
     updateSimStatusSignal(index)
 
     -- if nil == Sim[index].status.timestamp or '' == Sim[index].status.timestamp then
-    --     Sim[index].status = 'error'
+    --     Sim[index].status.status = 'error'
     --     return Sim[index]
     -- end
 
