@@ -314,6 +314,14 @@ end
 -- 获取模组连接状态
 local function getSimStatusConnect(index)
 
+    -- disabled
+    local section = Sim[index].settings.uciSection
+    local enabled = uci.cursor():get('sim', section, 'enable')
+    if nil == enabled or '0' == enabled then
+        Sim[index].status.status = 'disabled'
+        return Sim[index].status.status
+    end
+
     -- nosim
     local imsi = Sim[index].status.imsi
     if nil == imsi or "none" == imsi then

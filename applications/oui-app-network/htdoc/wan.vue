@@ -403,6 +403,7 @@ export default {
     },
     getStatusClass(status) {
       switch (status) {
+      case 'disabled': return 'status-disabled'
       case 'connected': return 'status-connected'
       case 'disconnected': return 'status-disconnected'
       case 'dialing': return 'status-dialing'
@@ -412,6 +413,7 @@ export default {
     },
     getStatusText(status) {
       switch (status) {
+      case 'disabled': return this.$t('Disabled')
       case 'connected': return this.$t('Connected')
       case 'disconnected': return this.$t('Disconnected')
       case 'dialing': return this.$t('Connecting')
@@ -672,6 +674,11 @@ export default {
 }
 
 .status-nosim {
+  color: var(--el-color-danger);
+  animation: blink 1s infinite linear;
+}
+
+.status-disabled {
   color: var(--el-color-danger);
   animation: blink 1s infinite linear;
 }
