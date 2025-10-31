@@ -447,10 +447,10 @@ function M.getSimStatus(params)
     -- 通过AT指令更新实时信号强度、频段、入网方式、小区id
     updateSimStatusSignal(index)
 
-    if nil == Sim[index].status.timestamp or '' == Sim[index].status.timestamp then
-        Sim[index].status = 'error'
-        return Sim[index]
-    end
+    -- if nil == Sim[index].status.timestamp or '' == Sim[index].status.timestamp then
+    --     Sim[index].status = 'error'
+    --     return Sim[index]
+    -- end
 
     Sim[index].status.module = getSimModuleName(index)
     Sim[index].status.version = getSimModuleVersion(index)
