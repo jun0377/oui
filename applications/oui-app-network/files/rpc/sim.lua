@@ -180,6 +180,12 @@ function getInterfaceMAC(interface)
     return exec(cmd)
 end
 
+-- 获取指定USB好对应的网口名,如2-1对应eth2
+function getInterfaceByUsb(usb)
+    local cmd = string.format("ls sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/%s/%s:2.0/net/", usb, usb)
+    return exec(cmd)
+end
+
 -- 获取模组对应的usb端点号
 local function getSimUsb(index)
     local section = Sim[index].settings.uciSection
@@ -217,9 +223,12 @@ end
 
 -- 获取模组对应的接口
 local function getSimInterface(index)
-    local section = Sim[index].settings.uciSection
-    local c = uci.cursor()
-    return c:get('sim', section, 'interface')
+    -- local section = Sim[index].settings.uciSection
+    -- local c = uci.cursor()
+    -- return c:get('sim', section, 'interface')
+    local usb = getSimUsb(index)
+    local interface = getInterfaceByUsb(usb)
+    return interface
 end
 
 -- 获取模组mac地址
@@ -343,72 +352,63 @@ local function getSimStatusConnect(index)
     if nil == ip or "" == ip then
         Sim[index].status.status = 'dialing'
     else
-        log.info(Sim[index].settings.interface, "IP:", ip)
+        -- log.info(Sim[index].settings.interface, "IP:", ip)
         Sim[index].status.status = 'connected'
     end
 
     return Sim[index].status.status
 end
 
--- 查询是否插卡
-local function updateSimInsertStatus(interface)
-    
-    local file = '/var/'..interface..'.json'
-    local simInsert = exec(string.format("jq '.sim' %s | tr -d '\r\n'", file))  -- jq '.sim' /var/usb0.json
-    -- log.info('simInsert:', simInsert)
-    return "true" == simInsert
-end
-
 -- 更新模组信号强度
 function updateSimStatusSignal(index)
     
-    local section = Sim[index].settings.uciSection
-    local c = uci.cursor()
-    local ttyusb = c:get('sim', section, 'node')
+    -- local section = Sim[index].settings.uciSection
+    -- local c = uci.cursor()
+    -- local ttyusb = c:get('sim', section, 'node')
+    -- local usb = c:get('sim', section, 'usb')
+    -- local interface = getInterfaceByUsb(usb)
+    -- local file = '/var/'..interface..'.json'
     
-    local interface = c:get('sim', section, 'interface')
-    local file = '/var/'..interface..'.json'
-    
-    -- sim ready ?
-    local simReady = updateSimInsertStatus(interface)    
-    if not simReady then
-        log.info(Sim[index].settings.alias, 'sim not insert!')
-        Sim[index].status.status = 'nosim'
-        Sim[index].status.timestamp = ''
-        Sim[index].status.net = ''
-        Sim[index].status.cell_nr = ''
-        Sim[index].status.cell_lte = ''
-        Sim[index].status.pcid_nr = ''
-        Sim[index].status.pcid_lte = ''
-        Sim[index].status.band = ''
-        Sim[index].status.operator = ''
-        Sim[index].status.rsrp_nr = ''
-        Sim[index].status.rsrp_lte = ''
-        Sim[index].status.sinr_nr = ''
-        Sim[index].status.sinr_lte = ''
-        Sim[index].status.ip = ''
-        Sim[index].status.mask = ''
-        Sim[index].status.gateway=''
-        return 0
-    end
+    -- -- sim ready ?
+    -- local simReady = updateSimInsertStatus(interface)
+    -- if not simReady then
+    --     -- log.info(Sim[index].settings.alias, 'sim not insert!')
+    --     Sim[index].status.status = 'nosim'
+    --     Sim[index].status.timestamp = ''
+    --     Sim[index].status.net = ''
+    --     Sim[index].status.cell_nr = ''
+    --     Sim[index].status.cell_lte = ''
+    --     Sim[index].status.pcid_nr = ''
+    --     Sim[index].status.pcid_lte = ''
+    --     Sim[index].status.band = ''
+    --     Sim[index].status.operator = ''
+    --     Sim[index].status.rsrp_nr = ''
+    --     Sim[index].status.rsrp_lte = ''
+    --     Sim[index].status.sinr_nr = ''
+    --     Sim[index].status.sinr_lte = ''
+    --     Sim[index].status.ip = ''
+    --     Sim[index].status.mask = ''
+    --     Sim[index].status.gateway=''
+    --     return 0
+    -- end
 
-    Sim[index].status.timestamp = exec(string.format("jq -r '.date' %s | tr -d '\r\n'", file))                   -- jq -r '.date' /var/usb0.json
-    Sim[index].status.imsi = exec(string.format("jq -r '.imsi' %s | tr -d '\r\n'", file))                        -- jq -r '.imsi' /var/usb0.json
-    Sim[index].status.imei = exec(string.format("jq -r '.imei' %s | tr -d '\r\n'", file))                        -- jq -r '.imei' /var/usb0.json 
-    Sim[index].status.net = exec(string.format("jq -r '.net' %s | tr -d '\r\n'", file))                  -- jq -r '.net' /var/usb0.json
-    Sim[index].status.band = exec(string.format("jq -r '.band' %s | tr -d '\r\n'", file))                -- jq -r '.band' /var/usb0.json
-    Sim[index].status.cell_nr = exec(string.format("jq -r '.cell_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.cell_nr' /var/usb0.json
-    Sim[index].status.cell_lte = exec(string.format("jq -r '.cell_lte' %s | tr -d '\r\n'", file))                -- jq -r '.cell_lte' /var/usb0.json
-    Sim[index].status.pcid_nr = exec(string.format("jq -r '.pcid_nr' %s | tr -d '\r\n'", file))            -- jq -r '.pcid_nr' /var/usb0.json
-    Sim[index].status.pcid_lte = exec(string.format("jq -r '.pcid_lte' %s | tr -d '\r\n'", file))          -- jq -r '.pcid_lte' /var/usb0.json
-    Sim[index].status.operator = exec(string.format("jq -r '.operator' %s | tr -d '\r\n'", file))                -- jq -r '.operator' /var/usb0.json
-    Sim[index].status.rsrp_nr = exec(string.format("jq -r '.rsrp_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.rsrp_nr' /var/usb0.json
-    Sim[index].status.rsrp_lte = exec(string.format("jq -r '.rsrp_lte' %s | tr -d '\r\n'", file))                -- jq -r '.rsrp_lte' /var/usb0.json
-    Sim[index].status.sinr_nr = exec(string.format("jq -r '.sinr_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.sinr_nr' /var/usb0.json
-    Sim[index].status.sinr_lte = exec(string.format("jq -r '.sinr_lte' %s | tr -d '\r\n'", file))                -- jq -r '.sinr_lte' /var/usb0.json
-    Sim[index].status.ip = exec(string.format("jq -r '.ip' %s | tr -d '\r\n'", file))                            -- jq -r '.ip' /var/usb0.json
-    Sim[index].status.mask = exec(string.format("jq -r '.mask' %s | tr -d '\r\n'", file))                        -- jq -r '.mask' /var/usb0.json
-    Sim[index].status.gateway = exec(string.format("jq -r '.gw' %s | tr -d '\r\n'", file))                       -- jq -r '.gw' /var/usb0.json
+    -- Sim[index].status.timestamp = exec(string.format("jq -r '.date' %s | tr -d '\r\n'", file))                   -- jq -r '.date' /var/usb0.json
+    -- Sim[index].status.imsi = exec(string.format("jq -r '.imsi' %s | tr -d '\r\n'", file))                        -- jq -r '.imsi' /var/usb0.json
+    -- Sim[index].status.imei = exec(string.format("jq -r '.imei' %s | tr -d '\r\n'", file))                        -- jq -r '.imei' /var/usb0.json 
+    -- Sim[index].status.net = exec(string.format("jq -r '.net' %s | tr -d '\r\n'", file))                  -- jq -r '.net' /var/usb0.json
+    -- Sim[index].status.band = exec(string.format("jq -r '.band' %s | tr -d '\r\n'", file))                -- jq -r '.band' /var/usb0.json
+    -- Sim[index].status.cell_nr = exec(string.format("jq -r '.cell_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.cell_nr' /var/usb0.json
+    -- Sim[index].status.cell_lte = exec(string.format("jq -r '.cell_lte' %s | tr -d '\r\n'", file))                -- jq -r '.cell_lte' /var/usb0.json
+    -- Sim[index].status.pcid_nr = exec(string.format("jq -r '.pcid_nr' %s | tr -d '\r\n'", file))            -- jq -r '.pcid_nr' /var/usb0.json
+    -- Sim[index].status.pcid_lte = exec(string.format("jq -r '.pcid_lte' %s | tr -d '\r\n'", file))          -- jq -r '.pcid_lte' /var/usb0.json
+    -- Sim[index].status.operator = exec(string.format("jq -r '.operator' %s | tr -d '\r\n'", file))                -- jq -r '.operator' /var/usb0.json
+    -- Sim[index].status.rsrp_nr = exec(string.format("jq -r '.rsrp_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.rsrp_nr' /var/usb0.json
+    -- Sim[index].status.rsrp_lte = exec(string.format("jq -r '.rsrp_lte' %s | tr -d '\r\n'", file))                -- jq -r '.rsrp_lte' /var/usb0.json
+    -- Sim[index].status.sinr_nr = exec(string.format("jq -r '.sinr_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.sinr_nr' /var/usb0.json
+    -- Sim[index].status.sinr_lte = exec(string.format("jq -r '.sinr_lte' %s | tr -d '\r\n'", file))                -- jq -r '.sinr_lte' /var/usb0.json
+    -- Sim[index].status.ip = exec(string.format("jq -r '.ip' %s | tr -d '\r\n'", file))                            -- jq -r '.ip' /var/usb0.json
+    -- Sim[index].status.mask = exec(string.format("jq -r '.mask' %s | tr -d '\r\n'", file))                        -- jq -r '.mask' /var/usb0.json
+    -- Sim[index].status.gateway = exec(string.format("jq -r '.gw' %s | tr -d '\r\n'", file))                       -- jq -r '.gw' /var/usb0.json
 
     return 0
 end
@@ -420,6 +420,46 @@ local function getSimStatusOperator(index)
     return c:get('sim', section, 'operator')
 end
 
+-- {
+-- "vendor":"TD Tech Ltd.",
+-- "product":"MT5700M-CN",
+-- "revision":"V200R001C20B022",
+-- "imei":"864640060183744",
+-- "iccid":"89860322249103745837",
+-- "imsi":"460115403693387"
+-- }
+-- 获取模组基本信息
+function M.getProductInfo(params)
+    local index = tonumber(params.index) + 1
+    local node = getSimNode(index)
+    local cmd = string.format("/usr/share/modemdata/product.sh %s", "/dev/ttyUSB1")
+    log.info(cmd)
+    local ret = exec(cmd);
+    log.info(ret)
+    return ret
+end
+
+-- 获取模组实时信息
+function M.getRealtimeStatus(params)
+    local index = tonumber(params.index) + 1
+    local node = getSimNode(index)
+    local cmd = string.format("/usr/share/modemdata/params.sh %s", "/dev/ttyUSB1")
+    log.info(cmd)
+    local ret = exec(cmd);
+    log.info(ret)
+    return ret
+end
+
+-- 获取模组配置信息
+function M.getSettings(params)
+    local index = tonumber(params.index) + 1
+    local node = getSimNode(index)
+    local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", "/dev/ttyUSB1")
+    log.info(cmd)
+    local ret = exec(cmd);
+    log.info(ret)
+    return ret
+end
 
 -- 获取SIM卡状态：是否插卡、拨号状态、信号强度、运营商、频段、小区...
 function M.getSimStatus(params)
@@ -661,5 +701,7 @@ function M.changeSimEnable(params)
 
     return 0
 end
+
+
 
 return M

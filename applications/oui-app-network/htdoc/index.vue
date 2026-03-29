@@ -11,7 +11,7 @@
             <div class="subnet-header-empty"></div>
             <div class="subnet-info-wan">
               <span>{{ $t('SIM') }}</span>
-              <span>{{ $t('Interface') }}</span>
+              <!-- <span>{{ $t('Interface') }}</span> -->
               <span>{{ $t('Operator') }}</span>
               <span>{{ $t('Real Network Access') }}</span>
               <span>APN</span>
@@ -121,43 +121,50 @@ export default {
     WirelessConfig
   },
   data() {
-    const createDefaultWanLink = () => ({
-      settings: {
-        index: '',
-        enable: true,
-        alias: '',
-        interface: '',
-        net: '',
-        band: '-',
-        pcid: '-',
-        apn: '',
-        auth: '-',
-        username: '-',
-        password: '-'
-      },
-      status: {
-        version: '',
-        timestamp: '',
-        imsi: '',
-        imei: '',
-        operator: '-',
-        net: '-',
-        band: '',
-        cell_nr: '-',
-        cell_lte: '-',
-        pcid_nr: '--',
-        pcid_lte: '--',
-        rsrp_nr: '-',
-        rsrp_lte: '-',
-        sinr_nr: '-',
-        sinr_lte: '-',
-        status: '',
-        ip: '-',
-        mask: '-',
-        gateway: '-',
-        mac: '-'
+    const createDefaultWanLink = (index) => {
+      const aliasMap = {
+        0: '5G-1',
+        1: '5G-2',
+        2: '5G-2'
       }
-    })
+      return {
+        settings: {
+          index: '',
+          enable: true,
+          alias: aliasMap[index] || '',
+          interface: '',
+          net: '',
+          band: '-',
+          pcid: '-',
+          apn: '',
+          auth: '-',
+          username: '-',
+          password: '-'
+        },
+        status: {
+          version: '',
+          timestamp: '',
+          imsi: '',
+          imei: '',
+          operator: '-',
+          net: '-',
+          band: '',
+          cell_nr: '-',
+          cell_lte: '-',
+          pcid_nr: '--',
+          pcid_lte: '--',
+          rsrp_nr: '-',
+          rsrp_lte: '-',
+          sinr_nr: '-',
+          sinr_lte: '-',
+          status: '',
+          ip: '-',
+          mask: '-',
+          gateway: '-',
+          mac: '-'
+        }
+      }
+    }
     return {
       currentView: 'main', // 'main' 或 'wan-config'
       selectedWan: null,
@@ -229,6 +236,27 @@ export default {
         })
       })
     },
+    getProductInfo() {
+
+      this.$oui.call('sim', 'getProductInfo', {'index': "0"}).then(result => {
+          console.log(`WAN getProductInfo result:`, result)
+      })
+
+      this.$oui.call('sim', 'getRealtimeStatus', {'index': "0"}).then(result => {
+          console.log(`WAN getRealtimeStatus result:`, result)
+      })
+
+      this.$oui.call('sim', 'getSettings', {'index': "0"}).then(result => {
+          console.log(`WAN getSettings result:`, result)
+      })
+
+      // this.wanLinks.forEach((wan, index) => {
+      //   console.log("test")
+      //   this.$oui.call('sim', 'getProductInfo', {'index': index}).then(result => {
+      //     console.log(`WAN ${index} getProductInfo result:`, result)
+      //   })
+      // })
+    },
     getSimStatus() {
       this.wanLinks.forEach((wan, index) => {
         this.$oui.call('sim', 'getSimStatus', {'index': index}).then(sim => {
@@ -259,7 +287,7 @@ export default {
           this.wanLinks[index].status.gateway = sim.status.gateway
           this.wanLinks[index].status.mac = sim.status.mac
           // console.log(this.wanLinks[index].settings.alias, this.wanLinks[index].settings.interface, this.wanLinks[index].settings)
-          console.log(this.wanLinks[index].settings.alias, this.wanLinks[index].settings.interface, this.wanLinks[index].status)
+          // console.log(this.wanLinks[index].settings.alias, this.wanLinks[index].settings.interface, this.wanLinks[index].status)
         }).catch(error => {
           const currentTime = new Date().toISOString()
           if (error.message === 'Request timeout') {
@@ -267,7 +295,6 @@ export default {
           } else {
             console.error(`[${currentTime}] WAN ${index} error details:`, error.message || error)
           }
-
         })
       })
     },
@@ -295,6 +322,7 @@ export default {
     this.getSimSettings()
     this.getSimStatus()
     this.$timer.create('wan', this.getSimStatus, { time: 5000, immediate: true, repeat: true})
+    this.$timer.create('wan-product', this.getProductInfo, { time: 15000, immediate: true, repeat: true})
   }
 }
 </script>

@@ -87,7 +87,6 @@
           </el-form-item>
 
         </el-form>
-        <!-- 操作按钮移入卡片内部底部 -->
         <div class="action-buttons card-actions">
           <el-button @click="saveConfig" type="primary" size="large">
             {{ $t('Save Configuration') }}
