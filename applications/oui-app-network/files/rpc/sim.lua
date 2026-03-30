@@ -175,9 +175,10 @@ end
 
 -- 获取指定网口的mac地址
 function getInterfaceMAC(interface)
-    local cmd = string.format("ifconfig %s | grep 'HWaddr' | awk '{print $5}' | tr -d '\r\n'", interface)
-    -- log.info(cmd)
-    return exec(cmd)
+    -- local cmd = string.format("ifconfig %s | grep 'HWaddr' | awk '{print $5}' | tr -d '\r\n'", interface)
+    -- -- log.info(cmd)
+    -- return exec(cmd)
+    return "xxxxxxxxxxxx"
 end
 
 -- 获取指定USB好对应的网口名,如2-1对应eth2
@@ -456,50 +457,72 @@ function M.getSettings(params)
     local node = getSimNode(index)
     local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", "/dev/ttyUSB1")
     log.info(cmd)
-    local ret = exec(cmd);
+    local ret = exec(cmd)
+    log.info(ret)
+    return ret
+end
+
+-- 获取SIM卡运营商 和 状态
+function M.getStatus(params)
+    local index = tonumber(params.index) + 1
+    local node = getSimNode(index)
+    local cmd = string.format("/usr/share/modemdata/params.sh %s", "/dev/ttyUSB1")
+    log.info(cmd)
+    local ret = exec(cmd)
+    log.info(ret)
+    return ret
+end
+
+-- 查询模组配置,是从模组内部查询到的配置,并不是uci配置
+function M.getModuleSettings(params)
+    local index = tonumber(params.index) + 1
+    local node = getSimNode(index)
+    local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", "/dev/ttyUSB1")
+    log.info(cmd)
+    local ret = exec(cmd)
     log.info(ret)
     return ret
 end
 
 -- 获取SIM卡状态：是否插卡、拨号状态、信号强度、运营商、频段、小区...
-function M.getSimStatus(params)
+-- function M.getSimStatus(params)
 
-    local index = tonumber(params.index) + 1
+--     local index = tonumber(params.index) + 1
 
-    -- 模组硬件信息
-    Sim[index].settings.usb = getSimUsb(index)
-    Sim[index].settings.alias = getSimAlias(index)
-    Sim[index].settings.ttyusb = getSimNode(index)
-    Sim[index].settings.interface = getSimInterface(index)
-    Sim[index].settings.band = getSimConfBand(index)
-    Sim[index].settings.net = string.upper(getSimConfNet(index))
-    Sim[index].settings.apn = getSimConfAPN(index)
-    Sim[index].settings.auth = getSimConfAuth(index)
-    Sim[index].settings.user = getSimConfUser(index)
-    Sim[index].settings.passwd = getSimConfPasswd(index)
-    Sim[index].settings.cellLocked = getSimConfCell(index)
-    Sim[index].settings.pcidlocked = getSimConfPCI(index)
-    Sim[index].settings.dhcpRangeStart = getSimConfDhcpRangeStart(index)
-    Sim[index].settings.dhcpRanageEnd = getSimConfDhcpRangeEnd(index)
-    Sim[index].settings.dhcpRangeMask = getSimConfDhcpRangeMask(index)
-    Sim[index].settings.dhcpRangeGateway = getSimConfDhcpRangeGateway(index)
+--     -- 模组硬件信息
+--     Sim[index].settings.usb = getSimUsb(index)
+--     Sim[index].settings.alias = getSimAlias(index)
+--     Sim[index].settings.ttyusb = getSimNode(index)
+--     Sim[index].settings.interface = getSimInterface(index)
+--     Sim[index].settings.band = getSimConfBand(index)
+--     Sim[index].settings.net = string.upper(getSimConfNet(index))
+--     Sim[index].settings.apn = getSimConfAPN(index)
+--     Sim[index].settings.auth = getSimConfAuth(index)
+--     Sim[index].settings.user = getSimConfUser(index)
+--     Sim[index].settings.passwd = getSimConfPasswd(index)
+--     Sim[index].settings.cellLocked = getSimConfCell(index)
+--     Sim[index].settings.pcidlocked = getSimConfPCI(index)
+--     Sim[index].settings.dhcpRangeStart = getSimConfDhcpRangeStart(index)
+--     Sim[index].settings.dhcpRanageEnd = getSimConfDhcpRangeEnd(index)
+--     Sim[index].settings.dhcpRangeMask = getSimConfDhcpRangeMask(index)
+--     Sim[index].settings.dhcpRangeGateway = getSimConfDhcpRangeGateway(index)
 
-    -- 通过AT指令更新实时信号强度、频段、入网方式、小区id
-    updateSimStatusSignal(index)
+--     -- 通过AT指令更新实时信号强度、频段、入网方式、小区id
+--     updateSimStatusSignal(index)
 
-    -- if nil == Sim[index].status.timestamp or '' == Sim[index].status.timestamp then
-    --     Sim[index].status.status = 'error'
-    --     return Sim[index]
-    -- end
+--     -- if nil == Sim[index].status.timestamp or '' == Sim[index].status.timestamp then
+--     --     Sim[index].status.status = 'error'
+--     --     return Sim[index]
+--     -- end
 
-    Sim[index].status.module = getSimModuleName(index)
-    Sim[index].status.version = getSimModuleVersion(index)
-    Sim[index].status.mac = getSimMac(index)
-    Sim[index].status.status = getSimStatusConnect(index)
-    Sim[index].status.operator = getSimStatusOperator(index)
+--     Sim[index].status.module = getSimModuleName(index)
+--     Sim[index].status.version = getSimModuleVersion(index)
+--     Sim[index].status.mac = getSimMac(index)
+--     Sim[index].status.status = getSimStatusConnect(index)
+--     Sim[index].status.operator = getSimStatusOperator(index)
 
-    return Sim[index]
-end
+--     return Sim[index]
+-- end
 
 -- 触发/lib/netifd/proto/ncm.sh，重新拨号
 local function dial(interface)

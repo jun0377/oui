@@ -38,8 +38,8 @@
             <div class="subnet-info-wan">
               <span>{{ wan.settings.alias }}</span>
               <!-- <span>{{ wan.settings.interface }}</span> -->
-              <span>{{ getOperatorString(wan.status.operator) }}</span>
-              <span>{{ wan.status.net }}</span>
+              <span>{{ wan.sim.mcc }}{{ wan.sim.mnc }}</span>
+              <span>{{ wan.monsc.rat }}</span>
               <span>{{ wan.settings.apn }}</span>
               <span>{{ wan.status.band }}</span>
               <span>{{ (wan.status.rsrp_nr === '' || wan.status.rsrp_nr == null || +wan.status.rsrp_nr === 0) ? wan.status.rsrp_lte : wan.status.rsrp_nr }}</span>
@@ -125,7 +125,7 @@ export default {
       const aliasMap = {
         0: '5G-1',
         1: '5G-2',
-        2: '5G-2'
+        2: '5G-3'
       }
       return {
         settings: {
@@ -141,12 +141,90 @@ export default {
           username: '-',
           password: '-'
         },
-        status: {
-          version: '',
-          timestamp: '',
-          imsi: '',
+        productInfo: {
+          vendor: '',
+          product: '',
+          revision: '',
           imei: '',
-          operator: '-',
+          iccid: '',
+          imsi: ''
+        },
+        sim: {
+          operator: '',
+          status: '',
+          country: '',
+          mcc: '',
+          mnc: ''
+        },
+        monsc: {
+          rat: '',
+          nr:{
+            cell_id:'',
+            arfcn:'',
+            scs:'',
+            pci:'',
+            tac:'',
+            rsrp:'',
+            rsrq:'',
+            sinr:''
+          },
+          lte:{
+            cell_id:'',
+            arfcn:'',
+            pci:'',
+            tac:'',
+            rsrp:'',
+            rsrq:'',
+            rssi:''
+          },
+          wcdma:{
+            arfcn:'',
+            pcs:'',
+            cell_id:'',
+            lac:'',
+            rscp:'',
+            rxlev:'',
+            ecno:''
+          }
+        },
+        monnc: {
+          gsm: [],
+          wcdma: [],
+          lte: [],
+          nr: []
+        },
+        // 从模组中查到的配置
+        realSettings:{
+          // 入网设置
+          rat:'',
+          // pdp上下文
+          pdp: {
+            cid: '',
+            pdp_type: '',
+            apn: '',
+            pdp_addr: ''
+          },
+          // 鉴权设置
+          auth:{
+            cid: '',
+            auth_type: '',
+            passwd: '',
+            username: '',
+            plmn: ''
+          },
+          // 锁频端 锁频点 锁小区设置
+          freqlock:{
+            operatetype: '',
+            forbid_flag: '',
+            num: '',
+            band: [],
+            arfcn: [],
+            scstype: [],
+            pci: []
+          }
+        },
+        status: {
+          timestamp: '',
           net: '-',
           band: '',
           cell_nr: '-',
@@ -203,99 +281,118 @@ export default {
       default: return '未知'
       }
     },
-    getOperatorString(operatorID) {
-      switch (operatorID) {
-      case '46000': return '中国移动'
-      case '46002': return '中国移动'
-      case '46004': return '中国移动'
-      case '46007': return '中国移动'
-      case '46008': return '中国移动'
-      case '46001': return '中国联通'
-      case '46006': return '中国联通'
-      case '46009': return '中国联通'
-      case '46003': return '中国电信'
-      case '46005': return '中国电信'
-      case '46011': return '中国电信'
-      case '46015': return '中国广电'
-      case '46020': return '中国铁通'
-      default: return '未知'
-      }
-    },
     getSimSettings() {
-      this.wanLinks.forEach((wan, index) => {
-        this.$oui.call('sim', 'getSimStatus', {'index': index}).then(sim => {
-          this.wanLinks[index].settings.index = index
-          this.wanLinks[index].settings.alias = sim.settings.alias
-          this.wanLinks[index].settings.interface = sim.settings.interface
-          this.wanLinks[index].settings.net = sim.settings.net
-          this.wanLinks[index].settings.apn = sim.settings.apn
-          this.wanLinks[index].settings.band = sim.settings.band
-          this.wanLinks[index].settings.auth = sim.settings.auth
-          this.wanLinks[index].settings.username = sim.settings.user
-          this.wanLinks[index].settings.password = sim.settings.passwd
-        })
-      })
-    },
-    getProductInfo() {
-
-      this.$oui.call('sim', 'getProductInfo', {'index': '0'}).then(result => {
-        console.log(`WAN getProductInfo result:`, result)
-      })
-
-      this.$oui.call('sim', 'getRealtimeStatus', {'index': '0'}).then(result => {
-        console.log(`WAN getRealtimeStatus result:`, result)
-      })
-
-      this.$oui.call('sim', 'getSettings', {'index': '0'}).then(result => {
-        console.log(`WAN getSettings result:`, result)
-      })
-
       // this.wanLinks.forEach((wan, index) => {
-      //   console.log("test")
-      //   this.$oui.call('sim', 'getProductInfo', {'index': index}).then(result => {
-      //     console.log(`WAN ${index} getProductInfo result:`, result)
+      //   this.$oui.call('sim', 'getSimStatus', {'index': index}).then(sim => {
+      //     this.wanLinks[index].settings.index = index
+      //     this.wanLinks[index].settings.alias = sim.settings.alias
+      //     this.wanLinks[index].settings.interface = sim.settings.interface
+      //     this.wanLinks[index].settings.net = sim.settings.net
+      //     this.wanLinks[index].settings.apn = sim.settings.apn
+      //     this.wanLinks[index].settings.band = sim.settings.band
+      //     this.wanLinks[index].settings.auth = sim.settings.auth
+      //     this.wanLinks[index].settings.username = sim.settings.user
+      //     this.wanLinks[index].settings.password = sim.settings.passwd
       //   })
       // })
     },
-    getSimStatus() {
-      this.wanLinks.forEach((wan, index) => {
-        this.$oui.call('sim', 'getSimStatus', {'index': index}).then(sim => {
+    getProductInfo(index) {
+      this.$oui.call('sim', 'getProductInfo', {'index': index}).then(result => {
+        const data = typeof result === 'string' ? JSON.parse(result) : result
+        const productInfo = this.wanLinks[index].productInfo
+        if (data.vendor) productInfo.vendor = data.vendor
+        if (data.product) productInfo.product = data.product
+        if (data.revision) productInfo.revision = data.revision
+        if (data.imei) productInfo.imei = data.imei
+        if (data.iccid) productInfo.iccid = data.iccid
+        if (data.imsi) productInfo.imsi = data.imsi
+        this.wanLinks[index].productInfo = { ...productInfo }
+      })
+    },
+    // 查询模组配置,是从模组中通过at指令查询到的配置,并不是uci配置
+    getModuleSettings(index) {
+      this.$oui.call('sim', 'getModuleSettings', {'index': index}).then(result => {
+        const data = typeof result === 'string' ? JSON.parse(result) : result
+        // console.log('data>>>>>>>>>>>', data)
+        const real = this.wanLinks[index].realSettings
+        if (data.rat) real.rat = data.rat
+        if (data.pdp) {
+          if (data.pdp.cid) real.pdp.cid = data.pdp.cid
+          if (data.pdp.pdp_type) real.pdp.pdp_type = data.pdp.pdp_type
+          if (data.pdp.apn) real.pdp.apn = data.pdp.apn
+          if (data.pdp.pdp_addr) real.pdp.pdp_addr = data.pdp.pdp_addr
+        }
+        if (data.auth) {
+          if (data.auth.cid) real.auth.cid = data.auth.cid
+          if (data.auth.auth_type) real.auth.auth_type = data.auth.auth_type
+          if (data.auth.passwd) real.auth.passwd = data.auth.passwd
+          if (data.auth.username) real.auth.username = data.auth.username
+          if (data.auth.plmn) real.auth.plmn = data.auth.plmn
+        }
+        if (data.freqlock) {
+          if (data.freqlock.operatetype) real.freqlock.operatetype = data.freqlock.operatetype
+          if (data.freqlock.forbid_flag) real.freqlock.forbid_flag = data.freqlock.forbid_flag
+          if (data.freqlock.num) real.freqlock.num = data.freqlock.num
+          if (data.freqlock.band) real.freqlock.band = data.freqlock.band
+          if (data.freqlock.arfcn) real.freqlock.arfcn = data.freqlock.arfcn
+          if (data.freqlock.scstype) real.freqlock.scstype = data.freqlock.scstype
+          if (data.freqlock.pci) real.freqlock.pci = data.freqlock.pci
+        }
+        this.wanLinks[index].realSettings = { ...real }
+      })
+    },
+    getStatus(index) {
+      this.$oui.call('sim', 'getStatus', {'index': index}).then(result => {
+        const data = typeof result === 'string' ? JSON.parse(result) : result
+        const sim = this.wanLinks[index].sim
+        if (data.sim) sim.status = data.sim
+        if (data.operator_name) sim.operator = data.operator_name
+        if (data.country) sim.country = data.country
+        if (data.mcc) sim.mcc = data.mcc
+        if (data.mnc) sim.mnc = data.mnc
+        this.wanLinks[index].sim = { ...sim }
 
-          if ('error' === sim.status) {
-            console.warn(this.wanLinks[index].settings.alias, this.wanLinks[index].settings.interface, 'get status failed!')
-            return
+        if (data.monsc) {
+          const monsc = data.monsc
+          const newest = this.wanLinks[index].monsc
+          if (monsc.rat) newest.rat = monsc.rat
+          if (monsc.nr) {
+            if (monsc.nr.cell_id) newest.nr.cell_id = monsc.nr.cell_id
+            if (monsc.nr.arfcn) newest.nr.arfcn = monsc.nr.arfcn
+            if (monsc.nr.scs) newest.nr.scs = monsc.nr.scs
+            if (monsc.nr.pci) newest.nr.pci = monsc.nr.pci
+            if (monsc.nr.tac) newest.nr.tac = monsc.nr.tac
+            if (monsc.nr.rsrp) newest.nr.rsrp = monsc.nr.rsrp
+            if (monsc.nr.rsrq) newest.nr.rsrq = monsc.nr.rsrq
+            if (monsc.nr.sinr) newest.nr.sinr = monsc.nr.sinr
+            // console.log("nr:", newest.nr)
           }
+          if (monsc.lte) {
+            if (monsc.lte.cell_id) newest.lte.cell_id = monsc.lte.cell_id
+            if (monsc.lte.arfcn) newest.lte.arfcn = monsc.lte.arfcn
+            if (monsc.lte.pci) newest.lte.pci = monsc.lte.pci
+            if (monsc.lte.tac) newest.lte.tac = monsc.lte.tac
+            if (monsc.lte.rsrp) newest.lte.rsrp = monsc.lte.rsrp
+            if (monsc.lte.rsrq) newest.lte.rsrq = monsc.lte.rsrq
+            if (monsc.lte.rssi) newest.lte.rssi = monsc.lte.rssi
+            // console.log("lte:", newest.lte)
+          }
+          if (monsc.wcdma) {
+            if (monsc.wcdma.cell_id) newest.wcdma.cell_id = monsc.wcdma.cell_id
+            if (monsc.wcdma.arfcn) newest.wcdma.arfcn = monsc.wcdma.arfcn
+            if (monsc.wcdma.pcs) newest.wcdma.pcs = monsc.wcdma.pcs
+            if (monsc.wcdma.lac) newest.wcdma.lac = monsc.wcdma.lac
+            if (monsc.wcdma.rscp) newest.wcdma.rscp = monsc.wcdma.rscp
+            if (monsc.wcdma.rxlev) newest.wcdma.rxlev = monsc.wcdma.rxlev
+            if (monsc.wcdma.ecno) newest.wcdma.ecno = monsc.wcdma.ecno
+            // console.log("wcdma:", newest.wcdma)
+          }
+          this.wanLinks[index].monsc = { ...newest }
 
-          this.wanLinks[index].status.version = sim.status.version
-          this.wanLinks[index].status.timestamp = sim.status.timestamp
-          this.wanLinks[index].status.imsi = sim.status.imsi
-          this.wanLinks[index].status.imei = sim.status.imei
-          this.wanLinks[index].status.operator = sim.status.operator
-          this.wanLinks[index].status.net = sim.status.net
-          this.wanLinks[index].status.band = sim.status.band
-          this.wanLinks[index].status.cell_nr = sim.status.cell_nr
-          this.wanLinks[index].status.cell_lte = sim.status.cell_lte
-          this.wanLinks[index].status.pcid_nr = sim.status.pcid_nr
-          this.wanLinks[index].status.pcid_lte = sim.status.pcid_lte
-          this.wanLinks[index].status.rsrp_nr = sim.status.rsrp_nr
-          this.wanLinks[index].status.rsrp_lte = sim.status.rsrp_lte
-          this.wanLinks[index].status.sinr_nr = sim.status.sinr_nr
-          this.wanLinks[index].status.sinr_lte = sim.status.sinr_lte
-          this.wanLinks[index].status.status = sim.status.status
-          this.wanLinks[index].status.ip = sim.status.ip
-          this.wanLinks[index].status.mask = sim.status.mask
-          this.wanLinks[index].status.gateway = sim.status.gateway
-          this.wanLinks[index].status.mac = sim.status.mac
-          // console.log(this.wanLinks[index].settings.alias, this.wanLinks[index].settings.interface, this.wanLinks[index].settings)
-          // console.log(this.wanLinks[index].settings.alias, this.wanLinks[index].settings.interface, this.wanLinks[index].status)
-        }).catch(error => {
-          const currentTime = new Date().toISOString()
-          if (error.message === 'Request timeout') {
-            console.error(`[${currentTime}] WAN ${index} getSimStatus request timeout`)
-          } else {
-            console.error(`[${currentTime}] WAN ${index} error details:`, error.message || error)
+          if (data.monnc) {
+            this.wanLinks[index].monnc = { ...data.monnc }
           }
-        })
+        }
       })
     },
     // 切换到WAN配置页面
@@ -320,9 +417,12 @@ export default {
   },
   created() {
     this.getSimSettings()
-    this.getSimStatus()
-    this.$timer.create('wan', this.getSimStatus, { time: 5000, immediate: true, repeat: true})
-    this.$timer.create('wan-product', this.getProductInfo, { time: 15000, immediate: true, repeat: true})
+
+    this.wanLinks.forEach((wan, index) => {
+      this.$timer.create('sim-product' + index, () => this.getProductInfo(index), { time: 15000, immediate: true, repeat: true})
+      this.$timer.create('sim-status' + index, () => this.getStatus(index), { time: 10000, immediate: true, repeat: true})
+      this.$timer.create('modules' + index, () => this.getModuleSettings(index), { time: 12000, immediate: true, repeat: true})
+    })
   }
 }
 </script>

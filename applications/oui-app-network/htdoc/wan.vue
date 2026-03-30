@@ -109,8 +109,8 @@
 
       <!-- 右侧：三个小卡片 -->
       <div class="right-column">
-        <!-- 上方：连接状态和SIM卡状态水平排列 -->
         <div class="top-cards">
+        <!-- 上方：连接状态和SIM卡状态水平排列 -->
           <!-- 连接状态卡片 -->
           <el-card class="config-card compact-card">
             <template #header>
@@ -210,22 +210,27 @@
 
                 <div class="status-item">
                   <span class="status-label">状态:</span>
-                  <span class="status-value">已注册</span>
+                  <span class="status-value">{{ sim.status }}</span>
+                </div>
+
+                <div class="status-item">
+                  <span class="status-label">国家:</span>
+                  <span class="status-value">{{ sim.country }}</span>
                 </div>
 
                 <div class="status-item">
                   <span class="status-label">{{ $t('Operator') }}:</span>
-                  <span class="status-value">{{ getOperatorString(status.operator) }}</span>
+                  <span class="status-value">{{ sim.mcc }}{{ sim.mnc }} {{ sim.operator }}</span>
                 </div>
 
                 <div class="status-item">
                   <span class="status-label">{{ $t('IMSI') }}:</span>
-                  <span class="status-value">{{ status.imsi }}</span>
+                  <span class="status-value">{{ productInfo.imsi }}</span>
                 </div>
 
                 <div class="status-item">
                   <span class="status-label">{{ $t('ICCID') }}:</span>
-                  <span class="status-value">{{ status.iccid }}</span>
+                  <span class="status-value">{{ productInfo.iccid }}</span>
                 </div>
 
               </div>
@@ -243,17 +248,17 @@
 
                 <div class="status-item">
                   <span class="status-label">模组型号:</span>
-                  <span class="status-value">MT5700M-CN</span>
+                  <span class="status-value">{{ productInfo.product }}</span>
                 </div>
 
                 <div class="status-item">
                   <span class="status-label">{{ $t('模组版本') }}:</span>
-                  <span class="status-value">{{ status.version }}</span>
+                  <span class="status-value">{{ productInfo.revision }}</span>
                 </div>
 
                 <div class="status-item">
                   <span class="status-label">{{ $t('IMEI') }}:</span>
-                  <span class="status-value">{{ status.imei }}</span>
+                  <span class="status-value">{{ productInfo.imei }}</span>
                 </div>
 
               </div>
@@ -272,30 +277,25 @@
           <div class="status-table">
             <div class="table-title">NR 驻留小区</div>
             <div class="table-row header-row">
-              <div class="table-cell">RAT</div>
-              <div class="table-cell">MCC</div>
-              <div class="table-cell">MNC</div>
+              <!-- <div class="table-cell">RAT</div> -->
               <div class="table-cell">ARFCN</div>
               <div class="table-cell">SCS</div>
               <div class="table-cell">Cell_ID</div>
               <div class="table-cell">PCI</div>
               <div class="table-cell">TAC</div>
-              <div class="table-cell">RSRP</div>
-              <div class="table-cell">RSRQ</div>
-              <div class="table-cell">SINR</div>
+              <div class="table-cell">RSRP/dBm</div>
+              <div class="table-cell">RSRQ/dB</div>
+              <div class="table-cell">SINR/dBm</div>
             </div>
-            <div class="table-row" v-if="status.net && status.net !== ''">
-              <div class="table-cell">{{ status.net }}</div>
-              <div class="table-cell">{{ status.mcc }}</div>
-              <div class="table-cell">{{ status.mnc }}</div>
-              <div class="table-cell">{{ status.arfcn_nr }}</div>
-              <div class="table-cell">{{ status.scs }}</div>
-              <div class="table-cell">{{ status.cell_nr }}</div>
-              <div class="table-cell">{{ status.pcid_nr }}</div>
-              <div class="table-cell">{{ status.tac }}</div>
-              <div class="table-cell">{{ status.rsrp_nr }} dBm</div>
-              <div class="table-cell">{{ status.rsrq }}</div>
-              <div class="table-cell">{{ status.sinr_nr }} dB</div>
+            <div class="table-row" v-if="monsc && monsc.nr">
+              <div class="table-cell">{{ monsc.nr.arfcn }}</div>
+              <div class="table-cell">{{ monsc.nr.scs }}</div>
+              <div class="table-cell">{{ monsc.nr.cell_id }}</div>
+              <div class="table-cell">{{ monsc.nr.pci }}</div>
+              <div class="table-cell">{{ monsc.nr.tac }}</div>
+              <div class="table-cell">{{ monsc.nr.rsrp }}</div>
+              <div class="table-cell">{{ monsc.nr.rsrq }}</div>
+              <div class="table-cell">{{ monsc.nr.sinr }}</div>
             </div>
             <div class="no-data" v-if="!status.net || status.net === ''">
               {{ $t('暂无NR驻留小区数据') }}
@@ -303,30 +303,25 @@
 
             <div class="table-title">LTE 驻留小区</div>
             <div class="table-row header-row">
-              <div class="table-cell">RAT</div>
-              <div class="table-cell">MCC</div>
-              <div class="table-cell">MNC</div>
               <div class="table-cell">ARFCN</div>
               <div class="table-cell">Cell_ID</div>
               <div class="table-cell">PCI</div>
               <div class="table-cell">TAC</div>
-              <div class="table-cell">RSRP</div>
-              <div class="table-cell">RSRQ</div>
-              <div class="table-cell">RSSI</div>
+              <div class="table-cell">RSRP/dBm</div>
+              <div class="table-cell">RSRQ/dB</div>
+              <div class="table-cell">RSSI/dBm</div>
             </div>
-            <div class="table-row" v-if="status.net_lte && status.net_lte !== ''">
-              <div class="table-cell">{{ status.net_lte }}</div>
-              <div class="table-cell">{{ status.mcc_lte }}</div>
-              <div class="table-cell">{{ status.mnc_lte }}</div>
-              <div class="table-cell">{{ status.arfcn_lte }}</div>
-              <div class="table-cell">{{ status.cell_lte }}</div>
-              <div class="table-cell">{{ status.pcid_lte }}</div>
-              <div class="table-cell">{{ status.tac_lte }}</div>
-              <div class="table-cell">{{ status.rsrp_lte }} dBm</div>
-              <div class="table-cell">{{ status.rsrq_lte }}</div>
-              <div class="table-cell">{{ status.rssi }} dBm</div>
+            <div class="table-row" v-if="monsc && monsc.lte">
+              <div class="table-cell">{{ monsc.lte.arfcn }}</div>
+              <div class="table-cell">{{ monsc.lte.cell_id }}</div>
+              <div class="table-cell">{{ monsc.lte.pci }}</div>
+              <div class="table-cell">{{ monsc.lte.tac }}</div>
+              <div class="table-cell">{{ monsc.lte.rsrp }}</div>
+              <div class="table-cell">{{ monsc.lte.rsrq }}</div>
+              <div class="table-cell">{{ monsc.lte.rssi }}</div>
+
             </div>
-            <div class="no-data" v-if="!status.net_lte || status.net_lte === ''">
+            <div class="no-data" v-if="!monsc.lte">
               {{ $t('暂无LTE驻留小区数据') }}
             </div>
           </div>
@@ -341,63 +336,41 @@
           </template>
 
           <div class="status-table">
-            <div class="table-title">NR 相邻小区</div>
+            <div class="table-title">NR相邻小区</div>
             <div class="table-row header-row">
-              <div class="table-cell">RAT</div>
-              <div class="table-cell">MCC</div>
-              <div class="table-cell">MNC</div>
               <div class="table-cell">ARFCN</div>
-              <div class="table-cell">SCS</div>
-              <div class="table-cell">Cell_ID</div>
               <div class="table-cell">PCI</div>
-              <div class="table-cell">TAC</div>
-              <div class="table-cell">RSRP</div>
-              <div class="table-cell">RSRQ</div>
-              <div class="table-cell">SINR</div>
+              <div class="table-cell">RSRP/dBm</div>
+              <div class="table-cell">RSRQ/dB</div>
+              <div class="table-cell">SINR/dBm</div>
             </div>
-            <div class="table-row" v-for="(cell, index) in status.nr_neighbors" :key="'nr-' + index">
-              <div class="table-cell">{{ cell.rat }}</div>
-              <div class="table-cell">{{ cell.mcc }}</div>
-              <div class="table-cell">{{ cell.mnc }}</div>
+            <div class="table-row" v-for="(cell, index) in monnc.nr" :key="'nr-' + index">
               <div class="table-cell">{{ cell.arfcn }}</div>
-              <div class="table-cell">{{ cell.scs }}</div>
-              <div class="table-cell">{{ cell.cell_id }}</div>
               <div class="table-cell">{{ cell.pci }}</div>
-              <div class="table-cell">{{ cell.tac }}</div>
-              <div class="table-cell">{{ cell.rsrp }} dBm</div>
+              <div class="table-cell">{{ cell.rsrp }}</div>
               <div class="table-cell">{{ cell.rsrq }}</div>
-              <div class="table-cell">{{ cell.sinr }} dB</div>
+              <div class="table-cell">{{ cell.sinr }}</div>
             </div>
-            <div class="no-data" v-if="status.nr_neighbors.length === 0">
+            <div class="no-data" v-if="monnc.nr.length === 0">
               {{ $t('暂无NR相邻小区数据') }}
             </div>
 
-            <div class="table-title">LTE 相邻小区</div>
+            <div class="table-title">LTE相邻小区</div>
             <div class="table-row header-row">
-              <div class="table-cell">RAT</div>
-              <div class="table-cell">MCC</div>
-              <div class="table-cell">MNC</div>
               <div class="table-cell">ARFCN</div>
-              <div class="table-cell">Cell_ID</div>
               <div class="table-cell">PCI</div>
-              <div class="table-cell">TAC</div>
               <div class="table-cell">RSRP</div>
               <div class="table-cell">RSRQ</div>
-              <div class="table-cell">RSSI</div>
+              <div class="table-cell">RXLEV</div>
             </div>
-            <div class="table-row" v-for="(cell, index) in status.lte_neighbors" :key="'lte-' + index">
-              <div class="table-cell">{{ cell.rat }}</div>
-              <div class="table-cell">{{ cell.mcc }}</div>
-              <div class="table-cell">{{ cell.mnc }}</div>
+            <div class="table-row" v-for="(cell, index) in monnc.lte" :key="'lte-' + index">
               <div class="table-cell">{{ cell.arfcn }}</div>
-              <div class="table-cell">{{ cell.cell_id }}</div>
               <div class="table-cell">{{ cell.pci }}</div>
-              <div class="table-cell">{{ cell.tac }}</div>
-              <div class="table-cell">{{ cell.rsrp }} dBm</div>
+              <div class="table-cell">{{ cell.rsrp }}</div>
               <div class="table-cell">{{ cell.rsrq }}</div>
-              <div class="table-cell">{{ cell.rssi }} dBm</div>
+              <div class="table-cell">{{ cell.rxlev }}</div>
             </div>
-            <div class="no-data" v-if="status.lte_neighbors.length === 0">
+            <div class="no-data" v-if="monnc.lte.length === 0">
               {{ $t('暂无LTE相邻小区数据') }}
             </div>
           </div>
@@ -424,10 +397,6 @@ export default {
         alias: '',
         interface: '',
         timestamp: '',
-        version: '',
-        imsi: '',
-        imei: '',
-        operator: '',
         net: '',
         band: '',
         pcid_nr: '',
@@ -458,6 +427,88 @@ export default {
         rssi: '',
         nr_neighbors: [],
         lte_neighbors: []
+      },
+      productInfo: {
+        vendor: '',
+        product: '',
+        revision: '',
+        imei: '',
+        iccid: '',
+        imsi: ''
+      },
+      sim: {
+        operator: '',
+        status: '',
+        country: '',
+        mcc: '',
+        mnc: ''
+      },
+      monsc: {
+          rat: '',
+          nr:{
+            cell_id:'',
+            arfcn:'',
+            scs:'',
+            pci:'',
+            tac:'',
+            rsrp:'',
+            rsrq:'',
+            sinr:''
+          },
+          lte:{
+            cell_id:"",
+            arfcn:"",
+            pci:"",
+            tac:"",
+            rsrp:"",
+            rsrq:"",
+            rssi:""
+          },
+          wcdma:{
+            arfcn:'',
+            pcs:'',
+            cell_id:'',
+            lac:'',
+            rscp:'',
+            rxlev:'',
+            ecno:''
+          }
+        },
+      monnc: {
+          gsm: [],
+          wcdma: [],
+          lte: [],
+          nr: []
+        },
+      // 从模组中查到的配置
+      realSettings:{
+        // 入网设置
+        rat:'',
+        // pdp上下文
+        pdp: {
+          cid: '',
+          pdp_type: '',
+          apn: '',
+          pdp_addr: ''
+        },
+        // 鉴权设置
+        auth:{
+          cid: '',
+          auth_type: '',
+          passwd: '',
+          username: '',
+          plmn: ''
+        },
+        // 锁频端 锁频点 锁小区设置
+        freqlock:{
+          operatetype: '',
+          forbid_flag: '',
+          num: '',
+          band: [],
+          arfcn: [],
+          scstype: [],
+          pci: []
+        }
       },
       settings: {
         index: '',
@@ -506,11 +557,8 @@ export default {
       // 总是更新实时状态
       this.status.alias = data.settings.alias
       this.status.interface = data.settings.interface
-      this.status.version = data.status.version
       this.status.timestamp = data.status.timestamp
       this.status.imsi = data.status.imsi
-      this.status.imei = data.status.imei
-      this.status.operator = data.status.operator
       this.status.net = data.status.net
       this.status.band = data.status.band
       this.status.cell_nr = data.status.cell_nr
@@ -526,6 +574,18 @@ export default {
       this.status.mask = data.status.mask
       this.status.gateway = data.status.gateway
       this.status.mac = data.status.mac
+
+      // productInfo
+      this.productInfo = data.productInfo
+      // sim
+      this.sim = data.sim
+      // monsc
+      this.monsc = data.monsc
+      // monnc
+      this.monnc = data.monnc
+      // 从模组中查到的真实配置
+      this.realSettings = data.realSettings
+      // console.log("real settings:", this.realSettings)
 
       // settings 仅在首次进入页面时初始化一次
       if (!this.settingsInitialized) {
@@ -566,25 +626,6 @@ export default {
         console.error('changeSimEnable error:', err)
         this.$message.error('设置失败')
       })
-    },
-    // 运营商
-    getOperatorString(operatorID) {
-      switch (operatorID) {
-      case '46000': return '中国移动'
-      case '46002': return '中国移动'
-      case '46004': return '中国移动'
-      case '46007': return '中国移动'
-      case '46008': return '中国移动'
-      case '46001': return '中国联通'
-      case '46006': return '中国联通'
-      case '46009': return '中国联通'
-      case '46003': return '中国电信'
-      case '46005': return '中国电信'
-      case '46011': return '中国电信'
-      case '46015': return '中国广电'
-      case '46020': return '中国铁通'
-      default: return '未知'
-      }
     },
     getStatusClass(status) {
       switch (status) {
