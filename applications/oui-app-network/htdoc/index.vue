@@ -37,7 +37,7 @@
             </svg>
             <div class="subnet-info-wan">
               <span>{{ wan.settings.alias }}</span>
-              <span>{{ wan.settings.interface }}</span>
+              <!-- <span>{{ wan.settings.interface }}</span> -->
               <span>{{ getOperatorString(wan.status.operator) }}</span>
               <span>{{ wan.status.net }}</span>
               <span>{{ wan.settings.apn }}</span>
@@ -238,16 +238,16 @@ export default {
     },
     getProductInfo() {
 
-      this.$oui.call('sim', 'getProductInfo', {'index': "0"}).then(result => {
-          console.log(`WAN getProductInfo result:`, result)
+      this.$oui.call('sim', 'getProductInfo', {'index': '0'}).then(result => {
+        console.log(`WAN getProductInfo result:`, result)
       })
 
-      this.$oui.call('sim', 'getRealtimeStatus', {'index': "0"}).then(result => {
-          console.log(`WAN getRealtimeStatus result:`, result)
+      this.$oui.call('sim', 'getRealtimeStatus', {'index': '0'}).then(result => {
+        console.log(`WAN getRealtimeStatus result:`, result)
       })
 
-      this.$oui.call('sim', 'getSettings', {'index': "0"}).then(result => {
-          console.log(`WAN getSettings result:`, result)
+      this.$oui.call('sim', 'getSettings', {'index': '0'}).then(result => {
+        console.log(`WAN getSettings result:`, result)
       })
 
       // this.wanLinks.forEach((wan, index) => {

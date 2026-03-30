@@ -5,233 +5,404 @@
     </div>
 
     <div class="config-section">
-      <el-card class="config-card">
-        <template #header>
-          <div class="card-header">
-            <span>{{ $t('Basic Settings') }}</span>
-          </div>
-        </template>
-        <el-form :model="settings" label-width="120px" class="config-form" label-align="left" label-position="left">
-          <el-form-item :label="$t('Label')">
-            <el-input v-model="settings.alias" :placeholder="$t('Enter WAN label')" readonly disabled/>
-          </el-form-item>
-          <el-form-item :label="$t('Interface')">
-            <el-input v-model="settings.interface" :placeholder="$t('Enter interface name')" readonly disabled/>
-          </el-form-item>
+      <!-- 左侧：基本设置卡片 -->
+      <div class="left-column">
+        <el-card class="config-card">
+          <template #header>
+            <div class="card-header">
+              <span>{{ $t('Basic Settings') }}</span>
+            </div>
+          </template>
+          <el-form :model="settings" label-width="120px" class="config-form" label-align="left" label-position="left">
+            <el-form-item :label="$t('Label')">
+              <el-input v-model="settings.alias" :placeholder="$t('Enter WAN label')" readonly disabled/>
+            </el-form-item>
+            <el-form-item :label="$t('Interface')">
+              <el-input v-model="settings.interface" :placeholder="$t('Enter interface name')" readonly disabled/>
+            </el-form-item>
 
-          <el-form-item :label="$t('Network Access')">
-            <el-select v-model="settings.net" :placeholder="$t('Select access type')" style="width: 100%">
-              <el-option :label="$t('AUTO')" value="AUTO"/>
-              <el-option label="SA" value="SA"/>
-              <el-option label="NSA" value="NSA"/>
-              <el-option label="LTE" value="LTE"/>
-            </el-select>
-          </el-form-item>
+            <el-form-item :label="$t('Network Access')">
+              <el-select v-model="settings.net" :placeholder="$t('Select access type')" style="width: 100%">
+                <el-option :label="$t('AUTO')" value="AUTO"/>
+                <el-option label="SA" value="SA"/>
+                <el-option label="NSA" value="NSA"/>
+                <el-option label="LTE" value="LTE"/>
+              </el-select>
+            </el-form-item>
 
-          <el-form-item :label="$t('Authentication')">
-            <el-select v-model="settings.auth" :placeholder="$t('Select auth type')" style="width: 100%">
-              <el-option :label="$t('AUTO')" value="AUTO"/>
-              <el-option label="PAP" value="PAP"/>
-              <el-option label="CHAP" value="CHAP"/>
-              <el-option :label="$t('NONE')" value="NONE"/>
-            </el-select>
-          </el-form-item>
+            <el-form-item :label="$t('Authentication')">
+              <el-select v-model="settings.auth" :placeholder="$t('Select auth type')" style="width: 100%">
+                <el-option :label="$t('AUTO')" value="AUTO"/>
+                <el-option label="PAP" value="PAP"/>
+                <el-option label="CHAP" value="CHAP"/>
+                <el-option :label="$t('NONE')" value="NONE"/>
+              </el-select>
+            </el-form-item>
 
-          <el-form-item :label="$t('USER')">
-            <el-input v-model="settings.username" placeholder="Enter User name"/>
-          </el-form-item>
+            <el-form-item :label="$t('USER')">
+              <el-input v-model="settings.username" placeholder="Enter User name"/>
+            </el-form-item>
 
-          <el-form-item :label="$t('PASSWD')">
-            <el-input v-model="settings.password" placeholder="Enter User password"/>
-          </el-form-item>
+            <el-form-item :label="$t('PASSWD')">
+              <el-input v-model="settings.password" placeholder="Enter User password"/>
+            </el-form-item>
 
-          <el-form-item label="APN">
-            <el-input v-model="settings.apn" placeholder="Enter APN"/>
-          </el-form-item>
+            <el-form-item label="APN">
+              <el-input v-model="settings.apn" placeholder="Enter APN"/>
+            </el-form-item>
 
-          <el-form-item :label="$t('Lock Frequency Band')">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <el-input
-                v-model="settings.band"
-                :placeholder="settings.bandUnLock ? '自动' : $t('band like: n78、b1...')"
-                :readonly="settings.bandUnLock"
-                style="flex: 1;"
-                disabled
+            <el-form-item :label="$t('Lock Frequency Band')">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <el-input
+                  v-model="settings.band"
+                  :placeholder="settings.bandUnLock ? '自动' : $t('band like: n78、b1...')"
+                  :readonly="settings.bandUnLock"
+                  style="flex: 1;"
+                  disabled
+                />
+                <el-checkbox v-model="settings.bandUnLock" @change="handleUnlockBand" disabled>解锁</el-checkbox>
+              </div>
+            </el-form-item>
+
+            <el-form-item :label="$t('Lock PCI')">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <el-input
+                  v-model="settings.pci"
+                  :placeholder="settings.pciUnlock ? '自动' : $t('Enter PCID')"
+                  :readonly="settings.pciUnlock"
+                  style="flex: 1;"
+                  disabled
+                />
+                <el-checkbox v-model="settings.pciUnlock" @change="handleUnlockPCI" disabled>解锁</el-checkbox>
+              </div>
+            </el-form-item>
+
+            <el-form-item :label="$t('Enable')">
+              <el-switch
+                v-model="settings.enable"
+                inline-prompt
+                :active-text="'开'"
+                :inactive-text="'关'"
+                @change="handleEnableChange"
+                class="wan-enable-switch"
               />
-              <el-checkbox v-model="settings.bandUnLock" @change="handleUnlockBand" disabled>解锁</el-checkbox>
+            </el-form-item>
+
+          </el-form>
+          <div class="action-buttons card-actions">
+            <el-button @click="saveConfig" type="primary" size="large">
+              {{ $t('Save Configuration') }}
+            </el-button>
+            <el-button @click="testConnection" type="success" size="large" disabled>
+              {{ $t('Test Connection') }}
+            </el-button>
+            <el-button @click="resetConfig" type="warning" size="large" disabled>
+              {{ $t('Reset to Default') }}
+            </el-button>
+            <el-button @click="goBack" type="primary" size="large">
+              <el-icon><ArrowLeft /></el-icon>
+              {{ $t('Back') }}
+            </el-button>
+          </div>
+        </el-card>
+      </div>
+
+      <!-- 右侧：三个小卡片 -->
+      <div class="right-column">
+        <!-- 上方：连接状态和SIM卡状态水平排列 -->
+        <div class="top-cards">
+          <!-- 连接状态卡片 -->
+          <el-card class="config-card compact-card">
+            <template #header>
+              <div class="card-header">
+                <span>{{ $t('连接状态') }}</span>
+              </div>
+            </template>
+
+            <div class="status-info">
+              <div class="status-item">
+                <span class="status-label">{{ $t('Current Status') }}:</span>
+                <span :class="['status-value', getStatusClass(status.status)]">
+                  {{ getStatusText(status.status) }}
+                </span>
+              </div>
+
+              <div class="status-item">
+                <span class="status-label">{{ $t('状态更新时间') }}:</span>
+                <span class="status-value">{{ status.timestamp }}</span>
+              </div>
+
+              <!-- 信号强度 -->
+              <div class="signal-row">
+                <div class="signal-title">信号强度:</div>
+                <div class="signal-item">
+                  <span class="status-label">RSRP:</span>
+                  <span class="status-value">0</span>
+                </div>
+                <div class="signal-item">
+                  <span class="status-label">RSRQ:</span>
+                  <span class="status-value">0</span>
+                </div>
+                <div class="signal-item">
+                  <span class="status-label">RSSI:</span>
+                  <span class="status-value">0</span>
+                </div>
+                <div class="signal-item">
+                  <span class="status-label">SINR:</span>
+                  <span class="status-value">0</span>
+                </div>
+              </div>
+
+              <div class="status-item">
+                <span class="status-label">已发送:</span>
+                <span class="status-value">27.1MB</span>
+              </div>
+
+              <div class="status-item">
+                <span class="status-label">已接收:</span>
+                <span class="status-value">36.7MB</span>
+              </div>
+
+              <div class="status-item">
+                <span class="status-label">{{ $t('Real Network Access') }}:</span>
+                <span class="status-value">{{ status.net }}</span>
+              </div>
+
+
+              <div class="status-item">
+                <span class="status-label">{{ $t('Real Band') }}:</span>
+                <span class="status-value">{{ status.band }}</span>
+              </div>
+
+              <div class="status-item">
+                <span class="status-label">{{ $t('IP Address') }}:</span>
+                <span class="status-value">{{ status.ip }}</span>
+              </div>
+
+              <div class="status-item">
+                <span class="status-label">{{ $t('Netmask') }}:</span>
+                <span class="status-value">{{ status.mask }}</span>
+              </div>
+
+              <div class="status-item">
+                <span class="status-label">{{ $t('Gateway') }}:</span>
+                <span class="status-value">{{ status.gateway }}</span>
+              </div>
+
+              <div class="status-item">
+                <span class="status-label">{{ $t('MAC') }}:</span>
+                <span class="status-value">{{ status.mac }}</span>
+              </div>
             </div>
-          </el-form-item>
+          </el-card>
 
-          <el-form-item :label="$t('Lock PCI')">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <el-input
-                v-model="settings.pci"
-                :placeholder="settings.pciUnlock ? '自动' : $t('Enter PCID')"
-                :readonly="settings.pciUnlock"
-                style="flex: 1;"
-                disabled
-              />
-              <el-checkbox v-model="settings.pciUnlock" @change="handleUnlockPCI" disabled>解锁</el-checkbox>
-            </div>
-          </el-form-item>
+          <!-- SIM卡状态和模组状态垂直排列 -->
+          <div class="vertical-cards">
+            <!-- SIM卡状态卡片 -->
+            <el-card class="config-card compact-card">
+              <template #header>
+                <div class="card-header">
+                  <span>{{ $t('SIM卡状态') }}</span>
+                </div>
+              </template>
 
-          <el-form-item :label="$t('Enable')">
-            <el-switch
-              v-model="settings.enable"
-              inline-prompt
-              :active-text="'开'"
-              :inactive-text="'关'"
-              @change="handleEnableChange"
-              class="wan-enable-switch"
-            />
-          </el-form-item>
+              <div class="status-info">
 
-        </el-form>
-        <div class="action-buttons card-actions">
-          <el-button @click="saveConfig" type="primary" size="large">
-            {{ $t('Save Configuration') }}
-          </el-button>
-          <el-button @click="testConnection" type="success" size="large" disabled>
-            {{ $t('Test Connection') }}
-          </el-button>
-          <el-button @click="resetConfig" type="warning" size="large" disabled>
-            {{ $t('Reset to Default') }}
-          </el-button>
-          <el-button @click="goBack" type="primary" size="large">
-            <el-icon><ArrowLeft /></el-icon>
-            {{ $t('Back') }}
-          </el-button>
+                <div class="status-item">
+                  <span class="status-label">状态:</span>
+                  <span class="status-value">已注册</span>
+                </div>
+
+                <div class="status-item">
+                  <span class="status-label">{{ $t('Operator') }}:</span>
+                  <span class="status-value">{{ getOperatorString(status.operator) }}</span>
+                </div>
+
+                <div class="status-item">
+                  <span class="status-label">{{ $t('IMSI') }}:</span>
+                  <span class="status-value">{{ status.imsi }}</span>
+                </div>
+
+                <div class="status-item">
+                  <span class="status-label">{{ $t('ICCID') }}:</span>
+                  <span class="status-value">{{ status.iccid }}</span>
+                </div>
+
+              </div>
+            </el-card>
+
+            <!-- 模组状态卡片 -->
+            <el-card class="config-card compact-card">
+              <template #header>
+                <div class="card-header">
+                  <span>{{ $t('模组信息') }}</span>
+                </div>
+              </template>
+
+              <div class="status-info">
+
+                <div class="status-item">
+                  <span class="status-label">模组型号:</span>
+                  <span class="status-value">MT5700M-CN</span>
+                </div>
+
+                <div class="status-item">
+                  <span class="status-label">{{ $t('模组版本') }}:</span>
+                  <span class="status-value">{{ status.version }}</span>
+                </div>
+
+                <div class="status-item">
+                  <span class="status-label">{{ $t('IMEI') }}:</span>
+                  <span class="status-value">{{ status.imei }}</span>
+                </div>
+
+              </div>
+            </el-card>
+          </div>
         </div>
-      </el-card>
 
-      <el-card class="config-card">
-        <template #header>
-          <div class="card-header">
-            <span>{{ $t('Status Information') }}</span>
-          </div>
-        </template>
+        <!-- 当前驻留小区信息卡片 -->
+        <el-card class="config-card compact-card">
+          <template #header>
+            <div class="card-header">
+              <span>{{ $t('当前驻留小区信息') }}</span>
+            </div>
+          </template>
 
-        <div class="status-info">
-          <div class="status-item">
-            <span class="status-label">{{ $t('Current Status') }}:</span>
-            <span :class="['status-value', getStatusClass(status.status)]">
-              {{ getStatusText(status.status) }}
-            </span>
-          </div>
+          <div class="status-table">
+            <div class="table-title">NR 驻留小区</div>
+            <div class="table-row header-row">
+              <div class="table-cell">RAT</div>
+              <div class="table-cell">MCC</div>
+              <div class="table-cell">MNC</div>
+              <div class="table-cell">ARFCN</div>
+              <div class="table-cell">SCS</div>
+              <div class="table-cell">Cell_ID</div>
+              <div class="table-cell">PCI</div>
+              <div class="table-cell">TAC</div>
+              <div class="table-cell">RSRP</div>
+              <div class="table-cell">RSRQ</div>
+              <div class="table-cell">SINR</div>
+            </div>
+            <div class="table-row" v-if="status.net && status.net !== ''">
+              <div class="table-cell">{{ status.net }}</div>
+              <div class="table-cell">{{ status.mcc }}</div>
+              <div class="table-cell">{{ status.mnc }}</div>
+              <div class="table-cell">{{ status.arfcn_nr }}</div>
+              <div class="table-cell">{{ status.scs }}</div>
+              <div class="table-cell">{{ status.cell_nr }}</div>
+              <div class="table-cell">{{ status.pcid_nr }}</div>
+              <div class="table-cell">{{ status.tac }}</div>
+              <div class="table-cell">{{ status.rsrp_nr }} dBm</div>
+              <div class="table-cell">{{ status.rsrq }}</div>
+              <div class="table-cell">{{ status.sinr_nr }} dB</div>
+            </div>
+            <div class="no-data" v-if="!status.net || status.net === ''">
+              {{ $t('暂无NR驻留小区数据') }}
+            </div>
 
-          <div class="status-item">
-            <span class="status-label">{{ $t('状态更新时间') }}:</span>
-            <span class="status-value">{{ status.timestamp }}</span>
-          </div>
-
-          <div class="status-item">
-            <span class="status-label">{{ $t('Operator') }}:</span>
-            <span class="status-value">{{ getOperatorString(status.operator) }}</span>
-          </div>
-
-          <div class="status-item">
-            <span class="status-label">{{ $t('IMSI') }}:</span>
-            <span class="status-value">{{ status.imsi }}</span>
-          </div>
-
-          <div class="status-item">
-            <span class="status-label">{{ $t('IMEI') }}:</span>
-            <span class="status-value">{{ status.imei }}</span>
-          </div>
-
-          <div class="status-item">
-            <span class="status-label">{{ $t('Real Network Access') }}:</span>
-            <span class="status-value">{{ status.net }}</span>
-          </div>
-
-          <div class="status-item">
-            <span class="status-label">{{ $t('Real Band') }}:</span>
-            <span class="status-value">{{ status.band }}</span>
-          </div>
-
-          <div class="status-item status-item-cellid">
-            <span class="status-label">{{ $t('Cell ID') }}:</span>
-            <div class="status-value-multi">
-              <div class="status-value-line">
-                <span class="status-value-label">NR:</span>
-                <span class="status-value status-fixed-10ch">{{ status.cell_nr }}</span>
-              </div>
-              <div class="status-value-line">
-                <span class="status-value-label">LTE:</span>
-                <span class="status-value status-fixed-10ch">{{ status.cell_lte }}</span>
-              </div>
+            <div class="table-title">LTE 驻留小区</div>
+            <div class="table-row header-row">
+              <div class="table-cell">RAT</div>
+              <div class="table-cell">MCC</div>
+              <div class="table-cell">MNC</div>
+              <div class="table-cell">ARFCN</div>
+              <div class="table-cell">Cell_ID</div>
+              <div class="table-cell">PCI</div>
+              <div class="table-cell">TAC</div>
+              <div class="table-cell">RSRP</div>
+              <div class="table-cell">RSRQ</div>
+              <div class="table-cell">RSSI</div>
+            </div>
+            <div class="table-row" v-if="status.net_lte && status.net_lte !== ''">
+              <div class="table-cell">{{ status.net_lte }}</div>
+              <div class="table-cell">{{ status.mcc_lte }}</div>
+              <div class="table-cell">{{ status.mnc_lte }}</div>
+              <div class="table-cell">{{ status.arfcn_lte }}</div>
+              <div class="table-cell">{{ status.cell_lte }}</div>
+              <div class="table-cell">{{ status.pcid_lte }}</div>
+              <div class="table-cell">{{ status.tac_lte }}</div>
+              <div class="table-cell">{{ status.rsrp_lte }} dBm</div>
+              <div class="table-cell">{{ status.rsrq_lte }}</div>
+              <div class="table-cell">{{ status.rssi }} dBm</div>
+            </div>
+            <div class="no-data" v-if="!status.net_lte || status.net_lte === ''">
+              {{ $t('暂无LTE驻留小区数据') }}
             </div>
           </div>
+        </el-card>
 
-          <div class="status-item status-item-pcid">
-            <span class="status-label">{{ $t('Physical Cell ID(PCID)') }}:</span>
-            <div class="status-value-multi">
-              <div class="status-value-line">
-                <span class="status-value-label">NR:</span>
-                <span class="status-value status-fixed-5ch">{{ status.pcid_nr }}</span>
-              </div>
-              <div class="status-value-line">
-                <span class="status-value-label">LTE:</span>
-                <span class="status-value status-fixed-5ch">{{ status.pcid_lte }}</span>
-              </div>
+        <!-- 下方：相邻小区信息卡片 -->
+        <el-card class="config-card neighbor-card">
+          <template #header>
+            <div class="card-header">
+              <span>{{ $t('相邻小区信息') }}</span>
+            </div>
+          </template>
+
+          <div class="status-table">
+            <div class="table-title">NR 相邻小区</div>
+            <div class="table-row header-row">
+              <div class="table-cell">RAT</div>
+              <div class="table-cell">MCC</div>
+              <div class="table-cell">MNC</div>
+              <div class="table-cell">ARFCN</div>
+              <div class="table-cell">SCS</div>
+              <div class="table-cell">Cell_ID</div>
+              <div class="table-cell">PCI</div>
+              <div class="table-cell">TAC</div>
+              <div class="table-cell">RSRP</div>
+              <div class="table-cell">RSRQ</div>
+              <div class="table-cell">SINR</div>
+            </div>
+            <div class="table-row" v-for="(cell, index) in status.nr_neighbors" :key="'nr-' + index">
+              <div class="table-cell">{{ cell.rat }}</div>
+              <div class="table-cell">{{ cell.mcc }}</div>
+              <div class="table-cell">{{ cell.mnc }}</div>
+              <div class="table-cell">{{ cell.arfcn }}</div>
+              <div class="table-cell">{{ cell.scs }}</div>
+              <div class="table-cell">{{ cell.cell_id }}</div>
+              <div class="table-cell">{{ cell.pci }}</div>
+              <div class="table-cell">{{ cell.tac }}</div>
+              <div class="table-cell">{{ cell.rsrp }} dBm</div>
+              <div class="table-cell">{{ cell.rsrq }}</div>
+              <div class="table-cell">{{ cell.sinr }} dB</div>
+            </div>
+            <div class="no-data" v-if="status.nr_neighbors.length === 0">
+              {{ $t('暂无NR相邻小区数据') }}
+            </div>
+
+            <div class="table-title">LTE 相邻小区</div>
+            <div class="table-row header-row">
+              <div class="table-cell">RAT</div>
+              <div class="table-cell">MCC</div>
+              <div class="table-cell">MNC</div>
+              <div class="table-cell">ARFCN</div>
+              <div class="table-cell">Cell_ID</div>
+              <div class="table-cell">PCI</div>
+              <div class="table-cell">TAC</div>
+              <div class="table-cell">RSRP</div>
+              <div class="table-cell">RSRQ</div>
+              <div class="table-cell">RSSI</div>
+            </div>
+            <div class="table-row" v-for="(cell, index) in status.lte_neighbors" :key="'lte-' + index">
+              <div class="table-cell">{{ cell.rat }}</div>
+              <div class="table-cell">{{ cell.mcc }}</div>
+              <div class="table-cell">{{ cell.mnc }}</div>
+              <div class="table-cell">{{ cell.arfcn }}</div>
+              <div class="table-cell">{{ cell.cell_id }}</div>
+              <div class="table-cell">{{ cell.pci }}</div>
+              <div class="table-cell">{{ cell.tac }}</div>
+              <div class="table-cell">{{ cell.rsrp }} dBm</div>
+              <div class="table-cell">{{ cell.rsrq }}</div>
+              <div class="table-cell">{{ cell.rssi }} dBm</div>
+            </div>
+            <div class="no-data" v-if="status.lte_neighbors.length === 0">
+              {{ $t('暂无LTE相邻小区数据') }}
             </div>
           </div>
-
-          <div class="status-item status-item-rsrp">
-            <span class="status-label">{{ $t('Signal Strength') }}:</span>
-            <div class="status-value-multi">
-              <div class="status-value-line">
-                <span class="status-value-label">NR: </span>
-                <span class="status-value"><span class="status-fixed-5ch">{{ status.rsrp_nr }}</span> dBm</span>
-              </div>
-              <div class="status-value-line">
-                <span class="status-value-label">LTE: </span>
-                <span class="status-value"><span class="status-fixed-5ch">{{ status.rsrp_lte }}</span> dBm</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="status-item status-item-rsrp">
-            <span class="status-label">{{ $t('信噪比') }}:</span>
-            <div class="status-value-multi">
-              <div class="status-value-line">
-                <span class="status-value-label">NR: </span>
-                <span class="status-value"><span class="status-fixed-5ch">{{ status.sinr_nr }}</span> dB</span>
-              </div>
-              <div class="status-value-line">
-                <span class="status-value-label">LTE: </span>
-                <span class="status-value"><span class="status-fixed-5ch">{{ status.sinr_lte }}</span> dB</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="status-item">
-            <span class="status-label">{{ $t('模组版本') }}:</span>
-            <span class="status-value">{{ status.version }}</span>
-          </div>
-
-          <div class="status-item">
-            <span class="status-label">{{ $t('IP Address') }}:</span>
-            <span class="status-value">{{ status.ip }}</span>
-          </div>
-
-          <div class="status-item">
-            <span class="status-label">{{ $t('Netmask') }}:</span>
-            <span class="status-value">{{ status.mask }}</span>
-          </div>
-
-          <div class="status-item">
-            <span class="status-label">{{ $t('Gateway') }}:</span>
-            <span class="status-value">{{ status.gateway }}</span>
-          </div>
-
-          <div class="status-item">
-            <span class="status-label">{{ $t('MAC') }}:</span>
-            <span class="status-value">{{ status.mac }}</span>
-          </div>
-
-        </div>
-      </el-card>
+        </el-card>
+      </div>
     </div>
 
   </div>
@@ -271,7 +442,22 @@ export default {
         ip: '',
         mask: '',
         gateway: '',
-        mac: ''
+        mac: '',
+        mcc: '',
+        mnc: '',
+        arfcn_nr: '',
+        scs: '',
+        tac: '',
+        rsrq: '',
+        net_lte: '',
+        mcc_lte: '',
+        mnc_lte: '',
+        arfcn_lte: '',
+        tac_lte: '',
+        rsrq_lte: '',
+        rssi: '',
+        nr_neighbors: [],
+        lte_neighbors: []
       },
       settings: {
         index: '',
@@ -491,7 +677,7 @@ export default {
 
 <style scoped>
 .wan-config-container {
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 20px;
   /* 统一右侧值列宽度，保证 NR/LTE 在三项中对齐 */
@@ -512,13 +698,92 @@ export default {
 
 .config-section {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 0.7fr 1.3fr;
   gap: 20px;
   margin-bottom: 30px;
+  align-items: start;
+}
+
+.left-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.top-cards {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.top-cards .config-card {
+  flex: 1;
+}
+
+.vertical-cards {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vertical-cards .config-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.vertical-cards .config-card .status-info {
+  flex: 1;
 }
 
 .config-card {
   border-radius: 8px;
+}
+
+.compact-card .card-header {
+  font-size: 14px;
+}
+
+.vertical-cards .compact-card .card-header {
+  padding: 0 15px;
+}
+
+.compact-card .status-item {
+  padding: 6px 0;
+}
+
+.vertical-cards .compact-card .status-item {
+  padding: 4px 0;
+}
+
+.compact-card .status-label {
+  font-size: 13px;
+}
+
+.vertical-cards .compact-card .status-label {
+  font-size: 12px;
+}
+
+.compact-card .status-value {
+  font-size: 13px;
+}
+
+.vertical-cards .compact-card .status-value {
+  font-size: 12px;
+}
+
+.compact-card .status-value-label {
+  font-size: 12px;
+}
+
+.neighbor-card {
+  flex: 2;
 }
 
 .card-header {
@@ -532,6 +797,140 @@ export default {
 
 .status-info {
   padding: 10px 0;
+}
+
+.signal-row {
+  display: flex;
+  gap: 15px;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  align-items: center;
+}
+
+.signal-row:last-child {
+  border-bottom: none;
+}
+
+.signal-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--el-text-color-regular);
+  min-width: 80px;
+}
+
+.signal-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: 1;
+}
+
+.signal-item .status-label {
+  font-size: 11px;
+  color: var(--el-text-color-regular);
+}
+
+.signal-item .status-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.status-table {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 10px 0;
+}
+
+.table-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+  margin-bottom: 5px;
+  text-align: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.table-title::before,
+.table-title::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  margin: 0 10px;
+}
+
+.table-row {
+  display: flex;
+  gap: 10px;
+}
+
+.header-row {
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+}
+
+.table-cell {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  padding: 5px 2px;
+}
+
+.header-row .table-cell {
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+}
+
+.table-row:not(.header-row) .table-cell {
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+}
+
+.table-row:not(.header-row):hover {
+  background-color: var(--el-fill-color-light);
+}
+
+.table-row:not(.header-row):hover .table-cell {
+  background-color: var(--el-fill-color-light);
+}
+
+.no-data {
+  text-align: center;
+  padding: 20px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.status-info-single-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.status-param {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.param-label {
+  font-weight: 500;
+  color: var(--el-text-color-regular);
+}
+
+.param-value {
+  font-weight: 600;
+  color: var(--el-text-color-primary);
 }
 
 .status-item {
