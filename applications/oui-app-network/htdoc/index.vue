@@ -39,7 +39,7 @@
               <span>{{ wan.settings.alias }}</span>
               <!-- <span>{{ wan.settings.interface }}</span> -->
               <span>{{ wan.sim.mcc }}{{ wan.sim.mnc }}</span>
-              <span>{{ wan.monsc.rat }}</span>
+              <span>{{ wan.status.rat }}</span>
               <span>{{ wan.settings.apn }}</span>
               <span>{{ wan.status.band }}</span>
               <span>{{ (wan.status.rsrp_nr === '' || wan.status.rsrp_nr == null || +wan.status.rsrp_nr === 0) ? wan.status.rsrp_lte : wan.status.rsrp_nr }}</span>
@@ -212,8 +212,8 @@ export default {
             username: '',
             plmn: ''
           },
-          // 锁频端 锁频点 锁小区设置
-          freqlock:{
+          // NR锁频段 锁频点 锁小区设置
+          nrfreqlock:{
             operatetype: '',
             forbid_flag: '',
             num: '',
@@ -221,25 +221,45 @@ export default {
             arfcn: [],
             scstype: [],
             pci: []
+          },
+          // LTE锁频段 锁频点 锁小区配置
+          ltefreqlock:{
+            operatetype: '',
+            forbid_flag: '',
+            num: '',
+            band: [],
+            arfcn: [],
+            pci: []
           }
         },
+        // 基本状态
         status: {
-          timestamp: '',
-          net: '-',
-          band: '',
-          cell_nr: '-',
-          cell_lte: '-',
-          pcid_nr: '--',
-          pcid_lte: '--',
-          rsrp_nr: '-',
-          rsrp_lte: '-',
-          sinr_nr: '-',
-          sinr_lte: '-',
           status: '',
-          ip: '-',
-          mask: '-',
-          gateway: '-',
-          mac: '-'
+          timestamp: '', // 状态更新时间戳
+          rat: '-', // 实时入网方式
+          // NR信号强度
+          nr: {
+            rsrp: '',
+            rsrq: '',
+            sinr: '',
+            band: ''
+          },
+          // lte信号强度
+          lte: {
+            rsrp: '',
+            rsrq: '',
+            sinr: '',
+            rssi: '',
+            band: ''
+          },
+          interface: {
+            ip: '-',
+            mask: '-',
+            gateway: '-',
+            mac: '-',
+            rxBytes: '-', // 接收流量
+            txBytes: '-' // 发送流量
+          }
         }
       }
     }
@@ -329,14 +349,22 @@ export default {
           if (data.auth.username) real.auth.username = data.auth.username
           if (data.auth.plmn) real.auth.plmn = data.auth.plmn
         }
-        if (data.freqlock) {
-          if (data.freqlock.operatetype) real.freqlock.operatetype = data.freqlock.operatetype
-          if (data.freqlock.forbid_flag) real.freqlock.forbid_flag = data.freqlock.forbid_flag
-          if (data.freqlock.num) real.freqlock.num = data.freqlock.num
-          if (data.freqlock.band) real.freqlock.band = data.freqlock.band
-          if (data.freqlock.arfcn) real.freqlock.arfcn = data.freqlock.arfcn
-          if (data.freqlock.scstype) real.freqlock.scstype = data.freqlock.scstype
-          if (data.freqlock.pci) real.freqlock.pci = data.freqlock.pci
+        if (data.nrfreqlock) {
+          if (data.nrfreqlock.operatetype) real.nrfreqlock.operatetype = data.nrfreqlock.operatetype
+          if (data.nrfreqlock.forbid_flag) real.nrfreqlock.forbid_flag = data.nrfreqlock.forbid_flag
+          if (data.nrfreqlock.num) real.nrfreqlock.num = data.nrfreqlock.num
+          if (data.nrfreqlock.band) real.nrfreqlock.band = data.nrfreqlock.band
+          if (data.nrfreqlock.arfcn) real.nrfreqlock.arfcn = data.nrfreqlock.arfcn
+          if (data.nrfreqlock.scstype) real.nrfreqlock.scstype = data.nrfreqlock.scstype
+          if (data.nrfreqlock.pci) real.nrfreqlock.pci = data.nrfreqlock.pci
+        }
+        if (data.ltefreqlock) {
+          if (data.ltefreqlock.operatetype) real.ltefreqlock.operatetype = data.ltefreqlock.operatetype
+          if (data.ltefreqlock.forbid_flag) real.ltefreqlock.forbid_flag = data.ltefreqlock.forbid_flag
+          if (data.ltefreqlock.num) real.ltefreqlock.num = data.ltefreqlock.num
+          if (data.ltefreqlock.band) real.ltefreqlock.band = data.ltefreqlock.band
+          if (data.ltefreqlock.arfcn) real.ltefreqlock.arfcn = data.ltefreqlock.arfcn
+          if (data.ltefreqlock.pci) real.ltefreqlock.pci = data.ltefreqlock.pci
         }
         this.wanLinks[index].realSettings = { ...real }
       })
@@ -392,7 +420,41 @@ export default {
           if (data.monnc) {
             this.wanLinks[index].monnc = { ...data.monnc }
           }
+
+          const status = this.wanLinks[index].status
+          if (data.monsc.rat) status.rat = data.monsc.rat
+          if (data.timestamp) status.timestamp = data.timestamp
+          if (monsc.nr) {
+            if (monsc.nr.rsrp) status.nr.rsrp = monsc.nr.rsrp
+            if (monsc.nr.rsrq) status.nr.rsrq = monsc.nr.rsrq
+            if (monsc.nr.sinr) status.nr.sinr = monsc.nr.sinr
+            if (monsc.nr.band) status.nr.band = monsc.nr.band
+          }
+          if (monsc.lte) {
+            if (monsc.lte.rsrp) status.lte.rsrp = monsc.lte.rsrp
+            if (monsc.lte.rsrq) status.lte.rsrq = monsc.lte.rsrq
+            if (monsc.lte.sinr) status.lte.sinr = monsc.lte.sinr
+            if (monsc.lte.rssi) status.lte.rssi = monsc.lte.rssi
+            if (monsc.lte.band) status.lte.band = monsc.lte.band
+          }
+
+          this.wanLinks[index].status = { ...status }
         }
+      })
+    },
+    // 获取网络接口信息
+    getInterfaceStatus(index) {
+      this.$oui.call('sim', 'getInterfaceStatus', {'index': index}).then(result => {
+        const data = typeof result === 'string' ? JSON.parse(result) : result
+        console.log('data', data)
+        const inter = this.wanLinks[index].status.interface
+        if (data.ip) inter.ip = data.ip
+        if (data.mask) inter.mask = data.mask
+        if (data.gateway) inter.gateway = data.gateway
+        if (data.mac) inter.mac = data.mac
+        if (data.rxBytes) inter.rxBytes = data.rxBytes
+        if (data.txBytes) inter.txBytes = data.txBytes
+        this.wanLinks[index].status.interface = { ...inter }
       })
     },
     // 切换到WAN配置页面
@@ -422,6 +484,7 @@ export default {
       this.$timer.create('sim-product' + index, () => this.getProductInfo(index), { time: 15000, immediate: true, repeat: true})
       this.$timer.create('sim-status' + index, () => this.getStatus(index), { time: 10000, immediate: true, repeat: true})
       this.$timer.create('modules' + index, () => this.getModuleSettings(index), { time: 12000, immediate: true, repeat: true})
+      this.$timer.create('interface' + index, () => this.getInterfaceStatus(index), { time: 5000, immediate: true, repeat: true})
     })
   }
 }

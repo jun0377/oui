@@ -175,15 +175,28 @@ end
 
 -- 获取指定网口的mac地址
 function getInterfaceMAC(interface)
-    -- local cmd = string.format("ifconfig %s | grep 'HWaddr' | awk '{print $5}' | tr -d '\r\n'", interface)
-    -- -- log.info(cmd)
-    -- return exec(cmd)
-    return "xxxxxxxxxxxx"
+    local cmd = string.format("cat /sys/class/net/%s/address | tr -d '\r\n'", interface)
+    -- log.info(cmd)
+    return exec(cmd)
+end
+
+-- 获取网口下行数据量
+function getInterfaceRxBytes(interface)
+    local cmd = string.format("cat /sys/class/net/%s/statistics/rx_bytes | tr -d '\r\n'", interface)
+    -- log.info(cmd)
+    return exec(cmd)
+end
+
+-- 获取网口上行数据量
+function getInterfaceTxBytes(interface)
+    local cmd = string.format("cat /sys/class/net/%s/statistics/tx_bytes | tr -d '\r\n'", interface)
+    -- log.info(cmd)
+    return exec(cmd)
 end
 
 -- 获取指定USB好对应的网口名,如2-1对应eth2
 function getInterfaceByUsb(usb)
-    local cmd = string.format("ls sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/%s/%s:2.0/net/", usb, usb)
+    local cmd = string.format("ls /sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/%s/%s:2.0/net/ | tr -d '\r\n'", usb, usb)
     return exec(cmd)
 end
 
@@ -360,65 +373,33 @@ local function getSimStatusConnect(index)
     return Sim[index].status.status
 end
 
--- 更新模组信号强度
-function updateSimStatusSignal(index)
+
+-- 获取网络接口信息
+function M.getInterfaceStatus(params)
+    local index = tonumber(params.index) + 1
+    local interface = getSimInterface(index)
     
-    -- local section = Sim[index].settings.uciSection
-    -- local c = uci.cursor()
-    -- local ttyusb = c:get('sim', section, 'node')
-    -- local usb = c:get('sim', section, 'usb')
-    -- local interface = getInterfaceByUsb(usb)
-    -- local file = '/var/'..interface..'.json'
-    
-    -- -- sim ready ?
-    -- local simReady = updateSimInsertStatus(interface)
-    -- if not simReady then
-    --     -- log.info(Sim[index].settings.alias, 'sim not insert!')
-    --     Sim[index].status.status = 'nosim'
-    --     Sim[index].status.timestamp = ''
-    --     Sim[index].status.net = ''
-    --     Sim[index].status.cell_nr = ''
-    --     Sim[index].status.cell_lte = ''
-    --     Sim[index].status.pcid_nr = ''
-    --     Sim[index].status.pcid_lte = ''
-    --     Sim[index].status.band = ''
-    --     Sim[index].status.operator = ''
-    --     Sim[index].status.rsrp_nr = ''
-    --     Sim[index].status.rsrp_lte = ''
-    --     Sim[index].status.sinr_nr = ''
-    --     Sim[index].status.sinr_lte = ''
-    --     Sim[index].status.ip = ''
-    --     Sim[index].status.mask = ''
-    --     Sim[index].status.gateway=''
-    --     return 0
-    -- end
+    interface = 'eth2'
+    if not interface or interface == "" then
+        return { code = -1, msg = "Interface not found" }
+    end
 
-    -- Sim[index].status.timestamp = exec(string.format("jq -r '.date' %s | tr -d '\r\n'", file))                   -- jq -r '.date' /var/usb0.json
-    -- Sim[index].status.imsi = exec(string.format("jq -r '.imsi' %s | tr -d '\r\n'", file))                        -- jq -r '.imsi' /var/usb0.json
-    -- Sim[index].status.imei = exec(string.format("jq -r '.imei' %s | tr -d '\r\n'", file))                        -- jq -r '.imei' /var/usb0.json 
-    -- Sim[index].status.net = exec(string.format("jq -r '.net' %s | tr -d '\r\n'", file))                  -- jq -r '.net' /var/usb0.json
-    -- Sim[index].status.band = exec(string.format("jq -r '.band' %s | tr -d '\r\n'", file))                -- jq -r '.band' /var/usb0.json
-    -- Sim[index].status.cell_nr = exec(string.format("jq -r '.cell_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.cell_nr' /var/usb0.json
-    -- Sim[index].status.cell_lte = exec(string.format("jq -r '.cell_lte' %s | tr -d '\r\n'", file))                -- jq -r '.cell_lte' /var/usb0.json
-    -- Sim[index].status.pcid_nr = exec(string.format("jq -r '.pcid_nr' %s | tr -d '\r\n'", file))            -- jq -r '.pcid_nr' /var/usb0.json
-    -- Sim[index].status.pcid_lte = exec(string.format("jq -r '.pcid_lte' %s | tr -d '\r\n'", file))          -- jq -r '.pcid_lte' /var/usb0.json
-    -- Sim[index].status.operator = exec(string.format("jq -r '.operator' %s | tr -d '\r\n'", file))                -- jq -r '.operator' /var/usb0.json
-    -- Sim[index].status.rsrp_nr = exec(string.format("jq -r '.rsrp_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.rsrp_nr' /var/usb0.json
-    -- Sim[index].status.rsrp_lte = exec(string.format("jq -r '.rsrp_lte' %s | tr -d '\r\n'", file))                -- jq -r '.rsrp_lte' /var/usb0.json
-    -- Sim[index].status.sinr_nr = exec(string.format("jq -r '.sinr_nr' %s | tr -d '\r\n'", file))                  -- jq -r '.sinr_nr' /var/usb0.json
-    -- Sim[index].status.sinr_lte = exec(string.format("jq -r '.sinr_lte' %s | tr -d '\r\n'", file))                -- jq -r '.sinr_lte' /var/usb0.json
-    -- Sim[index].status.ip = exec(string.format("jq -r '.ip' %s | tr -d '\r\n'", file))                            -- jq -r '.ip' /var/usb0.json
-    -- Sim[index].status.mask = exec(string.format("jq -r '.mask' %s | tr -d '\r\n'", file))                        -- jq -r '.mask' /var/usb0.json
-    -- Sim[index].status.gateway = exec(string.format("jq -r '.gw' %s | tr -d '\r\n'", file))                       -- jq -r '.gw' /var/usb0.json
+    local ip = getInterfaceIP(interface)
+    local mask = getInterfaceMask(interface)
+    local gateway = getInterfaceGateway(interface)
+    local mac = getInterfaceMAC(interface)
+    local rxBytes = getInterfaceRxBytes(interface)
+    local txBytes = getInterfaceTxBytes(interface)
 
-    return 0
-end
-
--- 获取模组运营商
-local function getSimStatusOperator(index)
-    local section = Sim[index].settings.uciSection
-    local c = uci.cursor()
-    return c:get('sim', section, 'operator')
+    return  {
+            interface = interface,
+            ip = ip,
+            mask = mask,
+            gateway = gateway,
+            mac = mac,
+            rxBytes = rxBytes,
+            txBytes = txBytes,
+            }
 end
 
 -- {
@@ -434,7 +415,7 @@ function M.getProductInfo(params)
     local index = tonumber(params.index) + 1
     local node = getSimNode(index)
     local cmd = string.format("/usr/share/modemdata/product.sh %s", "/dev/ttyUSB1")
-    log.info(cmd)
+    -- log.info(cmd)
     local ret = exec(cmd);
     log.info(ret)
     return ret
@@ -478,57 +459,17 @@ function M.getModuleSettings(params)
     local index = tonumber(params.index) + 1
     local node = getSimNode(index)
     local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", "/dev/ttyUSB1")
-    log.info(cmd)
+    -- log.info(cmd)
     local ret = exec(cmd)
     log.info(ret)
     return ret
 end
 
--- 获取SIM卡状态：是否插卡、拨号状态、信号强度、运营商、频段、小区...
--- function M.getSimStatus(params)
-
---     local index = tonumber(params.index) + 1
-
---     -- 模组硬件信息
---     Sim[index].settings.usb = getSimUsb(index)
---     Sim[index].settings.alias = getSimAlias(index)
---     Sim[index].settings.ttyusb = getSimNode(index)
---     Sim[index].settings.interface = getSimInterface(index)
---     Sim[index].settings.band = getSimConfBand(index)
---     Sim[index].settings.net = string.upper(getSimConfNet(index))
---     Sim[index].settings.apn = getSimConfAPN(index)
---     Sim[index].settings.auth = getSimConfAuth(index)
---     Sim[index].settings.user = getSimConfUser(index)
---     Sim[index].settings.passwd = getSimConfPasswd(index)
---     Sim[index].settings.cellLocked = getSimConfCell(index)
---     Sim[index].settings.pcidlocked = getSimConfPCI(index)
---     Sim[index].settings.dhcpRangeStart = getSimConfDhcpRangeStart(index)
---     Sim[index].settings.dhcpRanageEnd = getSimConfDhcpRangeEnd(index)
---     Sim[index].settings.dhcpRangeMask = getSimConfDhcpRangeMask(index)
---     Sim[index].settings.dhcpRangeGateway = getSimConfDhcpRangeGateway(index)
-
---     -- 通过AT指令更新实时信号强度、频段、入网方式、小区id
---     updateSimStatusSignal(index)
-
---     -- if nil == Sim[index].status.timestamp or '' == Sim[index].status.timestamp then
---     --     Sim[index].status.status = 'error'
---     --     return Sim[index]
---     -- end
-
---     Sim[index].status.module = getSimModuleName(index)
---     Sim[index].status.version = getSimModuleVersion(index)
---     Sim[index].status.mac = getSimMac(index)
---     Sim[index].status.status = getSimStatusConnect(index)
---     Sim[index].status.operator = getSimStatusOperator(index)
-
---     return Sim[index]
--- end
-
 -- 触发/lib/netifd/proto/ncm.sh，重新拨号
 local function dial(interface)
-    local cmd = string.format("ifdown %s;sleep 1;ifup %s", interface, interface)
-    log.info(cmd)
-    exec(cmd)
+    -- local cmd = string.format("ifdown %s;sleep 1;ifup %s", interface, interface)
+    -- log.info(cmd)
+    -- exec(cmd)
 end
 
 -- 更改入网方式

@@ -107,12 +107,11 @@
         </el-card>
       </div>
 
-      <!-- 右侧：三个小卡片 -->
       <div class="right-column">
         <div class="top-cards">
         <!-- 上方：连接状态和SIM卡状态水平排列 -->
           <!-- 连接状态卡片 -->
-          <el-card class="config-card compact-card">
+          <el-card class="config-card compact-card connection-card">
             <template #header>
               <div class="card-header">
                 <span>{{ $t('连接状态') }}</span>
@@ -132,40 +131,72 @@
                 <span class="status-value">{{ status.timestamp }}</span>
               </div>
 
-              <!-- 信号强度 -->
-              <div class="signal-row">
-                <div class="signal-title">信号强度:</div>
-                <div class="signal-item">
-                  <span class="status-label">RSRP:</span>
-                  <span class="status-value">0</span>
-                </div>
-                <div class="signal-item">
-                  <span class="status-label">RSRQ:</span>
-                  <span class="status-value">0</span>
-                </div>
-                <div class="signal-item">
-                  <span class="status-label">RSSI:</span>
-                  <span class="status-value">0</span>
-                </div>
-                <div class="signal-item">
-                  <span class="status-label">SINR:</span>
-                  <span class="status-value">0</span>
-                </div>
-              </div>
-
-              <div class="status-item">
-                <span class="status-label">已发送:</span>
-                <span class="status-value">27.1MB</span>
-              </div>
-
-              <div class="status-item">
-                <span class="status-label">已接收:</span>
-                <span class="status-value">36.7MB</span>
-              </div>
-
+              <!-- 实时入网方式 -->
               <div class="status-item">
                 <span class="status-label">{{ $t('Real Network Access') }}:</span>
-                <span class="status-value">{{ status.net }}</span>
+                <span class="status-value">{{ status.rat }}</span>
+              </div>
+
+              <!-- NR信号强度 -->
+              <div class="signal-row">
+                <div class="signal-title">NR信号:</div>
+                <!-- <div class="signal-item">
+                  <span class="status-label">band:</span>
+                  <span class="status-value">{{ status.nr.band }}</span>
+                </div> -->
+                <div class="signal-item">
+                  <span class="status-label">rsrp:</span>
+                  <span class="status-value">{{ status.nr.rsrp }}</span>
+                </div>
+                <div class="signal-item">
+                  <span class="status-label">rsrq:</span>
+                  <span class="status-value">{{ status.nr.rsrq }}</span>
+                </div>
+                <div class="signal-item">
+                  <span class="status-label">sinr:</span>
+                  <span class="status-value">{{ status.nr.sinr }}</span>
+                </div>
+                <div class="signal-item">
+                  <span class="status-label"></span>
+                  <span class="status-value"></span>
+                </div>
+              </div>
+
+              <!-- LTE信号强度 -->
+              <div class="signal-row">
+                <div class="signal-title">LTE信号:</div>
+                <!-- <div class="signal-item">
+                  <span class="status-label">band:</span>
+                  <span class="status-value">{{ status.lte.band }}</span>
+                </div> -->
+                <div class="signal-item">
+                  <span class="status-label">rsrp:</span>
+                  <span class="status-value">{{ status.lte.rsrp }}</span>
+                </div>
+                <div class="signal-item">
+                  <span class="status-label">rsrq:</span>
+                  <span class="status-value">{{ status.lte.rsrq }}</span>
+                </div>
+                <div class="signal-item">
+                  <span class="status-label">rssi:</span>
+                  <span class="status-value">{{ status.lte.rssi }}</span>
+                </div>
+                <div class="signal-item">
+                  <span class="status-label">sinr:</span>
+                  <span class="status-value">{{ status.lte.sinr }}</span>
+                </div>
+              </div>
+
+              <div class="signal-row signal-row-left">
+                <div class="signal-title">数据统计:</div>
+                <div class="signal-item">
+                  <span class="status-label">发送:</span>
+                  <span class="status-value">27.1MB</span>
+                </div>
+                <div class="signal-item">
+                  <span class="status-label">接收:</span>
+                  <span class="status-value">36.7MB</span>
+                </div>
               </div>
 
 
@@ -176,22 +207,22 @@
 
               <div class="status-item">
                 <span class="status-label">{{ $t('IP Address') }}:</span>
-                <span class="status-value">{{ status.ip }}</span>
+                <span class="status-value">{{ status.interface.ip }}</span>
               </div>
 
               <div class="status-item">
                 <span class="status-label">{{ $t('Netmask') }}:</span>
-                <span class="status-value">{{ status.mask }}</span>
+                <span class="status-value">{{ status.interface.mask }}</span>
               </div>
 
               <div class="status-item">
                 <span class="status-label">{{ $t('Gateway') }}:</span>
-                <span class="status-value">{{ status.gateway }}</span>
+                <span class="status-value">{{ status.interface.gateway }}</span>
               </div>
 
               <div class="status-item">
                 <span class="status-label">{{ $t('MAC') }}:</span>
-                <span class="status-value">{{ status.mac }}</span>
+                <span class="status-value">{{ status.interface.mac }}</span>
               </div>
             </div>
           </el-card>
@@ -261,6 +292,64 @@
                   <span class="status-value">{{ productInfo.imei }}</span>
                 </div>
 
+              </div>
+            </el-card>
+          </div>
+
+          <!-- NR锁频锁小区状态和LTE锁频锁小区状态 -->
+          <div class="vertical-cards freqlock-cards">
+            <el-card class="config-card compact-card">
+              <template #header>
+                <div class="card-header">
+                  <span>{{ $t('NR锁频锁小区状态') }}</span>
+                </div>
+              </template>
+              <div class="status-info">
+                <div class="status-item">
+                  <span class="status-label">锁状态:</span>
+                  <span class="status-value">{{ getFreqLockTypeText(realSettings.nrfreqlock.operatetype) }}</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">频段:</span>
+                  <span class="status-value">{{ realSettings.nrfreqlock.band.join(', ') }}</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">频点:</span>
+                  <span class="status-value">{{ realSettings.nrfreqlock.arfcn.join(', ') }}</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">SCS:</span>
+                  <span class="status-value">{{ realSettings.nrfreqlock.scstype.join(', ') }}</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">PCI:</span>
+                  <span class="status-value">{{ realSettings.nrfreqlock.pci.join(', ') }}</span>
+                </div>
+              </div>
+            </el-card>
+            <el-card class="config-card compact-card">
+              <template #header>
+                <div class="card-header">
+                  <span>{{ $t('LTE锁频锁小区状态') }}</span>
+                </div>
+              </template>
+              <div class="status-info">
+                <div class="status-item">
+                  <span class="status-label">锁状态:</span>
+                  <span class="status-value">{{ getFreqLockTypeText(realSettings.ltefreqlock.operatetype) }}</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">频段:</span>
+                  <span class="status-value">{{ realSettings.ltefreqlock.band.join(', ') }}</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">频点:</span>
+                  <span class="status-value">{{ realSettings.ltefreqlock.arfcn.join(', ') }}</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">PCI:</span>
+                  <span class="status-value">{{ realSettings.ltefreqlock.pci.join(', ') }}</span>
+                </div>
               </div>
             </el-card>
           </div>
@@ -393,41 +482,36 @@ export default {
   },
   data() {
     return {
+      // 基本状态
       status: {
-        alias: '',
-        interface: '',
-        timestamp: '',
-        net: '',
-        band: '',
-        pcid_nr: '',
-        pcid_lte: '',
-        rsrp_nr: '',
-        rsrp_lte: '',
-        sinr_nr: '',
-        sinr_lte: '',
-        cell_nr: '',
-        cell_lte: '',
         status: '',
-        ip: '',
-        mask: '',
-        gateway: '',
-        mac: '',
-        mcc: '',
-        mnc: '',
-        arfcn_nr: '',
-        scs: '',
-        tac: '',
-        rsrq: '',
-        net_lte: '',
-        mcc_lte: '',
-        mnc_lte: '',
-        arfcn_lte: '',
-        tac_lte: '',
-        rsrq_lte: '',
-        rssi: '',
-        nr_neighbors: [],
-        lte_neighbors: []
+        timestamp: '', // 状态更新时间戳
+        rat: '-', // 实时入网方式
+        // NR信号强度
+        nr: {
+          rsrp: '',
+          rsrq: '',
+          sinr: '',
+          band: ''
+        },
+        // lte信号强度
+        lte: {
+          rsrp: '',
+          rsrq: '',
+          sinr: '',
+          rssi: '',
+          band: ''
+        },
+        interface: {
+          ip: '-',
+          mask: '-',
+          gateway: '-',
+          mac: '-',
+          rxBytes: '-', // 接收流量
+          txBytes: '-' // 发送流量
+        }
       },
+      // 模组基本信息
       productInfo: {
         vendor: '',
         product: '',
@@ -444,69 +528,74 @@ export default {
         mnc: ''
       },
       monsc: {
-          rat: '',
-          nr:{
-            cell_id:'',
-            arfcn:'',
-            scs:'',
-            pci:'',
-            tac:'',
-            rsrp:'',
-            rsrq:'',
-            sinr:''
-          },
-          lte:{
-            cell_id:"",
-            arfcn:"",
-            pci:"",
-            tac:"",
-            rsrp:"",
-            rsrq:"",
-            rssi:""
-          },
-          wcdma:{
-            arfcn:'',
-            pcs:'',
-            cell_id:'',
-            lac:'',
-            rscp:'',
-            rxlev:'',
-            ecno:''
-          }
+        rat: '',
+        nr: {
+          cell_id: '',
+          arfcn: '',
+          scs: '',
+          pci: '',
+          tac: '',
+          rsrp: '',
+          rsrq: '',
+          sinr: ''
         },
+        lte: {
+          cell_id: '',
+          arfcn: '',
+          pci: '',
+          tac: '',
+          rsrp: '',
+          rsrq: '',
+          rssi: ''
+        },
+        wcdma: {
+          arfcn: '',
+          pcs: '',
+          cell_id: '',
+          lac: '',
+          rscp: '',
+          rxlev: '',
+          ecno: ''
+        }
+      },
       monnc: {
-          gsm: [],
-          wcdma: [],
-          lte: [],
-          nr: []
-        },
-      // 从模组中查到的配置
-      realSettings:{
-        // 入网设置
-        rat:'',
-        // pdp上下文
+        gsm: [],
+        wcdma: [],
+        lte: [],
+        nr: []
+      },
+      realSettings: {
+        rat: '',
         pdp: {
           cid: '',
           pdp_type: '',
           apn: '',
           pdp_addr: ''
         },
-        // 鉴权设置
-        auth:{
+        auth: {
           cid: '',
           auth_type: '',
           passwd: '',
           username: '',
           plmn: ''
         },
-        // 锁频端 锁频点 锁小区设置
-        freqlock:{
+        // NR锁频段 锁频点 锁小区设置
+        nrfreqlock:{
           operatetype: '',
           forbid_flag: '',
           num: '',
           band: [],
           arfcn: [],
           scstype: [],
+          pci: []
+        },
+        // LTE锁频段 锁频点 锁小区配置
+        ltefreqlock:{
+          operatetype: '',
+          forbid_flag: '',
+          num: '',
+          band: [],
+          arfcn: [],
           pci: []
         }
       },
@@ -551,30 +640,17 @@ export default {
     }
   },
   methods: {
+    getFreqLockTypeText(type) {
+      const map = { '0': '解锁状态', '1': '锁频点+锁频段', '2': '锁小区+频点+锁频段', '3': '锁频段' }
+      return map[type] || type
+    },
     // 将 props.wanData 映射到本地状态（wanInfo / wanConfig）
     applyWanData(data) {
       if (!data) return
-      // 总是更新实时状态
-      this.status.alias = data.settings.alias
-      this.status.interface = data.settings.interface
-      this.status.timestamp = data.status.timestamp
-      this.status.imsi = data.status.imsi
-      this.status.net = data.status.net
-      this.status.band = data.status.band
-      this.status.cell_nr = data.status.cell_nr
-      this.status.cell_lte = data.status.cell_lte
-      this.status.pcid_nr = data.status.pcid_nr
-      this.status.pcid_lte = data.status.pcid_lte
-      this.status.rsrp_nr = data.status.rsrp_nr
-      this.status.rsrp_lte = data.status.rsrp_lte
-      this.status.sinr_nr = data.status.sinr_nr
-      this.status.sinr_lte = data.status.sinr_lte
-      this.status.status = data.status.status
-      this.status.ip = data.status.ip
-      this.status.mask = data.status.mask
-      this.status.gateway = data.status.gateway
-      this.status.mac = data.status.mac
 
+      // 实时状态
+      this.status = data.status
+      console.log('data.mac', data.status.interface.mac)
       // productInfo
       this.productInfo = data.productInfo
       // sim
@@ -585,7 +661,7 @@ export default {
       this.monnc = data.monnc
       // 从模组中查到的真实配置
       this.realSettings = data.realSettings
-      // console.log("real settings:", this.realSettings)
+      // console.log('real settings:', this.realSettings)
 
       // settings 仅在首次进入页面时初始化一次
       if (!this.settingsInitialized) {
@@ -766,11 +842,19 @@ export default {
   flex: 1;
 }
 
+.top-cards .connection-card {
+  flex: 1.5;
+}
+
 .vertical-cards {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.vertical-cards.freqlock-cards {
+  flex: 0.8;
 }
 
 .vertical-cards .config-card {
@@ -851,6 +935,10 @@ export default {
 
 .signal-row:last-child {
   border-bottom: none;
+}
+
+.signal-row-left {
+  justify-content: flex-start;
 }
 
 .signal-title {
