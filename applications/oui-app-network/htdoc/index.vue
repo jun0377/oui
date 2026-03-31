@@ -16,7 +16,7 @@
               <span>{{ $t('Real Network Access') }}</span>
               <span>APN</span>
               <span>{{ $t('Frequency Band') }}</span>
-              <span>{{ $t('Rsrp') }}dbm</span>
+              <span>RSRP</span>
               <span class="status-column">{{ $t('Status') }}</span>
               <span> </span>
             </div>
@@ -41,13 +41,9 @@
               <span>{{ wan.sim.mcc }}{{ wan.sim.mnc }}</span>
               <span>{{ wan.status.rat }}</span>
               <span>{{ wan.settings.apn }}</span>
-              <span>{{ wan.status.band }}</span>
-              <span>{{ (wan.status.rsrp_nr === '' || wan.status.rsrp_nr == null || +wan.status.rsrp_nr === 0) ? wan.status.rsrp_lte : wan.status.rsrp_nr }}</span>
-              <span class="status-column">
-                <span :class="['status-text', getStatusClass(wan.status.status)]">
-                  {{ $t(getStatusText(wan.status.status)) }}
-                </span>
-              </span>
+              <span>{{ getRealBandTypeText(index) }}</span>
+              <span>{{ getRsrpText(index) }}</span>
+              <span class="status-marquee"><span class="status-marquee-text">{{ getStstusText(index) }}</span></span>
               <span class="subnet-arrow">›</span>
             </div>
           </div>
@@ -128,7 +124,7 @@ export default {
       }
       return {
         settings: {
-          index: '',
+          index: index,
           enable: true,
           alias: aliasMap[index] || '',
           interface: '',
@@ -370,30 +366,6 @@ export default {
       default: return ''
       }
     },
-    getStatusText(status) {
-      switch (status) {
-      case 'connected': return 'Online'
-      case 'disconnected': return 'Offline'
-      case 'dialing': return 'Dialing'
-      case 'nosim': return 'NoSim'
-      default: return '未知'
-      }
-    },
-    getSimSettings() {
-      // this.wanLinks.forEach((wan, index) => {
-      //   this.$oui.call('sim', 'getSimStatus', {'index': index}).then(sim => {
-      //     this.wanLinks[index].settings.index = index
-      //     this.wanLinks[index].settings.alias = sim.settings.alias
-      //     this.wanLinks[index].settings.interface = sim.settings.interface
-      //     this.wanLinks[index].settings.net = sim.settings.net
-      //     this.wanLinks[index].settings.apn = sim.settings.apn
-      //     this.wanLinks[index].settings.band = sim.settings.band
-      //     this.wanLinks[index].settings.auth = sim.settings.auth
-      //     this.wanLinks[index].settings.username = sim.settings.user
-      //     this.wanLinks[index].settings.password = sim.settings.passwd
-      //   })
-      // })
-    },
     getProductInfo(index) {
       return this.withInFlight('getProductInfo:' + index, () => {
         const token = this._pollingToken
@@ -468,7 +440,16 @@ export default {
           if (token !== this._pollingToken)
             return
 
-          const data = typeof result === 'string' ? JSON.parse(result) : result
+          let data = result
+          if (typeof result === 'string') {
+            try {
+              data = JSON.parse(result)
+            } catch {
+              return
+            }
+          }
+
+          console.log(index, '====', data)
           const link = this.wanLinks[index]
           // SIM卡信息
           const sim = link.sim
@@ -484,11 +465,18 @@ export default {
 
           // NR/LTE频率频段信息
           if (data.freqInfo) {
-            const freqInfo = typeof data.freqInfo === 'string' ? JSON.parse(data.freqInfo) : data.freqInfo
+            let freqInfo = data.freqInfo
+            if (typeof freqInfo === 'string') {
+              try {
+                freqInfo = JSON.parse(freqInfo)
+              } catch {
+                freqInfo = null
+              }
+            }
 
             if (freqInfo) {
               const fi = link.freqInfo
-              if (freqInfo.sysmode !== null)
+              if (freqInfo.sysmode !== null && freqInfo.sysmode !== undefined)
                 fi.sysmode = String(freqInfo.sysmode)
 
               const classes = freqInfo.class || freqInfo.classes || freqInfo.bands
@@ -496,21 +484,39 @@ export default {
             }
           }
 
-          if (data.C5GCore) {
-            const c5 = typeof data.C5GCore === 'string' ? JSON.parse(data.C5GCore) : data.C5GCore
-            if (c5.stat) link.NR_5GCore.stat = c5.stat
-            if (c5.tac) link.NR_5GCore.lac = c5.tac
-            if (c5.ci) link.NR_5GCore.ci = c5.ci
-            if (c5.act) link.NR_5GCore.act = c5.act
+          {
+            let c5 = data.C5GCore || data['5GCore']
+            if (typeof c5 === 'string') {
+              try {
+                c5 = JSON.parse(c5)
+              } catch {
+                c5 = null
+              }
+            }
+            if (c5) {
+              if (c5.stat) link.NR_5GCore.stat = c5.stat
+              if (c5.tac) link.NR_5GCore.tac = c5.tac
+              if (c5.ci) link.NR_5GCore.ci = c5.ci
+              if (c5.act) link.NR_5GCore.act = c5.act
+            }
           }
 
           // CS域注册状态
-          if (data.C4GCore) {
-            const cs = typeof data.C4GCore === 'string' ? JSON.parse(data.C4GCore) : data.C4GCore
-            if (cs.stat) link.CS.stat = cs.stat
-            if (cs.lac) link.CS.lac = cs.lac
-            if (cs.ci) link.CS.ci = cs.ci
-            if (cs.act) link.CS.act = cs.act
+          {
+            let cs = data.C4GCore || data['4GCore']
+            if (typeof cs === 'string') {
+              try {
+                cs = JSON.parse(cs)
+              } catch {
+                cs = null
+              }
+            }
+            if (cs) {
+              if (cs.stat) link.CS.stat = cs.stat
+              if (cs.lac) link.CS.lac = cs.lac
+              if (cs.ci) link.CS.ci = cs.ci
+              if (cs.act) link.CS.act = cs.act
+            }
           }
 
           // NR/LTE信号强度
@@ -602,6 +608,104 @@ export default {
         })
       })
     },
+    getStstusText(index) {
+      let stat = ''
+      if (this.wanLinks[index].NR_5GCore.stat !== '')
+        stat = stat + 'NR' + this.wanLinks[index].NR_5GCore.stat
+
+      if (this.wanLinks[index].CS.stat !== '')
+        stat = stat + ' | LTE' + this.wanLinks[index].CS.stat
+
+      return stat
+    },
+    getSimSettings(index) {
+      this.$oui.call('sim', 'getSimUciSettings', { index }).then(result => {
+        const data = typeof result === 'string' ? JSON.parse(result) : result
+        const settings = this.wanLinks[index].settings
+
+        settings.index = index
+        if (data.alias) settings.alias = data.alias
+        if (data.enable) settings.enable = data.enable === '1' || data.enable === 1 || data.enable === true
+        if (data.usb) settings.usb = data.usb
+        if (data.node) settings.node = data.node
+        if (data.interface) settings.interface = data.interface
+        if (data.band) settings.band = data.band
+        if (data.pci) settings.pcid = data.pci
+        if (data.net) settings.net = data.net
+        if (data.apn) settings.apn = data.apn
+        if (data.auth) settings.auth = data.auth
+        if (data.user) settings.username = data.user
+        if (data.passwd) settings.password = data.passwd
+        if (data.dhcpRangeStart) settings.dhcpRanageStart = data.dhcpRangeStart
+        if (data.dhcpRangeEnd) settings.dhcpRanageEnd = data.dhcpRangeEnd
+        if (data.dhcpRangeMask) settings.dhcpRanageMask = data.dhcpRangeMask
+        if (data.dhcpRangeGateway) settings.dhcpRanageGateway = data.dhcpRangeGateway
+      })
+    },
+    // 从freqInfo中解析出频段信息
+    getRealBandTypeText(index) {
+      const link = this.wanLinks[index]
+      const fi = link && link.freqInfo
+      if (!fi)
+        return ''
+
+      const sysmode = String(fi.sysmode ?? '').trim().toUpperCase()
+      let isNr = false
+      let isLte = false
+
+      if (sysmode.includes('NR')) {
+        isNr = true
+      } else if (sysmode.includes('LTE')) {
+        isLte = true
+      } else if (sysmode === '7') {
+        isNr = true
+      } else if (sysmode === '3') {
+        isLte = true
+      }
+
+      if (!isNr && !isLte) {
+        const rat = String(link?.status?.rat ?? '').toUpperCase()
+        if (rat.includes('LTE'))
+          isLte = true
+        else if (rat.includes('NR'))
+          isNr = true
+      }
+
+      if (!isNr && !isLte)
+        return ''
+
+      const list = Array.isArray(fi.class) ? fi.class : []
+      const seen = new Set()
+      const prefix = isNr ? 'n' : 'b'
+      const bands = []
+
+      for (const item of list) {
+        const bandClass = item && item.band_class !== null && item.band_class !== undefined ? String(item.band_class).trim() : ''
+        if (!bandClass)
+          continue
+        if (seen.has(bandClass))
+          continue
+        seen.add(bandClass)
+        bands.push(prefix + bandClass)
+      }
+
+      return bands.join(' ')
+    },
+    getRsrpText(index) {
+      const link = this.wanLinks[index]
+      if (!link || !link.status)
+        return '-'
+
+      const nr = link.status.nr && link.status.nr.rsrp !== null && link.status.nr.rsrp !== undefined ? String(link.status.nr.rsrp).trim() : ''
+      const lte = link.status.lte && link.status.lte.rsrp !== null && link.status.lte.rsrp !== undefined ? String(link.status.lte.rsrp).trim() : ''
+
+      const nrNum = Number(nr)
+      const hasNr = nr !== '' && Number.isFinite(nrNum) && nrNum !== 0
+      if (hasNr)
+        return nr
+
+      return lte !== '' ? lte : '-'
+    },
     // 切换到WAN配置页面
     editSubWan(wan, index) {
       this.selectedWan = wan
@@ -625,7 +729,7 @@ export default {
     }
   },
   created() {
-    this.getSimSettings()
+    this.wanLinks.forEach((_, index) => this.getSimSettings(index))
 
     this.wanLinks.forEach((wan, index) => {
       this.$timer.create('sim-product' + index, () => this.getProductInfo(index), { time: 15000, repeat: true, autostart: false })
@@ -749,6 +853,28 @@ export default {
   align-items: center;
   justify-content: center;
   height: 100%;
+}
+
+.status-marquee {
+  position: relative;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.status-marquee-text {
+  display: inline-block;
+  padding-left: 100%;
+  animation: status-marquee 6s linear infinite;
+}
+
+@keyframes status-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }
 
 .subnet-ip {

@@ -306,73 +306,6 @@ local function getSimConfPCI(index)
     return c:get('sim', section, 'pci')
 end
 
--- 获取模组DHCP设置
-local function getSimConfDhcpRangeStart(index)
-    local section = Sim[index].settings.uciSection
-    local c = uci.cursor()
-    return c:get('sim', section, 'dhcpRangeStart')
-end
-
--- 获取模组DHCP设置
-local function getSimConfDhcpRangeEnd(index)
-    local section = Sim[index].settings.uciSection
-    local c = uci.cursor()
-    return c:get('sim', section, 'dhcpRangeEnd')
-end
-
--- 获取模组DHCP设置
-local function getSimConfDhcpRangeMask(index)
-    local section = Sim[index].settings.uciSection
-    local c = uci.cursor()
-    return c:get('sim', section, 'dhcpRangeMask')
-end
-
--- 获取模组DHCP设置
-local function getSimConfDhcpRangeGateway(index)
-    local section = Sim[index].settings.uciSection
-    local c = uci.cursor()
-    return c:get('sim', section, 'dhcpRangeGateway')
-end
-
--- 获取模组连接状态
-local function getSimStatusConnect(index)
-
-    -- disabled
-    local section = Sim[index].settings.uciSection
-    local enabled = uci.cursor():get('sim', section, 'enable')
-    if nil == enabled or '0' == enabled then
-        Sim[index].status.status = 'disabled'
-        return Sim[index].status.status
-    end
-
-    -- nosim
-    local imsi = Sim[index].status.imsi
-    if nil == imsi or "none" == imsi then
-        Sim[index].status.status = 'nosim'
-        return Sim[index].status.status
-    end
-
-    -- udhcpc
-    local cmd = string.format("ps -w | grep 'udhcpc.*%s' | grep -v grep | awk '{print $1}'", Sim[index].settings.interface)
-    -- log.info(cmd)
-    local pid = exec(cmd);
-    if nil == pid or "" == pid then
-        Sim[index].status.status = 'disconnected'
-        return Sim[index].status.status
-    end
-
-    -- online
-    local ip = getInterfaceIP(Sim[index].settings.interface)
-    if nil == ip or "" == ip then
-        Sim[index].status.status = 'dialing'
-    else
-        -- log.info(Sim[index].settings.interface, "IP:", ip)
-        Sim[index].status.status = 'connected'
-    end
-
-    return Sim[index].status.status
-end
-
 
 -- 获取网络接口信息
 function M.getInterfaceStatus(params)
@@ -414,10 +347,10 @@ end
 function M.getProductInfo(params)
     local index = tonumber(params.index) + 1
     local node = getSimNode(index)
-    local cmd = string.format("/usr/share/modemdata/product.sh %s", "/dev/ttyUSB1")
-    -- log.info(cmd)
+    local cmd = string.format("/usr/share/modemdata/product.sh %s", node)
+    log.info(cmd)
     local ret = exec(cmd);
-    log.info(ret)
+    -- log.info(ret)
     return ret
 end
 
@@ -425,10 +358,10 @@ end
 function M.getRealtimeStatus(params)
     local index = tonumber(params.index) + 1
     local node = getSimNode(index)
-    local cmd = string.format("/usr/share/modemdata/params.sh %s", "/dev/ttyUSB1")
+    local cmd = string.format("/usr/share/modemdata/params.sh %s", node)
     log.info(cmd)
     local ret = exec(cmd);
-    log.info(ret)
+    -- log.info(ret)
     return ret
 end
 
@@ -436,10 +369,10 @@ end
 function M.getSettings(params)
     local index = tonumber(params.index) + 1
     local node = getSimNode(index)
-    local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", "/dev/ttyUSB1")
+    local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", node)
     log.info(cmd)
     local ret = exec(cmd)
-    log.info(ret)
+    -- log.info(ret)
     return ret
 end
 
@@ -447,10 +380,10 @@ end
 function M.getStatus(params)
     local index = tonumber(params.index) + 1
     local node = getSimNode(index)
-    local cmd = string.format("/usr/share/modemdata/params.sh %s", "/dev/ttyUSB1")
+    local cmd = string.format("/usr/share/modemdata/params.sh %s", node)
     log.info(cmd)
     local ret = exec(cmd)
-    log.info(ret)
+    -- log.info("status:", ret)
     return ret
 end
 
@@ -458,18 +391,29 @@ end
 function M.getModuleSettings(params)
     local index = tonumber(params.index) + 1
     local node = getSimNode(index)
-    local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", "/dev/ttyUSB1")
+    local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", node)
     -- log.info(cmd)
     local ret = exec(cmd)
-    log.info(ret)
+    -- log.info(ret)
     return ret
 end
 
 -- 触发/lib/netifd/proto/ncm.sh，重新拨号
 local function dial(interface)
-    -- local cmd = string.format("ifdown %s;sleep 1;ifup %s", interface, interface)
-    -- log.info(cmd)
-    -- exec(cmd)
+    local cmd = string.format("ifdown %s;sleep 1;ifup %s", interface, interface)
+    log.info(cmd)
+    exec(cmd)
+end
+
+-- 从/etc/config/sim这个配置文件中查询配置
+function M.getSimUciSettings(params)
+    local index = tonumber(params.index) + 1
+    local section = Sim[index].settings.uciSection
+    local cmd = string.format("ubus call uci get '{\"config\":\"sim\",\"section\":\"%s\"}' | jq -c '.values'", section)
+    log.info(cmd)
+    local ret = exec(cmd)
+    -- log.info(ret)
+    return ret
 end
 
 -- 更改入网方式
@@ -599,6 +543,22 @@ local function setSimAuth(index, auth, apn, username, password)
         password = ''
     end
 
+    if old_auth ~= auth then
+        log.info(Sim[index].settings.alias, 'auth change from ', old_auth, ' to ', auth)
+    end
+
+    if old_apn ~= apn then
+        log.info(Sim[index].settings.alias, 'apn change from ', old_apn, ' to ', apn)
+    end
+
+    if old_username ~= username then
+        log.info(Sim[index].settings.alias, 'username change from ', old_username, ' to ', username)
+    end
+
+    if old_password ~= apn then
+        log.info(Sim[index].settings.alias, 'password change from ', old_password, ' to ', password)
+    end
+
     local section = Sim[index].settings.uciSection
     local c = uci.cursor()
     c:set("sim", section, 'auth', auth)
@@ -616,8 +576,8 @@ end
 function M.changeSimSettings(params)
     
     log.info(string.format("index:%s %s net: %s apn:%s band:%s cell:%s pci:%s auth:%s username:%s password:%s",
-        params.index + 1,
-        Sim[params.index + 1].settings.alias,
+        params.index,
+        params.alias,
         params.net,
         params.apn,
         params.band,
@@ -627,7 +587,7 @@ function M.changeSimSettings(params)
         params.username,
         params.password))
     
-    local index = params.index + 1
+    local index = tonumber(params.index) + 1
 
     setSimNet(index, params.net)
     setSimAPN(index, params.apn)

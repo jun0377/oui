@@ -51,31 +51,37 @@
               <el-input v-model="settings.apn" placeholder="Enter APN"/>
             </el-form-item>
 
-            <el-form-item :label="$t('Lock Frequency Band')">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <el-input
-                  v-model="settings.band"
-                  :placeholder="settings.bandUnLock ? '自动' : $t('band like: n78、b1...')"
-                  :readonly="settings.bandUnLock"
-                  style="flex: 1;"
-                  disabled
-                />
-                <el-checkbox v-model="settings.bandUnLock" @change="handleUnlockBand" disabled>解锁</el-checkbox>
-              </div>
-            </el-form-item>
+            <div style="display: flex; gap: 10px;">
+              <el-form-item label="锁NR频段" style="flex: 1; margin-bottom: 0;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <el-select
+                    v-model="settings.band"
+                    :placeholder="settings.bandUnLock ? '未锁定' : $t('band like: n78、b1...')"
+                    :disabled="settings.bandUnLock"
+                    filterable
+                    allow-create
+                    default-first-option
+                    style="flex: 1;"
+                  >
+                    <el-option v-for="opt in getBandOptions()" :key="opt" :label="opt" :value="opt"/>
+                  </el-select>
+                  <el-checkbox v-model="settings.bandUnLock" @change="handleUnlockBand">解锁</el-checkbox>
+                </div>
+              </el-form-item>
 
-            <el-form-item :label="$t('Lock PCI')">
+            </div>
+
+            <!-- <el-form-item :label="$t('Lock PCI')">
               <div style="display: flex; align-items: center; gap: 10px;">
                 <el-input
                   v-model="settings.pci"
                   :placeholder="settings.pciUnlock ? '自动' : $t('Enter PCID')"
                   :readonly="settings.pciUnlock"
                   style="flex: 1;"
-                  disabled
                 />
-                <el-checkbox v-model="settings.pciUnlock" @change="handleUnlockPCI" disabled>解锁</el-checkbox>
+                <el-checkbox v-model="settings.pciUnlock" @change="handleUnlockPCI">解锁</el-checkbox>
               </div>
-            </el-form-item>
+            </el-form-item> -->
 
             <el-form-item :label="$t('Enable')">
               <el-switch
@@ -607,19 +613,24 @@ export default {
         }
       },
       settings: {
+        // 链路索引
         index: '',
+        // 链路使能
         enable: true,
+        // 链路标签,如5G-1 5G-2
         alias: '',
         name: '',
         interface: '',
+        //入网方式
         net: '',
-        accessType: '',
         apn: '',
+        // 锁频段
         band: '',
         bandUnLock: true,
-        cell: '',
+        // 锁小区
         pci: '',
         pciUnlock: true,
+        // 鉴权
         auth: '',
         username: '',
         password: ''
@@ -695,6 +706,53 @@ export default {
 
       return bands.join(' ')
     },
+    getBandOptions() {
+      const fi = this.freqInfo
+      if (!fi)
+        return []
+
+      const sysmode = String(fi.sysmode ?? '').trim().toUpperCase()
+      let isNr = false
+      let isLte = false
+
+      if (sysmode.includes('NR')) {
+        isNr = true
+      } else if (sysmode.includes('LTE')) {
+        isLte = true
+      } else if (sysmode === '7') {
+        isNr = true
+      } else if (sysmode === '3') {
+        isLte = true
+      }
+
+      if (!isNr && !isLte) {
+        const rat = String(this.status?.rat ?? '').toUpperCase()
+        if (rat.includes('LTE'))
+          isLte = true
+        else if (rat.includes('NR'))
+          isNr = true
+      }
+
+      if (!isNr && !isLte)
+        return []
+
+      const list = Array.isArray(fi.class) ? fi.class : []
+      const prefix = isNr ? 'n' : 'b'
+      const seen = new Set()
+      const opts = []
+
+      for (const item of list) {
+        const bandClass = item && item.band_class !== null && item.band_class !== undefined ? String(item.band_class).trim() : ''
+        if (!bandClass)
+          continue
+        if (seen.has(bandClass))
+          continue
+        seen.add(bandClass)
+        opts.push(prefix + bandClass)
+      }
+
+      return opts
+    },
     // 将 props.wanData 映射到本地状态（wanInfo / wanConfig）
     applyWanData(data) {
       if (!data) return
@@ -725,6 +783,7 @@ export default {
       // settings 仅在首次进入页面时初始化一次
       if (!this.settingsInitialized) {
         this.settings.index = data.settings.index
+        console.log('index-----------------', this.settings.index)
         this.settings.enable = typeof data.settings.enable === 'boolean' ? data.settings.enable : true
         this.settings.alias = data.settings.alias
         this.settings.interface = data.settings.interface
@@ -768,7 +827,6 @@ export default {
     },
     // 保存配置
     saveConfig() {
-      console.log('saveConfig...')
       // 验证必填字段
       if (!this.settings.interface) {
         console.log('The network interface must be specified!')
@@ -788,10 +846,11 @@ export default {
         return
       }
       console.log('saveConf index:', this.settings.index,
-        'APN:', this.settings.apn,
-        'NET:', this.settings.net,
-        'Band:', this.settings.band,
-        'PCID:', this.settings.pci,
+        'alias:', this.settings.alias,
+        'apn:', this.settings.apn,
+        'net:', this.settings.net,
+        'band:', this.settings.band,
+        'pcid:', this.settings.pci,
         'auth', this.settings.auth,
         'username', this.settings.username,
         'password', this.settings.password)
