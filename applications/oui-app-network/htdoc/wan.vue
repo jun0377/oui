@@ -121,9 +121,7 @@
             <div class="status-info">
               <div class="status-item">
                 <span class="status-label">{{ $t('Current Status') }}:</span>
-                <span :class="['status-value', getStatusClass(status.status)]">
-                  {{ getStatusText(status.status) }}
-                </span>
+                <span class="status-value">{{ getStatusText() }}</span>
               </div>
 
               <div class="status-item">
@@ -136,9 +134,14 @@
                 <span class="status-label">{{ $t('Real Network Access') }}:</span>
                 <span class="status-value">{{ status.rat }}</span>
               </div>
+              <!-- 实时频段 -->
+              <div class="status-item">
+                <span class="status-label">{{ $t('Real Band') }}:</span>
+                <span class="status-value">{{ getRealBandTypeText() }}</span>
+              </div>
 
               <!-- NR信号强度 -->
-              <div class="signal-row">
+              <div class="signal-row signal-row-right" v-if="String(status.rat).toUpperCase() !== 'LTE'">
                 <div class="signal-title">NR信号:</div>
                 <!-- <div class="signal-item">
                   <span class="status-label">band:</span>
@@ -156,14 +159,10 @@
                   <span class="status-label">sinr:</span>
                   <span class="status-value">{{ status.nr.sinr }}</span>
                 </div>
-                <div class="signal-item">
-                  <span class="status-label"></span>
-                  <span class="status-value"></span>
-                </div>
               </div>
 
               <!-- LTE信号强度 -->
-              <div class="signal-row">
+              <div class="signal-row" v-if="['NSA', 'LTE'].includes(String(status.rat).toUpperCase())">
                 <div class="signal-title">LTE信号:</div>
                 <!-- <div class="signal-item">
                   <span class="status-label">band:</span>
@@ -187,22 +186,16 @@
                 </div>
               </div>
 
-              <div class="signal-row signal-row-left">
+              <div class="signal-row signal-row-right">
                 <div class="signal-title">数据统计:</div>
                 <div class="signal-item">
                   <span class="status-label">发送:</span>
-                  <span class="status-value">27.1MB</span>
+                  <span class="status-value">{{ (Number(status.interface.txBytes) / 1024).toFixed(2) }} MB</span>
                 </div>
                 <div class="signal-item">
                   <span class="status-label">接收:</span>
-                  <span class="status-value">36.7MB</span>
+                  <span class="status-value">{{ (Number(status.interface.rxBytes) / 1024).toFixed(2) }} MB</span>
                 </div>
-              </div>
-
-
-              <div class="status-item">
-                <span class="status-label">{{ $t('Real Band') }}:</span>
-                <span class="status-value">{{ status.band }}</span>
               </div>
 
               <div class="status-item">
@@ -502,6 +495,7 @@ export default {
           rssi: '',
           band: ''
         },
+        // 接口信息
         interface: {
           ip: '-',
           mask: '-',
@@ -526,6 +520,25 @@ export default {
         country: '',
         mcc: '',
         mnc: ''
+      },
+      // NR/LTE 工作频率信息
+      freqInfo: {
+        sysmode: '',
+        class: []
+      },
+      // 5G Core注册状态
+      NR_5GCore: {
+        stat: '',
+        tac: '',
+        ci: '',
+        act: ''
+      },
+      // CS域注册状态, 可用于反应LTE注册状态
+      CS: {
+        stat: '',
+        lac: '',
+        ci: '',
+        act: ''
       },
       monsc: {
         rat: '',
@@ -622,20 +635,19 @@ export default {
     }
   },
   created() {
-    // 初始化一次
     if (this.wanData) {
       this.applyWanData(this.wanData)
     }
   },
   watch: {
-    // 监听父组件传入的 wanData，实时更新界面
     wanData: {
-      handler(newVal) {
-        if (newVal) {
-          this.applyWanData(newVal)
-        }
+      handler(newVal, oldVal) {
+        if (!newVal)
+          return
+        if (!oldVal || (oldVal.settings && newVal.settings && oldVal.settings.index !== newVal.settings.index))
+          this.settingsInitialized = false
+        this.applyWanData(newVal)
       },
-      deep: true,
       immediate: true
     }
   },
@@ -644,17 +656,67 @@ export default {
       const map = { '0': '解锁状态', '1': '锁频点+锁频段', '2': '锁小区+频点+锁频段', '3': '锁频段' }
       return map[type] || type
     },
+    // 从freqInfo中解析出频段信息
+    getRealBandTypeText() {
+      const fi = this.freqInfo
+      if (!fi)
+        return ''
+
+      const sysmode = String(fi.sysmode ?? '').trim().toUpperCase()
+      let isNr = false
+      let isLte = false
+
+      if (sysmode.includes('NR')) {
+        isNr = true
+      } else if (sysmode.includes('LTE')) {
+        isLte = true
+      } else if (sysmode === '7') {
+        isNr = true
+      } else if (sysmode === '3') {
+        isLte = true
+      }
+
+      if (!isNr && !isLte) {
+        const rat = String(this.status?.rat ?? '').toUpperCase()
+        if (rat.includes('LTE'))
+          isLte = true
+        else if (rat.includes('NR'))
+          isNr = true
+      }
+
+      const list = Array.isArray(fi.class) ? fi.class : []
+      const seen = new Set()
+      const prefix = isNr ? 'n' : 'b'
+      const bands = []
+
+      for (const item of list) {
+        const bandClass = item && item.band_class !== null ? String(item.band_class).trim() : ''
+        if (!bandClass)
+          continue
+        if (seen.has(bandClass))
+          continue
+        seen.add(bandClass)
+        bands.push(prefix + bandClass)
+      }
+
+      return bands.join(' ')
+    },
     // 将 props.wanData 映射到本地状态（wanInfo / wanConfig）
     applyWanData(data) {
       if (!data) return
 
       // 实时状态
       this.status = data.status
-      console.log('data.mac', data.status.interface.mac)
       // productInfo
       this.productInfo = data.productInfo
       // sim
       this.sim = data.sim
+      // freq LTE/NR工作频率 频段
+      this.freqInfo = data.freqInfo
+      // 5G Core注册状态
+      this.NR_5GCore = data.NR_5GCore
+      // CS域注册状态, 可用于反应LTE注册状态
+      this.CS = data.CS
       // monsc
       this.monsc = data.monsc
       // monnc
@@ -662,6 +724,9 @@ export default {
       // 从模组中查到的真实配置
       this.realSettings = data.realSettings
       // console.log('real settings:', this.realSettings)
+
+      // freq LTE/NR工作频率 频段
+      this.freqInfo = data.freqInfo
 
       // settings 仅在首次进入页面时初始化一次
       if (!this.settingsInitialized) {
@@ -703,25 +768,9 @@ export default {
         this.$message.error('设置失败')
       })
     },
-    getStatusClass(status) {
-      switch (status) {
-      case 'disabled': return 'status-disabled'
-      case 'connected': return 'status-connected'
-      case 'disconnected': return 'status-disconnected'
-      case 'dialing': return 'status-dialing'
-      case 'nosim': return 'status-nosim'
-      default: return ''
-      }
-    },
-    getStatusText(status) {
-      switch (status) {
-      case 'disabled': return this.$t('Disabled')
-      case 'connected': return this.$t('Connected')
-      case 'disconnected': return this.$t('Disconnected')
-      case 'dialing': return this.$t('Connecting')
-      case 'nosim': return this.$t('NoSim')
-      default: return this.$t('Unknown')
-      }
+    getStatusText() {
+      // 判断当前的实时网络
+      return this.NR_5GCore.stat
     },
     // 保存配置
     saveConfig() {
@@ -843,7 +892,7 @@ export default {
 }
 
 .top-cards .connection-card {
-  flex: 1.5;
+  flex: 1.1;
 }
 
 .vertical-cards {
@@ -854,7 +903,7 @@ export default {
 }
 
 .vertical-cards.freqlock-cards {
-  flex: 0.8;
+  flex: 1;
 }
 
 .vertical-cards .config-card {
@@ -939,6 +988,19 @@ export default {
 
 .signal-row-left {
   justify-content: flex-start;
+}
+
+.signal-row-right {
+  justify-content: flex-start;
+}
+
+.signal-row-right .signal-title {
+  margin-right: auto;
+}
+
+.signal-row-right .signal-item {
+  justify-content: flex-end;
+  flex: 0 0 auto;
 }
 
 .signal-title {

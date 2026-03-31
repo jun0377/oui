@@ -26,7 +26,7 @@
           <hr />
 
           <!-- 数据行 -->
-          <div class="subnet-item" v-for="(wan, index) in wanLinks" :key="index" @click="editSubWan(wan)">
+          <div class="subnet-item" v-for="(wan, index) in wanLinks" :key="index" @click="editSubWan(wan, index)">
             <svg class="subnet-icon-svg" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
               <!-- SIM卡外框 -->
               <path d="M6 3C5.44772 3 5 3.44772 5 4V20C5 20.5523 5.44772 21 6 21H18C18.5523 21 19 20.5523 19 20V8L14 3H6Z" fill="#DCFCE7" stroke="#22C55E" stroke-width="1.5"/>
@@ -100,12 +100,11 @@
       </div>
     </div>
 
-    <!-- WAN配置页面 -->
-    <WanConfig v-else-if="currentView === 'wan-config'" :wan-data="selectedWan" @go-back="goBackToMain" />
-    <!-- DHCP配置页面 -->
-    <DhcpConfig v-else-if="currentView === 'dhcp'" @go-back="goBackToMain" />
-    <!-- Wireless配置页面 -->
-    <WirelessConfig v-else-if="currentView === 'wireless'" @go-back="goBackToMain" />
+    <KeepAlive>
+      <WanConfig v-if="currentView === 'wan-config'" :wan-data="selectedWan" @go-back="goBackToMain" />
+    </KeepAlive>
+    <DhcpConfig v-if="currentView === 'dhcp'" @go-back="goBackToMain" />
+    <WirelessConfig v-if="currentView === 'wireless'" @go-back="goBackToMain" />
   </div>
 </template>
 
@@ -155,6 +154,25 @@ export default {
           country: '',
           mcc: '',
           mnc: ''
+        },
+        // NR/LTE 工作频率信息
+        freqInfo: {
+          sysmode: '',
+          class: []
+        },
+        // 5G Core注册状态
+        NR_5GCore: {
+          stat: '',
+          tac: '',
+          ci: '',
+          act: ''
+        },
+        // CS域注册状态, 可用于反应LTE注册状态
+        CS: {
+          stat: '',
+          lac: '',
+          ci: '',
+          act: ''
         },
         monsc: {
           rat: '',
@@ -266,6 +284,7 @@ export default {
     return {
       currentView: 'main', // 'main' 或 'wan-config'
       selectedWan: null,
+      selectedWanIndex: null,
       wanLinks: [
         createDefaultWanLink(0),
         createDefaultWanLink(1),
@@ -281,8 +300,67 @@ export default {
       ]
     }
   },
+  watch: {
+    currentView() {
+      this.updatePolling()
+    },
+    selectedWanIndex() {
+      this.updatePolling()
+    }
+  },
 
   methods: {
+    updatePolling() {
+      this._pollingToken = (this._pollingToken || 0) + 1
+      this.stopAllPolling()
+
+      if (this.currentView === 'main') {
+        this.startPollingForIndexes([0, 1, 2], { status: true })
+        return
+      }
+
+      if (this.currentView === 'wan-config' && typeof this.selectedWanIndex === 'number') {
+        this.startPollingForIndexes([this.selectedWanIndex], { status: true, product: true, modules: true, interface: true })
+      }
+    },
+    startPollingForIndexes(indexes, plan) {
+      indexes.forEach((index) => {
+        if (plan.product) {
+          this.$timer.start('sim-product' + index)
+          this.getProductInfo(index)
+        }
+        if (plan.status) {
+          this.$timer.start('sim-status' + index)
+          this.getStatus(index)
+        }
+        if (plan.modules) {
+          this.$timer.start('modules' + index)
+          this.getModuleSettings(index)
+        }
+        if (plan.interface) {
+          this.$timer.start('interface' + index)
+          this.getInterfaceStatus(index)
+        }
+      })
+    },
+    stopAllPolling() {
+      this.wanLinks.forEach((_, index) => {
+        this.$timer.stop('sim-product' + index)
+        this.$timer.stop('sim-status' + index)
+        this.$timer.stop('modules' + index)
+        this.$timer.stop('interface' + index)
+      })
+    },
+    withInFlight(key, fn) {
+      if (!this._inFlight)
+        this._inFlight = {}
+      if (this._inFlight[key])
+        return
+      this._inFlight[key] = true
+      return Promise.resolve(fn()).finally(() => {
+        this._inFlight[key] = false
+      })
+    },
     getStatusClass(status) {
       switch (status) {
       case 'connected': return 'status-connected'
@@ -317,155 +395,224 @@ export default {
       // })
     },
     getProductInfo(index) {
-      this.$oui.call('sim', 'getProductInfo', {'index': index}).then(result => {
-        const data = typeof result === 'string' ? JSON.parse(result) : result
-        const productInfo = this.wanLinks[index].productInfo
-        if (data.vendor) productInfo.vendor = data.vendor
-        if (data.product) productInfo.product = data.product
-        if (data.revision) productInfo.revision = data.revision
-        if (data.imei) productInfo.imei = data.imei
-        if (data.iccid) productInfo.iccid = data.iccid
-        if (data.imsi) productInfo.imsi = data.imsi
-        this.wanLinks[index].productInfo = { ...productInfo }
+      return this.withInFlight('getProductInfo:' + index, () => {
+        const token = this._pollingToken
+        return this.$oui.call('sim', 'getProductInfo', { index }).then(result => {
+          if (token !== this._pollingToken)
+            return
+          if (!(this.currentView === 'wan-config' && this.selectedWanIndex === index))
+            return
+
+          const data = typeof result === 'string' ? JSON.parse(result) : result
+          const productInfo = this.wanLinks[index].productInfo
+          if (data.vendor) productInfo.vendor = data.vendor
+          if (data.product) productInfo.product = data.product
+          if (data.revision) productInfo.revision = data.revision
+          if (data.imei) productInfo.imei = data.imei
+          if (data.iccid) productInfo.iccid = data.iccid
+          if (data.imsi) productInfo.imsi = data.imsi
+        })
       })
     },
     // 查询模组配置,是从模组中通过at指令查询到的配置,并不是uci配置
     getModuleSettings(index) {
-      this.$oui.call('sim', 'getModuleSettings', {'index': index}).then(result => {
-        const data = typeof result === 'string' ? JSON.parse(result) : result
-        // console.log('data>>>>>>>>>>>', data)
-        const real = this.wanLinks[index].realSettings
-        if (data.rat) real.rat = data.rat
-        if (data.pdp) {
-          if (data.pdp.cid) real.pdp.cid = data.pdp.cid
-          if (data.pdp.pdp_type) real.pdp.pdp_type = data.pdp.pdp_type
-          if (data.pdp.apn) real.pdp.apn = data.pdp.apn
-          if (data.pdp.pdp_addr) real.pdp.pdp_addr = data.pdp.pdp_addr
-        }
-        if (data.auth) {
-          if (data.auth.cid) real.auth.cid = data.auth.cid
-          if (data.auth.auth_type) real.auth.auth_type = data.auth.auth_type
-          if (data.auth.passwd) real.auth.passwd = data.auth.passwd
-          if (data.auth.username) real.auth.username = data.auth.username
-          if (data.auth.plmn) real.auth.plmn = data.auth.plmn
-        }
-        if (data.nrfreqlock) {
-          if (data.nrfreqlock.operatetype) real.nrfreqlock.operatetype = data.nrfreqlock.operatetype
-          if (data.nrfreqlock.forbid_flag) real.nrfreqlock.forbid_flag = data.nrfreqlock.forbid_flag
-          if (data.nrfreqlock.num) real.nrfreqlock.num = data.nrfreqlock.num
-          if (data.nrfreqlock.band) real.nrfreqlock.band = data.nrfreqlock.band
-          if (data.nrfreqlock.arfcn) real.nrfreqlock.arfcn = data.nrfreqlock.arfcn
-          if (data.nrfreqlock.scstype) real.nrfreqlock.scstype = data.nrfreqlock.scstype
-          if (data.nrfreqlock.pci) real.nrfreqlock.pci = data.nrfreqlock.pci
-        }
-        if (data.ltefreqlock) {
-          if (data.ltefreqlock.operatetype) real.ltefreqlock.operatetype = data.ltefreqlock.operatetype
-          if (data.ltefreqlock.forbid_flag) real.ltefreqlock.forbid_flag = data.ltefreqlock.forbid_flag
-          if (data.ltefreqlock.num) real.ltefreqlock.num = data.ltefreqlock.num
-          if (data.ltefreqlock.band) real.ltefreqlock.band = data.ltefreqlock.band
-          if (data.ltefreqlock.arfcn) real.ltefreqlock.arfcn = data.ltefreqlock.arfcn
-          if (data.ltefreqlock.pci) real.ltefreqlock.pci = data.ltefreqlock.pci
-        }
-        this.wanLinks[index].realSettings = { ...real }
+      return this.withInFlight('getModuleSettings:' + index, () => {
+        const token = this._pollingToken
+        return this.$oui.call('sim', 'getModuleSettings', { index }).then(result => {
+          if (token !== this._pollingToken)
+            return
+          if (!(this.currentView === 'wan-config' && this.selectedWanIndex === index))
+            return
+
+          const data = typeof result === 'string' ? JSON.parse(result) : result
+          // console.log('data>>>>>>>>>>>', data)
+          const real = this.wanLinks[index].realSettings
+          if (data.rat) real.rat = data.rat
+          if (data.pdp) {
+            if (data.pdp.cid) real.pdp.cid = data.pdp.cid
+            if (data.pdp.pdp_type) real.pdp.pdp_type = data.pdp.pdp_type
+            if (data.pdp.apn) real.pdp.apn = data.pdp.apn
+            if (data.pdp.pdp_addr) real.pdp.pdp_addr = data.pdp.pdp_addr
+          }
+          if (data.auth) {
+            if (data.auth.cid) real.auth.cid = data.auth.cid
+            if (data.auth.auth_type) real.auth.auth_type = data.auth.auth_type
+            if (data.auth.passwd) real.auth.passwd = data.auth.passwd
+            if (data.auth.username) real.auth.username = data.auth.username
+            if (data.auth.plmn) real.auth.plmn = data.auth.plmn
+          }
+          if (data.nrfreqlock) {
+            if (data.nrfreqlock.operatetype) real.nrfreqlock.operatetype = data.nrfreqlock.operatetype
+            if (data.nrfreqlock.forbid_flag) real.nrfreqlock.forbid_flag = data.nrfreqlock.forbid_flag
+            if (data.nrfreqlock.num) real.nrfreqlock.num = data.nrfreqlock.num
+            if (data.nrfreqlock.band) real.nrfreqlock.band = data.nrfreqlock.band
+            if (data.nrfreqlock.arfcn) real.nrfreqlock.arfcn = data.nrfreqlock.arfcn
+            if (data.nrfreqlock.scstype) real.nrfreqlock.scstype = data.nrfreqlock.scstype
+            if (data.nrfreqlock.pci) real.nrfreqlock.pci = data.nrfreqlock.pci
+          }
+          if (data.ltefreqlock) {
+            if (data.ltefreqlock.operatetype) real.ltefreqlock.operatetype = data.ltefreqlock.operatetype
+            if (data.ltefreqlock.forbid_flag) real.ltefreqlock.forbid_flag = data.ltefreqlock.forbid_flag
+            if (data.ltefreqlock.num) real.ltefreqlock.num = data.ltefreqlock.num
+            if (data.ltefreqlock.band) real.ltefreqlock.band = data.ltefreqlock.band
+            if (data.ltefreqlock.arfcn) real.ltefreqlock.arfcn = data.ltefreqlock.arfcn
+            if (data.ltefreqlock.pci) real.ltefreqlock.pci = data.ltefreqlock.pci
+          }
+        })
       })
     },
     getStatus(index) {
-      this.$oui.call('sim', 'getStatus', {'index': index}).then(result => {
-        const data = typeof result === 'string' ? JSON.parse(result) : result
-        const sim = this.wanLinks[index].sim
-        if (data.sim) sim.status = data.sim
-        if (data.operator_name) sim.operator = data.operator_name
-        if (data.country) sim.country = data.country
-        if (data.mcc) sim.mcc = data.mcc
-        if (data.mnc) sim.mnc = data.mnc
-        this.wanLinks[index].sim = { ...sim }
+      return this.withInFlight('getStatus:' + index, () => {
+        const token = this._pollingToken
+        return this.$oui.call('sim', 'getStatus', { index }).then(result => {
+          if (token !== this._pollingToken)
+            return
 
-        if (data.monsc) {
-          const monsc = data.monsc
-          const newest = this.wanLinks[index].monsc
-          if (monsc.rat) newest.rat = monsc.rat
-          if (monsc.nr) {
-            if (monsc.nr.cell_id) newest.nr.cell_id = monsc.nr.cell_id
-            if (monsc.nr.arfcn) newest.nr.arfcn = monsc.nr.arfcn
-            if (monsc.nr.scs) newest.nr.scs = monsc.nr.scs
-            if (monsc.nr.pci) newest.nr.pci = monsc.nr.pci
-            if (monsc.nr.tac) newest.nr.tac = monsc.nr.tac
-            if (monsc.nr.rsrp) newest.nr.rsrp = monsc.nr.rsrp
-            if (monsc.nr.rsrq) newest.nr.rsrq = monsc.nr.rsrq
-            if (monsc.nr.sinr) newest.nr.sinr = monsc.nr.sinr
-            // console.log("nr:", newest.nr)
-          }
-          if (monsc.lte) {
-            if (monsc.lte.cell_id) newest.lte.cell_id = monsc.lte.cell_id
-            if (monsc.lte.arfcn) newest.lte.arfcn = monsc.lte.arfcn
-            if (monsc.lte.pci) newest.lte.pci = monsc.lte.pci
-            if (monsc.lte.tac) newest.lte.tac = monsc.lte.tac
-            if (monsc.lte.rsrp) newest.lte.rsrp = monsc.lte.rsrp
-            if (monsc.lte.rsrq) newest.lte.rsrq = monsc.lte.rsrq
-            if (monsc.lte.rssi) newest.lte.rssi = monsc.lte.rssi
-            // console.log("lte:", newest.lte)
-          }
-          if (monsc.wcdma) {
-            if (monsc.wcdma.cell_id) newest.wcdma.cell_id = monsc.wcdma.cell_id
-            if (monsc.wcdma.arfcn) newest.wcdma.arfcn = monsc.wcdma.arfcn
-            if (monsc.wcdma.pcs) newest.wcdma.pcs = monsc.wcdma.pcs
-            if (monsc.wcdma.lac) newest.wcdma.lac = monsc.wcdma.lac
-            if (monsc.wcdma.rscp) newest.wcdma.rscp = monsc.wcdma.rscp
-            if (monsc.wcdma.rxlev) newest.wcdma.rxlev = monsc.wcdma.rxlev
-            if (monsc.wcdma.ecno) newest.wcdma.ecno = monsc.wcdma.ecno
-            // console.log("wcdma:", newest.wcdma)
-          }
-          this.wanLinks[index].monsc = { ...newest }
+          const data = typeof result === 'string' ? JSON.parse(result) : result
+          const link = this.wanLinks[index]
+          // SIM卡信息
+          const sim = link.sim
+          if (data.sim) sim.status = data.sim
+          if (data.operator_name) sim.operator = data.operator_name
+          if (data.country) sim.country = data.country
+          if (data.mcc) sim.mcc = data.mcc
+          if (data.mnc) sim.mnc = data.mnc
+          const isDetail = this.currentView === 'wan-config' && this.selectedWanIndex === index
+          const isMain = this.currentView === 'main'
+          if (!isDetail && !isMain)
+            return
 
-          if (data.monnc) {
-            this.wanLinks[index].monnc = { ...data.monnc }
+          // NR/LTE频率频段信息
+          if (data.freqInfo) {
+            const freqInfo = typeof data.freqInfo === 'string' ? JSON.parse(data.freqInfo) : data.freqInfo
+
+            if (freqInfo) {
+              const fi = link.freqInfo
+              if (freqInfo.sysmode !== null)
+                fi.sysmode = String(freqInfo.sysmode)
+
+              const classes = freqInfo.class || freqInfo.classes || freqInfo.bands
+              fi.class = Array.isArray(classes) ? classes : []
+            }
           }
 
-          const status = this.wanLinks[index].status
-          if (data.monsc.rat) status.rat = data.monsc.rat
-          if (data.timestamp) status.timestamp = data.timestamp
-          if (monsc.nr) {
-            if (monsc.nr.rsrp) status.nr.rsrp = monsc.nr.rsrp
-            if (monsc.nr.rsrq) status.nr.rsrq = monsc.nr.rsrq
-            if (monsc.nr.sinr) status.nr.sinr = monsc.nr.sinr
-            if (monsc.nr.band) status.nr.band = monsc.nr.band
-          }
-          if (monsc.lte) {
-            if (monsc.lte.rsrp) status.lte.rsrp = monsc.lte.rsrp
-            if (monsc.lte.rsrq) status.lte.rsrq = monsc.lte.rsrq
-            if (monsc.lte.sinr) status.lte.sinr = monsc.lte.sinr
-            if (monsc.lte.rssi) status.lte.rssi = monsc.lte.rssi
-            if (monsc.lte.band) status.lte.band = monsc.lte.band
+          if (data.C5GCore) {
+            const c5 = typeof data.C5GCore === 'string' ? JSON.parse(data.C5GCore) : data.C5GCore
+            if (c5.stat) link.NR_5GCore.stat = c5.stat
+            if (c5.tac) link.NR_5GCore.lac = c5.tac
+            if (c5.ci) link.NR_5GCore.ci = c5.ci
+            if (c5.act) link.NR_5GCore.act = c5.act
           }
 
-          this.wanLinks[index].status = { ...status }
-        }
+          // CS域注册状态
+          if (data.C4GCore) {
+            const cs = typeof data.C4GCore === 'string' ? JSON.parse(data.C4GCore) : data.C4GCore
+            if (cs.stat) link.CS.stat = cs.stat
+            if (cs.lac) link.CS.lac = cs.lac
+            if (cs.ci) link.CS.ci = cs.ci
+            if (cs.act) link.CS.act = cs.act
+          }
+
+          // NR/LTE信号强度
+          if (data.monsc) {
+            const monsc = data.monsc
+            const status = link.status
+            if (data.monsc.rat) status.rat = data.monsc.rat
+            if (data.timestamp) status.timestamp = data.timestamp
+            if (monsc.nr) {
+              if (monsc.nr.rsrp) status.nr.rsrp = monsc.nr.rsrp
+              if (monsc.nr.rsrq) status.nr.rsrq = monsc.nr.rsrq
+              if (monsc.nr.sinr) status.nr.sinr = monsc.nr.sinr
+              if (monsc.nr.band) status.nr.band = monsc.nr.band
+            }
+            if (monsc.lte) {
+              if (monsc.lte.rsrp) status.lte.rsrp = monsc.lte.rsrp
+              if (monsc.lte.rsrq) status.lte.rsrq = monsc.lte.rsrq
+              if (monsc.lte.sinr) status.lte.sinr = monsc.lte.sinr
+              if (monsc.lte.rssi) status.lte.rssi = monsc.lte.rssi
+              if (monsc.lte.band) status.lte.band = monsc.lte.band
+            }
+
+            if (isDetail) {
+              const newest = link.monsc
+              // 驻留小区信息
+              if (monsc.rat) newest.rat = monsc.rat
+              // NR驻留小区信息
+              if (monsc.nr) {
+                if (monsc.nr.cell_id) newest.nr.cell_id = monsc.nr.cell_id
+                if (monsc.nr.arfcn) newest.nr.arfcn = monsc.nr.arfcn
+                if (monsc.nr.scs) newest.nr.scs = monsc.nr.scs
+                if (monsc.nr.pci) newest.nr.pci = monsc.nr.pci
+                if (monsc.nr.tac) newest.nr.tac = monsc.nr.tac
+                if (monsc.nr.rsrp) newest.nr.rsrp = monsc.nr.rsrp
+                if (monsc.nr.rsrq) newest.nr.rsrq = monsc.nr.rsrq
+                if (monsc.nr.sinr) newest.nr.sinr = monsc.nr.sinr
+              }
+              // LTE驻留小区信息
+              if (monsc.lte) {
+                if (monsc.lte.cell_id) newest.lte.cell_id = monsc.lte.cell_id
+                if (monsc.lte.arfcn) newest.lte.arfcn = monsc.lte.arfcn
+                if (monsc.lte.pci) newest.lte.pci = monsc.lte.pci
+                if (monsc.lte.tac) newest.lte.tac = monsc.lte.tac
+                if (monsc.lte.rsrp) newest.lte.rsrp = monsc.lte.rsrp
+                if (monsc.lte.rsrq) newest.lte.rsrq = monsc.lte.rsrq
+                if (monsc.lte.rssi) newest.lte.rssi = monsc.lte.rssi
+              }
+              // WCDMA驻留小区信息
+              if (monsc.wcdma) {
+                if (monsc.wcdma.cell_id) newest.wcdma.cell_id = monsc.wcdma.cell_id
+                if (monsc.wcdma.arfcn) newest.wcdma.arfcn = monsc.wcdma.arfcn
+                if (monsc.wcdma.pcs) newest.wcdma.pcs = monsc.wcdma.pcs
+                if (monsc.wcdma.lac) newest.wcdma.lac = monsc.wcdma.lac
+                if (monsc.wcdma.rscp) newest.wcdma.rscp = monsc.wcdma.rscp
+                if (monsc.wcdma.rxlev) newest.wcdma.rxlev = monsc.wcdma.rxlev
+                if (monsc.wcdma.ecno) newest.wcdma.ecno = monsc.wcdma.ecno
+              }
+              // 更新驻留小区信息
+              if (data.monnc) {
+                const monnc = link.monnc
+                if (data.monnc.gsm) monnc.gsm = data.monnc.gsm
+                if (data.monnc.wcdma) monnc.wcdma = data.monnc.wcdma
+                if (data.monnc.lte) monnc.lte = data.monnc.lte
+                if (data.monnc.nr) monnc.nr = data.monnc.nr
+              }
+            }
+          }
+        })
       })
     },
     // 获取网络接口信息
     getInterfaceStatus(index) {
-      this.$oui.call('sim', 'getInterfaceStatus', {'index': index}).then(result => {
-        const data = typeof result === 'string' ? JSON.parse(result) : result
-        console.log('data', data)
-        const inter = this.wanLinks[index].status.interface
-        if (data.ip) inter.ip = data.ip
-        if (data.mask) inter.mask = data.mask
-        if (data.gateway) inter.gateway = data.gateway
-        if (data.mac) inter.mac = data.mac
-        if (data.rxBytes) inter.rxBytes = data.rxBytes
-        if (data.txBytes) inter.txBytes = data.txBytes
-        this.wanLinks[index].status.interface = { ...inter }
+      return this.withInFlight('getInterfaceStatus:' + index, () => {
+        const token = this._pollingToken
+        return this.$oui.call('sim', 'getInterfaceStatus', { index }).then(result => {
+          if (token !== this._pollingToken)
+            return
+          if (!(this.currentView === 'wan-config' && this.selectedWanIndex === index))
+            return
+
+          const data = typeof result === 'string' ? JSON.parse(result) : result
+          const inter = this.wanLinks[index].status.interface
+          if (data.ip) inter.ip = data.ip
+          if (data.mask) inter.mask = data.mask
+          if (data.gateway) inter.gateway = data.gateway
+          if (data.mac) inter.mac = data.mac
+          if (data.rxBytes) inter.rxBytes = data.rxBytes
+          if (data.txBytes) inter.txBytes = data.txBytes
+        })
       })
     },
     // 切换到WAN配置页面
-    editSubWan(wan) {
+    editSubWan(wan, index) {
       this.selectedWan = wan
+      this.selectedWanIndex = index
       this.currentView = 'wan-config'
     },
     // 返回主页面
     goBackToMain() {
       this.currentView = 'main'
       this.selectedWan = null
+      this.selectedWanIndex = null
     },
     editSubNet(lan) {
       if (lan.name === 'DHCP Service') {
@@ -481,11 +628,13 @@ export default {
     this.getSimSettings()
 
     this.wanLinks.forEach((wan, index) => {
-      this.$timer.create('sim-product' + index, () => this.getProductInfo(index), { time: 15000, immediate: true, repeat: true})
-      this.$timer.create('sim-status' + index, () => this.getStatus(index), { time: 10000, immediate: true, repeat: true})
-      this.$timer.create('modules' + index, () => this.getModuleSettings(index), { time: 12000, immediate: true, repeat: true})
-      this.$timer.create('interface' + index, () => this.getInterfaceStatus(index), { time: 5000, immediate: true, repeat: true})
+      this.$timer.create('sim-product' + index, () => this.getProductInfo(index), { time: 15000, repeat: true, autostart: false })
+      this.$timer.create('sim-status' + index, () => this.getStatus(index), { time: 10000, repeat: true, autostart: false })
+      this.$timer.create('modules' + index, () => this.getModuleSettings(index), { time: 12000, repeat: true, autostart: false })
+      this.$timer.create('interface' + index, () => this.getInterfaceStatus(index), { time: 10000, repeat: true, autostart: false })
     })
+
+    this.updatePolling()
   }
 }
 </script>
