@@ -357,8 +357,8 @@
           </template>
 
           <div class="status-table">
-            <div class="table-title">NR 驻留小区</div>
-            <div class="table-row header-row">
+            <div class="table-title" v-if="monsc.nr">NR 驻留小区</div>
+            <div class="table-row header-row" v-if="monsc.nr">
               <!-- <div class="table-cell">RAT</div> -->
               <div class="table-cell">ARFCN</div>
               <div class="table-cell">SCS</div>
@@ -369,7 +369,7 @@
               <div class="table-cell">RSRQ/dB</div>
               <div class="table-cell">SINR/dBm</div>
             </div>
-            <div class="table-row" v-if="monsc && monsc.nr">
+            <div class="table-row" v-if="monsc.nr">
               <div class="table-cell">{{ monsc.nr.arfcn }}</div>
               <div class="table-cell">{{ monsc.nr.scs }}</div>
               <div class="table-cell">{{ monsc.nr.cell_id }}</div>
@@ -379,12 +379,9 @@
               <div class="table-cell">{{ monsc.nr.rsrq }}</div>
               <div class="table-cell">{{ monsc.nr.sinr }}</div>
             </div>
-            <div class="no-data" v-if="!status.net || status.net === ''">
-              {{ $t('暂无NR驻留小区数据') }}
-            </div>
 
-            <div class="table-title">LTE 驻留小区</div>
-            <div class="table-row header-row">
+            <div class="table-title" v-if="monsc.lte.arfcn">LTE 驻留小区</div>
+            <div class="table-row header-row" v-if="monsc.lte.arfcn">
               <div class="table-cell">ARFCN</div>
               <div class="table-cell">Cell_ID</div>
               <div class="table-cell">PCI</div>
@@ -393,7 +390,7 @@
               <div class="table-cell">RSRQ/dB</div>
               <div class="table-cell">RSSI/dBm</div>
             </div>
-            <div class="table-row" v-if="monsc && monsc.lte">
+            <div class="table-row" v-if="monsc.lte.arfcn">
               <div class="table-cell">{{ monsc.lte.arfcn }}</div>
               <div class="table-cell">{{ monsc.lte.cell_id }}</div>
               <div class="table-cell">{{ monsc.lte.pci }}</div>
@@ -401,11 +398,8 @@
               <div class="table-cell">{{ monsc.lte.rsrp }}</div>
               <div class="table-cell">{{ monsc.lte.rsrq }}</div>
               <div class="table-cell">{{ monsc.lte.rssi }}</div>
+            </div>
 
-            </div>
-            <div class="no-data" v-if="!monsc.lte">
-              {{ $t('暂无LTE驻留小区数据') }}
-            </div>
           </div>
         </el-card>
 
@@ -770,7 +764,7 @@ export default {
     },
     getStatusText() {
       // 判断当前的实时网络
-      return this.NR_5GCore.stat
+      return 'NR' + this.NR_5GCore.stat + ' | ' + 'LTE' + this.CS.stat
     },
     // 保存配置
     saveConfig() {
