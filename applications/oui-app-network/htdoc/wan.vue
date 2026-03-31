@@ -53,22 +53,38 @@
 
             <div style="display: flex; gap: 10px;">
               <el-form-item label="锁NR频段" style="flex: 1; margin-bottom: 0;">
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <el-select
-                    v-model="settings.band"
-                    :placeholder="settings.bandUnLock ? '未锁定' : $t('band like: n78、b1...')"
-                    :disabled="settings.bandUnLock"
-                    filterable
-                    allow-create
-                    default-first-option
-                    style="flex: 1;"
+                <div v-if="getNRBandOptions().length" class="band-option-list">
+                  <el-tag
+                    v-for="opt in getNRBandOptions()"
+                    :key="opt"
+                    class="band-option-tag"
+                    :type="isNRBandOptionActive(opt) ? 'primary' : 'info'"
+                    :effect="isNRBandOptionActive(opt) ? 'dark' : 'plain'"
+                    @click="selectNRBandOption(opt)"
                   >
-                    <el-option v-for="opt in getBandOptions()" :key="opt" :label="opt" :value="opt"/>
-                  </el-select>
-                  <el-checkbox v-model="settings.bandUnLock" @change="handleUnlockBand">解锁</el-checkbox>
+                    {{ opt }}
+                  </el-tag>
                 </div>
+                <div v-else class="band-option-empty">暂无可选频段</div>
               </el-form-item>
+            </div>
 
+            <div style="display: flex; gap: 10px;">
+              <el-form-item label="锁LTE频段" style="flex: 1; margin-bottom: 0;">
+                <div v-if="getLTEBandOptions().length" class="band-option-list">
+                  <el-tag
+                    v-for="opt in getLTEBandOptions()"
+                    :key="opt"
+                    class="band-option-tag"
+                    :type="isLTEBandOptionActive(opt) ? 'primary' : 'info'"
+                    :effect="isLTEBandOptionActive(opt) ? 'dark' : 'plain'"
+                    @click="selectLTEBandOption(opt)"
+                  >
+                    {{ opt }}
+                  </el-tag>
+                </div>
+                <div v-else class="band-option-empty">暂无可选频段</div>
+              </el-form-item>
             </div>
 
             <!-- <el-form-item :label="$t('Lock PCI')">
@@ -196,11 +212,11 @@
                 <div class="signal-title">数据统计:</div>
                 <div class="signal-item">
                   <span class="status-label">发送:</span>
-                  <span class="status-value">{{ (Number(status.interface.txBytes) / 1024).toFixed(2) }} MB</span>
+                  <span class="status-value">{{ (Number(status.interface.txBytes) / 1024 / 1024).toFixed(2) }} MB</span>
                 </div>
                 <div class="signal-item">
                   <span class="status-label">接收:</span>
-                  <span class="status-value">{{ (Number(status.interface.rxBytes) / 1024).toFixed(2) }} MB</span>
+                  <span class="status-value">{{ (Number(status.interface.rxBytes) / 1024 / 1024).toFixed(2) }} MB</span>
                 </div>
               </div>
 
@@ -295,7 +311,7 @@
             </el-card>
           </div>
 
-          <!-- NR锁频锁小区状态和LTE锁频锁小区状态 -->
+          <!-- NR锁频锁小区状态 -->
           <div class="vertical-cards freqlock-cards">
             <el-card class="config-card compact-card">
               <template #header>
@@ -326,6 +342,7 @@
                 </div>
               </div>
             </el-card>
+            <!-- LTE锁频锁小区状态 -->
             <el-card class="config-card compact-card">
               <template #header>
                 <div class="card-header">
@@ -339,7 +356,7 @@
                 </div>
                 <div class="status-item">
                   <span class="status-label">频段:</span>
-                  <span class="status-value">{{ realSettings.ltefreqlock.band.join(', ') }}</span>
+                  <span class="status-value">{{ realSettings.ltefreqlock.band.map(v => 'b' + v).join(',') }}</span>
                 </div>
                 <div class="status-item">
                   <span class="status-label">频点:</span>
@@ -624,9 +641,12 @@ export default {
         //入网方式
         net: '',
         apn: '',
-        // 锁频段
-        band: '',
-        bandUnLock: true,
+        // NR锁频段 锁PCI小区
+        nrBand: '',
+        nrBandUnLock: true,
+        // LTE锁频段 锁PCI小区
+        lteBand: '',
+        lteBandUnLock: true,
         // 锁小区
         pci: '',
         pciUnlock: true,
@@ -706,52 +726,19 @@ export default {
 
       return bands.join(' ')
     },
-    getBandOptions() {
-      const fi = this.freqInfo
-      if (!fi)
-        return []
-
-      const sysmode = String(fi.sysmode ?? '').trim().toUpperCase()
-      let isNr = false
-      let isLte = false
-
-      if (sysmode.includes('NR')) {
-        isNr = true
-      } else if (sysmode.includes('LTE')) {
-        isLte = true
-      } else if (sysmode === '7') {
-        isNr = true
-      } else if (sysmode === '3') {
-        isLte = true
-      }
-
-      if (!isNr && !isLte) {
-        const rat = String(this.status?.rat ?? '').toUpperCase()
-        if (rat.includes('LTE'))
-          isLte = true
-        else if (rat.includes('NR'))
-          isNr = true
-      }
-
-      if (!isNr && !isLte)
-        return []
-
-      const list = Array.isArray(fi.class) ? fi.class : []
-      const prefix = isNr ? 'n' : 'b'
-      const seen = new Set()
-      const opts = []
-
-      for (const item of list) {
-        const bandClass = item && item.band_class !== null && item.band_class !== undefined ? String(item.band_class).trim() : ''
-        if (!bandClass)
-          continue
-        if (seen.has(bandClass))
-          continue
-        seen.add(bandClass)
-        opts.push(prefix + bandClass)
-      }
-
-      return opts
+    getNRBandOptions() {
+      return ['解锁', 'n1', 'n3', 'n5', 'n8', 'n28', 'n41', 'n78', 'n79']
+    },
+    getLTEBandOptions() {
+      return ['解锁', 'b1', 'b3', 'b5', 'b8', 'b34', 'b38', 'b39', 'b40', 'b41']
+    },
+    buildBandValue() {
+      const values = []
+      if (!this.settings.nrBandUnLock && this.settings.nrBand)
+        values.push(this.settings.nrBand)
+      if (!this.settings.lteBandUnLock && this.settings.lteBand)
+        values.push(this.settings.lteBand)
+      return values.length ? values.join(',') : 'none'
     },
     // 将 props.wanData 映射到本地状态（wanInfo / wanConfig）
     applyWanData(data) {
@@ -783,19 +770,35 @@ export default {
       // settings 仅在首次进入页面时初始化一次
       if (!this.settingsInitialized) {
         this.settings.index = data.settings.index
-        console.log('index-----------------', this.settings.index)
+        // console.log('index-----------------', this.settings.index)
         this.settings.enable = typeof data.settings.enable === 'boolean' ? data.settings.enable : true
         this.settings.alias = data.settings.alias
         this.settings.interface = data.settings.interface
         this.settings.net = data.settings.net
         this.settings.apn = data.settings.apn
-        this.settings.band = data.settings.settingsBand
+        this.settings.band = data.settings.band || data.settings.settingsBand || ''
         this.settings.auth = data.settings.auth
         this.settings.username = data.settings.username
         this.settings.password = data.settings.password
-        this.settings.bandUnLock = (this.settings.band === 'none' || this.settings.band === '')
-        this.settings.cell = data.settings.settingsCell
-        this.settings.pci = data.settings.settingsPCI
+        const bandTokens = String(this.settings.band || '')
+          .split(',')
+          .map(item => item.trim())
+          .filter(Boolean)
+        const nrStoredBand = bandTokens.find(item => item.toLowerCase().startsWith('n')) || ''
+        const lteStoredBand = bandTokens.find(item => item.toLowerCase().startsWith('b')) || ''
+        const nrRealBand = data.realSettings && data.realSettings.nrfreqlock && Array.isArray(data.realSettings.nrfreqlock.band) ? (data.realSettings.nrfreqlock.band[0] || '') : ''
+        const lteRealBand = data.realSettings && data.realSettings.ltefreqlock && Array.isArray(data.realSettings.ltefreqlock.band) ? (data.realSettings.ltefreqlock.band[0] || '') : ''
+        this.settings.nrBand = nrRealBand || nrStoredBand
+        this.settings.lteBand = lteRealBand || lteStoredBand
+        this.settings.nrBandUnLock = (this.settings.nrBand === 'none' || this.settings.nrBand === '')
+        this.settings.lteBandUnLock = (this.settings.lteBand === 'none' || this.settings.lteBand === '')
+        if (this.settings.nrBandUnLock)
+          this.settings.nrBand = 'none'
+        if (this.settings.lteBandUnLock)
+          this.settings.lteBand = 'none'
+        this.settings.bandUnLock = this.settings.nrBandUnLock && this.settings.lteBandUnLock
+        this.settings.cell = data.settings.cell || data.settings.settingsCell
+        this.settings.pci = data.settings.pcid || data.settings.settingsPCI
         this.settings.pciUnlock = (this.settings.pci === 'none' || this.settings.pci === '')
         this.settingsInitialized = true
       }
@@ -833,10 +836,12 @@ export default {
         this.$message.error('The network interface must be specified!')
         return
       }
-      // 锁频段参数
-      if (!this.settings.bandUnLock && ('none' === this.settings.band || '' === this.settings.band)) {
-        console.log('Band locked but not specify the band!')
-        this.$message.error('请设置频段 或 解锁频段!')
+      if (!this.settings.nrBandUnLock && ('none' === this.settings.nrBand || '' === this.settings.nrBand)) {
+        this.$message.error('请设置NR频段 或 解锁NR频段!')
+        return
+      }
+      if (!this.settings.lteBandUnLock && ('none' === this.settings.lteBand || '' === this.settings.lteBand)) {
+        this.$message.error('请设置LTE频段 或 解锁LTE频段!')
         return
       }
       // 锁小区参数
@@ -845,11 +850,18 @@ export default {
         this.$message.error('请设置小区PCID 或 解锁小区!')
         return
       }
+
+      if (this.settings.nrBandUnLock)
+        this.settings.nrBand = 'none'
+      if (this.settings.lteBandUnLock)
+        this.settings.lteBand = 'none'
+
       console.log('saveConf index:', this.settings.index,
         'alias:', this.settings.alias,
         'apn:', this.settings.apn,
         'net:', this.settings.net,
-        'band:', this.settings.band,
+        'nrBand:', this.settings.nrBand,
+        'lteBand:', this.settings.lteBand,
         'pcid:', this.settings.pci,
         'auth', this.settings.auth,
         'username', this.settings.username,
@@ -874,13 +886,33 @@ export default {
         this.$message.success(this.$t('Configuration reset successfully'))
       })
     },
-    handleUnlockBand(unlocked) {
-      console.log('this.settings.bandUnlock: ', this.settings.bandUnLock)
-      if (unlocked) {
-        this.settings.band = ''
-      } else {
-        this.settings.band = this.wanData.settingsBand
+    selectNRBandOption(value) {
+      if (value === '解锁') {
+        this.settings.nrBand = 'none'
+        this.settings.nrBandUnLock = true
+        return
       }
+      this.settings.nrBand = value
+      this.settings.nrBandUnLock = false
+    },
+    selectLTEBandOption(value) {
+      if (value === '解锁') {
+        this.settings.lteBand = 'none'
+        this.settings.lteBandUnLock = true
+        return
+      }
+      this.settings.lteBand = value
+      this.settings.lteBandUnLock = false
+    },
+    isNRBandOptionActive(value) {
+      if (value === '解锁')
+        return this.settings.nrBandUnLock || this.settings.nrBand === ''
+      return !this.settings.nrBandUnLock && this.settings.nrBand === value
+    },
+    isLTEBandOptionActive(value) {
+      if (value === '解锁')
+        return this.settings.lteBandUnLock || this.settings.lteBand === ''
+      return !this.settings.lteBandUnLock && this.settings.lteBand === value
     },
     handleUnlockPCI(unlocked) {
       console.log('this.settings.pciUnlock: ', this.settings.pciUnlock)
@@ -1344,6 +1376,23 @@ export default {
   display: flex;
   justify-content: center;
   gap: 15px;
+}
+
+.band-option-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+  align-items: center;
+}
+
+.band-option-tag {
+  cursor: pointer;
+}
+
+.band-option-empty {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 
 /* 让“关”字在未开启状态下显示为红色 */

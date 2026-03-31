@@ -449,7 +449,6 @@ export default {
             }
           }
 
-          console.log(index, '====', data)
           const link = this.wanLinks[index]
           // SIM卡信息
           const sim = link.sim
@@ -584,6 +583,8 @@ export default {
               }
             }
           }
+        }).catch(err => {
+          console.warn('getStatus failed for index', index, err)
         })
       })
     },

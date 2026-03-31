@@ -312,7 +312,6 @@ function M.getInterfaceStatus(params)
     local index = tonumber(params.index) + 1
     local interface = getSimInterface(index)
     
-    interface = 'eth2'
     if not interface or interface == "" then
         return { code = -1, msg = "Interface not found" }
     end
@@ -365,14 +364,14 @@ function M.getRealtimeStatus(params)
     return ret
 end
 
--- 获取模组配置信息
+-- 获取模组内部配置信息
 function M.getSettings(params)
     local index = tonumber(params.index) + 1
     local node = getSimNode(index)
     local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", node)
     log.info(cmd)
     local ret = exec(cmd)
-    -- log.info(ret)
+    log.info(ret)
     return ret
 end
 
@@ -383,7 +382,7 @@ function M.getStatus(params)
     local cmd = string.format("/usr/share/modemdata/params.sh %s", node)
     log.info(cmd)
     local ret = exec(cmd)
-    -- log.info("status:", ret)
+    log.info("status:", ret)
     return ret
 end
 
@@ -392,15 +391,16 @@ function M.getModuleSettings(params)
     local index = tonumber(params.index) + 1
     local node = getSimNode(index)
     local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", node)
-    -- log.info(cmd)
+    log.info(cmd)
     local ret = exec(cmd)
-    -- log.info(ret)
+    log.info(ret)
     return ret
 end
 
--- 触发/lib/netifd/proto/ncm.sh，重新拨号
-local function dial(interface)
-    local cmd = string.format("ifdown %s;sleep 1;ifup %s", interface, interface)
+-- 触发重新拨号
+local function dial(index)
+    local node = getSimNode(index)
+    local cmd = string.format("/usr/share/modemdata/dial.sh %s", node)
     log.info(cmd)
     exec(cmd)
 end
@@ -442,7 +442,7 @@ local function setSimNet(index, net)
     c:commit('sim')
 
     Sim[index].settings.interface = c:get('sim', section, 'interface')
-    dial(Sim[index].settings.interface)
+    dial(index)
 end
 
 -- 更改apn
@@ -465,7 +465,7 @@ local function setSimAPN(index, apn)
     c:commit('sim')
 
     Sim[index].settings.interface = c:get('sim', section, 'interface')
-    dial(Sim[index].settings.interface)
+    dial(index)
 end
 
 -- 更改频段
@@ -488,7 +488,7 @@ local function setSimBand(index, band)
     c:commit('sim')
 
     Sim[index].settings.interface = c:get('sim', section, 'interface')
-    dial(Sim[index].settings.interface)
+    dial(index)
 end
 
 -- 更改小区
@@ -511,7 +511,7 @@ local function setSimPCID(index, PCID)
     c:commit('sim')
 
     Sim[index].settings.interface = c:get('sim', section, 'interface')
-    dial(Sim[index].settings.interface)
+    dial(index)
 end
 
 -- 更改鉴权、用户名、密码
@@ -568,31 +568,24 @@ local function setSimAuth(index, auth, apn, username, password)
     c:commit('sim')
 
     Sim[index].settings.interface = c:get('sim', section, 'interface')
-    dial(Sim[index].settings.interface)
+    dial(index)
 
 end
 
 -- 更改配置
 function M.changeSimSettings(params)
     
-    log.info(string.format("index:%s %s net: %s apn:%s band:%s cell:%s pci:%s auth:%s username:%s password:%s",
-        params.index,
-        params.alias,
-        params.net,
-        params.apn,
-        params.band,
-        params.cell,
-        params.pci,
-        params.auth,
-        params.username,
-        params.password))
+    log.info(string.format("index:%s %s net:%s", params.index, params.alias, params.net))
+    log.info(string.format("index:%s %s apn:%s auth:%s username:%s passwd:%s", params.index, params.alias, params.apn, params.auth, params.username, params.password))
+    log.info(string.format("index:%s %s nrBand:%s", params.index, params.alias, params.nrBand))
+    log.info(string.format("index:%s %s lteBand:%s", params.index, params.alias, params.lteBand))
     
     local index = tonumber(params.index) + 1
 
     setSimNet(index, params.net)
     setSimAPN(index, params.apn)
-    setSimBand(index, params.band)
-    setSimPCID(index, params.pci)
+    -- setSimBand(index, params.band)
+    -- setSimPCID(index, params.pci)
     setSimAuth(index, params.auth, params.apn, params.username, params.password)
 
     return { code = 0 }
@@ -615,6 +608,9 @@ function M.changeSimEnable(params)
 
         cmd = string.format('ifup %s', interface)
         exec(cmd)
+
+        -- 触发拨号
+        dial(index)
     else
         c:set("sim", section, 'enable', '0')
         c:commit('sim')
