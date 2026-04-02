@@ -87,17 +87,63 @@
               </el-form-item>
             </div>
 
-            <!-- <el-form-item :label="$t('Lock PCI')">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <el-input
-                  v-model="settings.pci"
-                  :placeholder="settings.pciUnlock ? '自动' : $t('Enter PCID')"
-                  :readonly="settings.pciUnlock"
-                  style="flex: 1;"
+            <el-form-item label="锁NR PCI小区">
+              <div style="display: flex; align-items: center; gap: 6px; width: 100%;">
+                <el-switch
+                  v-model="settings.nr_pci.enabled"
+                  inline-prompt
+                  :active-text="'开'"
+                  :inactive-text="'关'"
+                  @change="handleNRPciLock"
+                  class="wan-enable-switch"
                 />
-                <el-checkbox v-model="settings.pciUnlock" @change="handleUnlockPCI">解锁</el-checkbox>
+                <el-input v-model="settings.nr_pci.pcid" placeholder="PCID" style="flex: 0.9;" size="small"/>
+                <el-input v-model="settings.nr_pci.freq" placeholder="频点" style="flex: 0.9;" size="small"/>
+                <el-select v-model="settings.nr_pci.band" placeholder="频段" style="flex: 0.9;" size="small">
+                  <el-option label="n1" value="1"/>
+                  <el-option label="n3" value="3"/>
+                  <el-option label="n5" value="5"/>
+                  <el-option label="n8" value="8"/>
+                  <el-option label="n28" value="28"/>
+                  <el-option label="n41" value="41"/>
+                  <el-option label="n78" value="78"/>
+                </el-select>
+                <el-tooltip content="子载波间隔" placement="top">
+                  <el-select v-model="settings.nr_pci.scs" placeholder="子载波间隔" style="flex: 1.3; min-width: 120px;" size="small">
+                    <el-option label="15KHz" value="0"/>
+                    <el-option label="30KHz" value="1"/>
+                    <el-option label="60KHz" value="2"/>
+                    <el-option label="120KHz" value="3"/>
+                    <el-option label="240KHz" value="4"/>
+                  </el-select>
+                </el-tooltip>
               </div>
-            </el-form-item> -->
+            </el-form-item>
+
+            <el-form-item label="锁LTE PCI小区">
+              <div style="display: flex; align-items: center; gap: 6px; width: 100%;">
+                <el-switch
+                  v-model="settings.lte_pci.enabled"
+                  inline-prompt
+                  :active-text="'开'"
+                  :inactive-text="'关'"
+                  @change="handleLtePciLock"
+                  class="wan-enable-switch"
+                />
+                <el-input v-model="settings.lte_pci.pcid" placeholder="PCID" style="flex: 0.9;" size="small"/>
+                <el-input v-model="settings.lte_pci.freq" placeholder="频点" style="flex: 0.9;" size="small"/>
+                <el-select v-model="settings.lte_pci.band" placeholder="频段" style="flex: 0.9;" size="small">
+                  <el-option label="b1" value="1"/>
+                  <el-option label="b3" value="3"/>
+                  <el-option label="b5" value="5"/>
+                  <el-option label="b8" value="8"/>
+                  <el-option label="b34" value="34"/>
+                  <el-option label="b39" value="39"/>
+                  <el-option label="b40" value="40"/>
+                  <el-option label="b41" value="40"/>
+                </el-select>
+              </div>
+            </el-form-item>
 
             <el-form-item :label="$t('Enable')">
               <el-switch
@@ -647,9 +693,20 @@ export default {
         // LTE锁频段 锁PCI小区
         lteBand: '',
         lteBandUnLock: true,
-        // 锁小区
-        pci: '',
-        pciUnlock: true,
+        // 锁小区, 锁小区时必须同时指定 频段 频点 载波 载波间隔
+        nr_pci: {
+          enabled: false,
+          pcid: '',
+          band: '',
+          freq: '',
+          scs: ''
+        },
+        lte_pci: {
+          enabled: false,
+          pcid: '',
+          band: '',
+          freq: ''
+        },
         // 鉴权
         auth: '',
         username: '',
@@ -774,7 +831,7 @@ export default {
         this.settings.enable = typeof data.settings.enable === 'boolean' ? data.settings.enable : true
         this.settings.alias = data.settings.alias
         this.settings.interface = data.settings.interface
-        this.settings.net = data.settings.net
+        this.settings.net = String(data.settings.net || '').toUpperCase()
         this.settings.apn = data.settings.apn
         this.settings.band = data.settings.band || data.settings.settingsBand || ''
         this.settings.auth = data.settings.auth
@@ -836,13 +893,40 @@ export default {
         this.$message.error('The network interface must be specified!')
         return
       }
-      if (!this.settings.nrBandUnLock && ('none' === this.settings.nrBand || '' === this.settings.nrBand)) {
-        this.$message.error('请设置NR频段 或 解锁NR频段!')
-        return
+      // if (!this.settings.nrBandUnLock && ('none' === this.settings.nrBand || '' === this.settings.nrBand)) {
+      //   this.$message.error('请设置NR频段 或 解锁NR频段!')
+      //   return
+      // }
+      // if (!this.settings.lteBandUnLock && ('none' === this.settings.lteBand || '' === this.settings.lteBand)) {
+      //   this.$message.error('请设置LTE频段 或 解锁LTE频段!')
+      //   return
+      // }
+      if (this.settings.nr_pci && this.settings.nr_pci.enabled) {
+        if (!this.settings.nr_pci.pcid || !this.settings.nr_pci.band || !this.settings.nr_pci.freq || this.settings.nr_pci.scs === '') {
+          this.$message.error('请完整填写NR PCI锁定参数: PCID/频段/频点/子载波间隔')
+          return
+        }
+
+        console.log(this.settings.index,
+          'alias:', this.settings.alias,
+          'pcid:', this.settings.nr_pci.pcid,
+          'band:', this.settings.nr_pci.band,
+          'freq:', this.settings.nr_pci.freq,
+          'scs:', this.settings.nr_pci.scs
+        )
       }
-      if (!this.settings.lteBandUnLock && ('none' === this.settings.lteBand || '' === this.settings.lteBand)) {
-        this.$message.error('请设置LTE频段 或 解锁LTE频段!')
-        return
+      if (this.settings.lte_pci && this.settings.lte_pci.enabled) {
+        if (!this.settings.lte_pci.pcid || !this.settings.lte_pci.band || !this.settings.lte_pci.freq) {
+          this.$message.error('请完整填写LTE PCI锁定参数: PCID/频段/频点')
+          return
+        }
+
+        console.log(this.settings.index,
+          'alias:', this.settings.alias,
+          'pcid:', this.settings.lte_pci.pcid,
+          'band:', this.settings.lte_pci.band,
+          'freq:', this.settings.lte_pci.freq
+        )
       }
       // 锁小区参数
       if (!this.settings.pciUnlock && ('none' === this.settings.pci || '' === this.settings.pci)) {
@@ -851,10 +935,10 @@ export default {
         return
       }
 
-      if (this.settings.nrBandUnLock)
-        this.settings.nrBand = 'none'
-      if (this.settings.lteBandUnLock)
-        this.settings.lteBand = 'none'
+      // if (this.settings.nrBandUnLock)
+      //   this.settings.nrBand = 'none'
+      // if (this.settings.lteBandUnLock)
+      //   this.settings.lteBand = 'none'
 
       console.log('saveConf index:', this.settings.index,
         'alias:', this.settings.alias,
@@ -865,7 +949,9 @@ export default {
         'pcid:', this.settings.pci,
         'auth', this.settings.auth,
         'username', this.settings.username,
-        'password', this.settings.password)
+        'password', this.settings.password
+      )
+
       // 调用后端API保存配置
       this.$oui.call('sim', 'changeSimSettings', this.settings).then(response => {
         if (response && 0 === response.code) {
@@ -885,6 +971,21 @@ export default {
         this.settings = { ...this.status }
         this.$message.success(this.$t('Configuration reset successfully'))
       })
+    },
+    handleNRPciLock(enabled) {
+      if (!enabled) {
+        this.settings.nr_pci.pcid = ''
+        this.settings.nr_pci.band = ''
+        this.settings.nr_pci.freq = ''
+        this.settings.nr_pci.scs = ''
+      }
+    },
+    handleLtePciLock(enabled) {
+      if (!enabled) {
+        this.settings.lte_pci.pcid = ''
+        this.settings.lte_pci.band = ''
+        this.settings.lte_pci.freq = ''
+      }
     },
     selectNRBandOption(value) {
       if (value === '解锁') {

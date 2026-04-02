@@ -371,7 +371,7 @@ function M.getSettings(params)
     local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", node)
     log.info(cmd)
     local ret = exec(cmd)
-    log.info(ret)
+    -- log.info(ret)
     return ret
 end
 
@@ -382,7 +382,7 @@ function M.getStatus(params)
     local cmd = string.format("/usr/share/modemdata/params.sh %s", node)
     log.info(cmd)
     local ret = exec(cmd)
-    log.info("status:", ret)
+    -- log.info("status:", ret)
     return ret
 end
 
@@ -393,14 +393,13 @@ function M.getModuleSettings(params)
     local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", node)
     log.info(cmd)
     local ret = exec(cmd)
-    log.info(ret)
+    -- log.info(ret)
     return ret
 end
 
 -- 触发重新拨号
-local function dial(index)
-    local node = getSimNode(index)
-    local cmd = string.format("/usr/share/modemdata/dial.sh %s", node)
+local function dial(interface)
+    local cmd = string.format("ifup %s", interface)
     log.info(cmd)
     exec(cmd)
 end
@@ -441,8 +440,8 @@ local function setSimNet(index, net)
     c:set("sim", section, 'net', sim_net)
     c:commit('sim')
 
-    Sim[index].settings.interface = c:get('sim', section, 'interface')
-    dial(index)
+    local interface = c:get('sim', section, 'logicInterface')
+    dial(interface)
 end
 
 -- 更改apn
@@ -464,8 +463,8 @@ local function setSimAPN(index, apn)
     c:set("sim", section, 'apn', apn)
     c:commit('sim')
 
-    Sim[index].settings.interface = c:get('sim', section, 'interface')
-    dial(index)
+    local interface = c:get('sim', section, 'logicInterface')
+    dial(interface)
 end
 
 -- 更改频段
@@ -488,7 +487,8 @@ local function setSimBand(index, band)
     c:commit('sim')
 
     Sim[index].settings.interface = c:get('sim', section, 'interface')
-    dial(index)
+    local interface = c:get('sim', section, 'logicInterface')
+    dial(interface)
 end
 
 -- 更改小区
@@ -510,24 +510,82 @@ local function setSimPCID(index, PCID)
     c:set("sim", section, 'pci', PCID)
     c:commit('sim')
 
-    Sim[index].settings.interface = c:get('sim', section, 'interface')
-    dial(index)
+    local interface = c:get('sim', section, 'logicInterface')
+    dial(interface)
+end
+
+-- 锁NR PCI小区
+local function setSimNRPCID(index, PCID)
+
+    if nil == PCID or '' == PCID then
+        log.error('PCID is nil!')
+        return false
+    end
+
+    local section = Sim[index].settings.uciSection
+
+    local c = uci.cursor()
+    
+    if (PCID.enabled) then
+        c:set("sim", section, 'nrPciLock', 'true')
+    else
+        c:set("sim", section, 'nrPciLock', 'false')
+        c:set("sim", section, 'nrPciPcid', 'none')
+        c:set("sim", section, 'nrPciBand', 'none')
+        c:set("sim", section, 'nrPciFreq', 'none')
+        c:set("sim", section, 'nrPciScs', 'none')
+        c:commit('sim')
+        return
+    end
+
+    c:set("sim", section, 'nrPciPcid', PCID.pcid)
+    c:set("sim", section, 'nrPciBand', PCID.band)
+    c:set("sim", section, 'nrPciFreq', PCID.freq)
+    c:set("sim", section, 'nrPciScs', PCID.scs)
+
+    c:commit('sim')
+
+    local interface = c:get('sim', section, 'logicInterface')
+    dial(interface)
+end
+
+-- 锁LTE PCI小区
+local function setSimLTEPCID(index, PCID)
+
+    if nil == PCID or '' == PCID then
+        log.error('PCID is nil!')
+        return false
+    end
+
+    local section = Sim[index].settings.uciSection
+
+    local c = uci.cursor()
+    
+    if (PCID.enabled) then
+        c:set("sim", section, 'ltePciLock', 'true')
+    else
+        c:set("sim", section, 'ltePciLock', 'false')
+        c:set("sim", section, 'ltePciPcid', 'none')
+        c:set("sim", section, 'ltePciBand', 'none')
+        c:set("sim", section, 'ltePciFreq', 'none')
+        c:commit('sim')
+        return
+    end
+
+    c:set("sim", section, 'ltePciPcid', PCID.pcid)
+    c:set("sim", section, 'ltePciBand', PCID.band)
+    c:set("sim", section, 'ltePciFreq', PCID.freq)
+
+    c:commit('sim')
+
+    local interface = c:get('sim', section, 'logicInterface')
+    dial(interface)
 end
 
 -- 更改鉴权、用户名、密码
 local function setSimAuth(index, auth, apn, username, password)
     if nil == auth or '' == auth then
         log.error(Sim[index].settings.alias, 'unknown auth')
-        return
-    end
-
-    local old_auth = getSimConfAuth(index)
-    local old_apn = getSimConfAPN(index)
-    local old_username = getSimConfUser(index)
-    local old_password = getSimConfPasswd(index)
-
-    if old_auth == auth and old_apn == apn and old_username == username and old_password == password then
-        log.info(Sim[index].settings.alias, 'Auth settings not changed! return now...')
         return
     end
 
@@ -543,22 +601,6 @@ local function setSimAuth(index, auth, apn, username, password)
         password = ''
     end
 
-    if old_auth ~= auth then
-        log.info(Sim[index].settings.alias, 'auth change from ', old_auth, ' to ', auth)
-    end
-
-    if old_apn ~= apn then
-        log.info(Sim[index].settings.alias, 'apn change from ', old_apn, ' to ', apn)
-    end
-
-    if old_username ~= username then
-        log.info(Sim[index].settings.alias, 'username change from ', old_username, ' to ', username)
-    end
-
-    if old_password ~= apn then
-        log.info(Sim[index].settings.alias, 'password change from ', old_password, ' to ', password)
-    end
-
     local section = Sim[index].settings.uciSection
     local c = uci.cursor()
     c:set("sim", section, 'auth', auth)
@@ -567,8 +609,8 @@ local function setSimAuth(index, auth, apn, username, password)
     c:set("sim", section, 'passwd', password)
     c:commit('sim')
 
-    Sim[index].settings.interface = c:get('sim', section, 'interface')
-    dial(index)
+    local interface = c:get('sim', section, 'logicInterface')
+    dial(interface)
 
 end
 
@@ -579,13 +621,18 @@ function M.changeSimSettings(params)
     log.info(string.format("index:%s %s apn:%s auth:%s username:%s passwd:%s", params.index, params.alias, params.apn, params.auth, params.username, params.password))
     log.info(string.format("index:%s %s nrBand:%s", params.index, params.alias, params.nrBand))
     log.info(string.format("index:%s %s lteBand:%s", params.index, params.alias, params.lteBand))
-    
+    log.info(string.format("index:%s %s NR PCI: enable:%s pcid:%s band:%s freq:%s scs:%s", params.index, params.alias, 
+                        params.nr_pci.enabled, params.nr_pci.pcid,params.nr_pci.band,params.nr_pci.freq,params.nr_pci.scs))
+    log.info(string.format("index:%s %s LTE PCI: enable:%s pcid:%s band:%s freq:%s", params.index, params.alias, 
+                        params.lte_pci.enabled, params.lte_pci.pcid,params.lte_pci.band,params.lte_pci.freq))
+
     local index = tonumber(params.index) + 1
 
     setSimNet(index, params.net)
     setSimAPN(index, params.apn)
     -- setSimBand(index, params.band)
-    -- setSimPCID(index, params.pci)
+    setSimNRPCID(index, params.nr_pci)
+    setSimLTEPCID(index, params.lte_pci)
     setSimAuth(index, params.auth, params.apn, params.username, params.password)
 
     return { code = 0 }
@@ -610,7 +657,7 @@ function M.changeSimEnable(params)
         exec(cmd)
 
         -- 触发拨号
-        dial(index)
+        dial(interface)
     else
         c:set("sim", section, 'enable', '0')
         c:commit('sim')
