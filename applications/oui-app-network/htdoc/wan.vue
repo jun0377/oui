@@ -909,10 +909,10 @@ export default {
 
         console.log(this.settings.index,
           'alias:', this.settings.alias,
-          'pcid:', this.settings.nr_pci.pcid,
-          'band:', this.settings.nr_pci.band,
-          'freq:', this.settings.nr_pci.freq,
-          'scs:', this.settings.nr_pci.scs
+          'nr_pcid:', this.settings.nr_pci.pcid,
+          'nr_band:', this.settings.nr_pci.band,
+          'nr_freq:', this.settings.nr_pci.freq,
+          'nr_scs:', this.settings.nr_pci.scs
         )
       }
       if (this.settings.lte_pci && this.settings.lte_pci.enabled) {
@@ -923,9 +923,9 @@ export default {
 
         console.log(this.settings.index,
           'alias:', this.settings.alias,
-          'pcid:', this.settings.lte_pci.pcid,
-          'band:', this.settings.lte_pci.band,
-          'freq:', this.settings.lte_pci.freq
+          'lte_pcid:', this.settings.lte_pci.pcid,
+          'lte_LTEband:', this.settings.lte_pci.band,
+          'lte_freq:', this.settings.lte_pci.freq
         )
       }
       // 锁小区参数
