@@ -292,7 +292,7 @@ export default {
         createDefaultWanLink(0),
         createDefaultWanLink(1),
         createDefaultWanLink(2),
-        createDefaultWanLink(3)
+        // createDefaultWanLink(3)
       ],
       subnets: [
         {
