@@ -10,7 +10,7 @@
           <div class="subnet-item">
             <div class="subnet-header-empty"></div>
             <div class="subnet-info-wan">
-              <span>{{ $t('SIM') }}</span>
+              <span>名称</span>
               <!-- <span>{{ $t('Interface') }}</span> -->
               <span>{{ $t('Operator') }}</span>
               <span>{{ $t('Real Network Access') }}</span>
@@ -120,9 +120,11 @@ export default {
       const aliasMap = {
         0: '5G-1',
         1: '5G-2',
-        2: '5G-3'
+        2: '5G-3',
+        3: '有线网'
       }
       return {
+        // uci配置文件
         settings: {
           index: index,
           enable: true,
@@ -136,6 +138,7 @@ export default {
           username: '-',
           password: '-'
         },
+        // 模组基本信息
         productInfo: {
           vendor: '',
           product: '',
@@ -144,6 +147,7 @@ export default {
           iccid: '',
           imsi: ''
         },
+        // sim卡基本信息
         sim: {
           operator: '',
           status: '',
@@ -170,6 +174,7 @@ export default {
           ci: '',
           act: ''
         },
+        // 驻留小区信息
         monsc: {
           rat: '',
           nr:{
@@ -201,6 +206,7 @@ export default {
             ecno:''
           }
         },
+        // 相邻小区信息
         monnc: {
           gsm: [],
           wcdma: [],
@@ -266,6 +272,7 @@ export default {
             rssi: '',
             band: ''
           },
+          // 网络接口信息
           interface: {
             ip: '-',
             mask: '-',
@@ -284,7 +291,8 @@ export default {
       wanLinks: [
         createDefaultWanLink(0),
         createDefaultWanLink(1),
-        createDefaultWanLink(2)
+        createDefaultWanLink(2),
+        createDefaultWanLink(3)
       ],
       subnets: [
         {
