@@ -55,7 +55,11 @@
       </el-header>
       <el-main>
         <el-scrollbar>
-          <router-view/>
+          <router-view v-slot="{ Component }">
+            <keep-alive include="ServerConfig">
+              <component :is="Component"/>
+            </keep-alive>
+          </router-view>
           <el-backtop target=".oui-container .el-container .el-scrollbar__wrap"/>
         </el-scrollbar>
       </el-main>

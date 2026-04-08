@@ -102,9 +102,11 @@ export default {
       },
       hasUnsavedChanges: false, // 是否有为保存的配置
       isEditing: false, // 用户是否正在编辑
-      refreshTimer: null,
-      blinkTimer: null,
-      isBlinking: false, // 控制状态背景闪烁
+      stopped: false,
+      statusInFlight: false,
+      pollTimer: null,
+      pollIntervalMs: 5000,
+      visibilityListenerAdded: false,
       rules: {
         ip: [
           { required: true, message: this.$t('Server IP is required'), trigger: 'blur' },
@@ -118,32 +120,107 @@ export default {
     }
   },
   created() {
-    this.fetchServerIP()
-    this.fetchServerPort()
-    this.fetchServerNode()
-    this.fetchServerVersion()
-    this.fetchServerAnnourcement()
-    // 初始加载服务器状态
-    this.fetchServerStatus()
-    // 设置定时刷新，每5秒刷新一次
-    this.refreshTimer = setInterval(() => {
-      this.fetchServerStatus()
-    }, 5000)
-    // 设置背景闪烁定时器，每秒切换一次
-    this.blinkTimer = setInterval(() => {
-      this.isBlinking = !this.isBlinking
-    }, 1000)
+  },
+  mounted() {
+    this.runAfterFirstFrame(() => {
+      this.startAll()
+    })
+  },
+  activated() {
+    this.runAfterFirstFrame(() => {
+      this.startAll()
+    })
+  },
+  deactivated() {
+    this.stopAll()
   },
   beforeUnmount() {
-    // 组件销毁前清除定时器
-    if (this.refreshTimer) {
-      clearInterval(this.refreshTimer)
-    }
-    if (this.blinkTimer) {
-      clearInterval(this.blinkTimer)
-    }
+    this.stopAll()
+  },
+  beforeRouteLeave(to, from, next) {
+    this.stopAll()
+    next()
   },
   methods: {
+    runAfterFirstFrame(fn) {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => requestAnimationFrame(() => fn()))
+      } else {
+        setTimeout(() => fn(), 0)
+      }
+    },
+    startAll() {
+      this.stopped = false
+      this.statusInFlight = false
+      if (typeof document !== 'undefined' && document && !this.visibilityListenerAdded) {
+        document.addEventListener('visibilitychange', this.onVisibilityChange)
+        this.visibilityListenerAdded = true
+      }
+      this.fetchStaticInfo()
+      this.refreshOnce()
+      this.startPolling()
+    },
+    stopAll() {
+      this.stopped = true
+      this.stopPolling()
+      if (typeof document !== 'undefined' && document && this.visibilityListenerAdded) {
+        document.removeEventListener('visibilitychange', this.onVisibilityChange)
+        this.visibilityListenerAdded = false
+      }
+    },
+    startPolling() {
+      if (this.stopped)
+        return
+      this.stopPolling()
+      this.pollTimer = setTimeout(async () => {
+        await this.refreshOnce()
+        this.startPolling()
+      }, this.pollIntervalMs)
+    },
+    stopPolling() {
+      if (this.pollTimer) {
+        clearTimeout(this.pollTimer)
+        this.pollTimer = null
+      }
+    },
+    onVisibilityChange() {
+      if (this.stopped)
+        return
+      if (typeof document !== 'undefined' && document && document.hidden) {
+        this.stopPolling()
+      } else {
+        this.refreshOnce()
+        this.startPolling()
+      }
+    },
+    fetchStaticInfo() {
+      setTimeout(() => this.fetchServerIP(), 0)
+      setTimeout(() => this.fetchServerPort(), 50)
+      setTimeout(() => this.fetchServerNode(), 100)
+      setTimeout(() => this.fetchServerVersion(), 150)
+      setTimeout(() => this.fetchServerAnnourcement(), 200)
+    },
+    async refreshOnce() {
+      if (this.stopped)
+        return
+      if (this.isEditing || this.hasUnsavedChanges)
+        return
+      await this.fetchServerStatus()
+    },
+    withTimeout(promise, ms, operation) {
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error(`${operation} timeout after ${ms}ms`))
+        }, ms)
+        Promise.resolve(promise).then((value) => {
+          clearTimeout(timer)
+          resolve(value)
+        }, (err) => {
+          clearTimeout(timer)
+          reject(err)
+        })
+      })
+    },
     saveConfig() {
       // 表单验证
       this.$refs.serverForm.validate((valid) => {
@@ -166,7 +243,6 @@ export default {
     // 设置服务器ip
     setServerIP() {
       const params = { ip: this.ServerConfig.ip }
-      console.log('Calling setServerIP with params:', params)
       this.serverStatus.connected = false
       this.serverStatus.rtt = 0
       this.$oui.call('serverManager', 'setServerIP', params)
@@ -175,7 +251,6 @@ export default {
     // 设置服务器端口
     setServerPort() {
       const params = { port: this.ServerConfig.port}
-      console.log('set server port: ', params)
       this.serverStatus.connected = false
       this.serverStatus.rtt = 0
       this.$oui.call('serverManager', 'setServerPort', params)
@@ -216,15 +291,13 @@ export default {
         return
       if (this.hasUnsavedChanges) // 当有未保存的配置时，不要更新
         return
-      console.log('get Server IP')
       this.$oui.call('serverManager', 'getServerIP').then(ip => {
+        if (this.stopped)
+          return
         if (ip) {
           this.ServerConfig.ip = ip
-          console.log('getServerIP: ', this.ServerConfig.ip)
         }
-      }).catch(error => {
-        console.error('Failed to get server IP:', error)
-      })
+      }).catch(() => {})
     },
     // 获取服务器端口
     fetchServerPort() {
@@ -232,20 +305,19 @@ export default {
         return
       if (this.hasUnsavedChanges) // 当有未保存的配置时，不要更新
         return
-      console.log('get Server Port')
       this.$oui.call('serverManager', 'getServerPort').then(port => {
+        if (this.stopped)
+          return
         if (port) {
           this.ServerConfig.port = parseInt(port)
-          console.log('getServerPort: ', this.ServerConfig.port)
         }
-      }).catch (errno => {
-        console.error('Failed to get server Port:', errno)
-      })
+      }).catch(() => {})
     },
     // 获取服务器节点信息
     fetchServerNode() {
       this.$oui.call('serverManager', 'getServerNode').then(node => {
-        console.log(node)
+        if (this.stopped)
+          return
         if (node) {
           this.serverStatus.location = node
         }
@@ -254,7 +326,8 @@ export default {
     // 获取服务器版本
     fetchServerVersion() {
       this.$oui.call('serverManager', 'getServerVersion').then(version => {
-        console.log(version)
+        if (this.stopped)
+          return
         if (version) {
           this.serverStatus.version = version
         }
@@ -263,80 +336,61 @@ export default {
     // 获取服务器公告
     fetchServerAnnourcement() {
       this.$oui.call('serverManager', 'getServerAnnourcement').then(annourcement => {
+        if (this.stopped)
+          return
         if (annourcement) {
           this.serverStatus.notice = annourcement
         }
       })
     },
-    // 创建超时Promise
-    createTimeoutPromise(ms, operation) {
-      return new Promise((resolve, reject) => {
-        setTimeout(() => {
-          reject(new Error(`${operation} timeout after ${ms}ms`))
-        }, ms)
-      })
-    },
     // 获取服务器连接状态和rtt
     fetchServerRTT() {
-      console.log('get Server RTT')
-      // 使用Promise.race实现超时机制，5秒超时
-      return Promise.race([
-        this.$oui.call('serverManager', 'getHostRtt'),
-        this.createTimeoutPromise(5000, 'getHostRtt')
-      ]).then(state => {
+      return this.withTimeout(this.$oui.call('serverManager', 'getHostRtt'), 5000, 'getHostRtt').then(state => {
+        if (this.stopped)
+          return
         if (!state.reachable) {
-          console.warn('Server Unreachable! Server: ', this.ServerConfig.ip)
           this.serverStatus.connected = false
           this.serverStatus.rtt = 0
           return
         }
         this.serverStatus.rtt = parseInt(state.rtt_ms)
-        console.log('getHostRtt', this.serverStatus.rtt)
-      }).catch(error => {
-        console.error('Failed to get server RTT:', error)
+      }).catch(() => {
+        if (this.stopped)
+          return
         this.serverStatus.rtt = 0
-        if (error.message.includes('timeout')) {
-          console.warn('get rtt timeout...')
-        }
       })
     },
     // 获取VPN隧道状态和RTT
     fetchVPNrtt() {
-      console.log('get VPN RTT')
-      return Promise.race([
-        this.$oui.call('serverManager', 'getVPNrtt'),
-        this.createTimeoutPromise(5000, 'getVPNrtt')
-      ]).then(state => {
-        if (!state.reachable) {
-          console.log('Server VPN Unreachable!')
-          this.serverStatus.connected = false
-          this.fetchServerRTT()
+      return this.withTimeout(this.$oui.call('serverManager', 'getVPNrtt'), 5000, 'getVPNrtt').then(state => {
+        if (this.stopped)
           return
+        if (!state.reachable) {
+          this.serverStatus.connected = false
+          return this.fetchServerRTT()
+            .catch(() => {})
         }
         this.serverStatus.connected = true
         this.serverStatus.rtt = parseInt(state.rtt_ms)
+      }).catch(() => {
+        if (this.stopped)
+          return
+        this.serverStatus.connected = false
+        this.serverStatus.rtt = 0
       })
     },
     // 获取服务器状态 - 异步并行执行
     async fetchServerStatus() {
+      if (this.stopped)
+        return
+      if (this.statusInFlight)
+        return
+      this.statusInFlight = true
       try {
-        // 使用 Promise.allSettled 并行执行，避免一个失败影响其他
-        const results = await Promise.allSettled([
-          // this.fetchServerRTT(),
-          this.fetchVPNrtt()
-        ])
-        // 检查每个操作的结果
-        const operations = ['fetchVPNrtt']
-        results.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
-            // console.log(`${operations[index]} completed successfully`)
-          } else {
-            console.error(`${operations[index]} failed:`, result.reason)
-          }
-        })
-        // console.log('Server status fetch completed')
-      } catch (error) {
-        console.error('Unexpected error in fetchServerStatus:', error)
+        await this.fetchVPNrtt()
+      } catch {
+      } finally {
+        this.statusInFlight = false
       }
     },
     // 根据rtt判断连接状态
@@ -354,11 +408,7 @@ export default {
     },
     // 不同状态使用不同颜色标识
     getStatusTagType() {
-      if (this.isBlinking) {
-        return this.serverStatus.connected ? 'warning' : 'success'
-      } else {
-        return this.serverStatus.connected ? 'success' : 'danger'
-      }
+      return this.serverStatus.connected ? 'success' : 'danger'
     },
     // 有未保存的改动
     markUnsavedChanges() {
