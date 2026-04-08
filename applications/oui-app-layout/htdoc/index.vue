@@ -34,15 +34,15 @@
           <el-icon color="#ffd93b" size="24" style="cursor: pointer;" @click="$oui.state.isDark = !$oui.state.isDark">
             <component :is="$oui.state.isDark ? MoonIcon : SunnySharpIcon"/>
           </el-icon>
-          <el-dropdown @command="lang => $oui.setLocale(lang)">
+          <!-- <el-dropdown @command="lang => $oui.setLocale(lang)">
             <span class="el-dropdown-link"><el-icon><TranslateIcon/></el-icon></span>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item v-for="i in localeOptions" :key="i.key" :command="i.key" :class="{selected: i.key === $oui.state.locale}">{{ i.label }}</el-dropdown-item>
               </el-dropdown-menu>
             </template>
-          </el-dropdown>
-          <el-dropdown @command="handleUserAction">
+          </el-dropdown> -->
+          <!-- <el-dropdown @command="handleUserAction">
             <span class="el-dropdown-link"><el-icon><Avatar/></el-icon></span>
             <template #dropdown>
               <el-dropdown-menu>
@@ -50,7 +50,7 @@
                 <el-dropdown-item command="reboot" icon="SwitchButton">{{ $t('Reboot') }}</el-dropdown-item>
               </el-dropdown-menu>
             </template>
-          </el-dropdown>
+          </el-dropdown> -->
         </el-space>
       </el-header>
       <el-main>
@@ -65,7 +65,7 @@
       </el-main>
       <el-footer>
         <div class="copyright">
-          <p>Copyright © 2025 Powered by 青青子衿</p>
+          <p>Copyright © 2026 Powered by 青青子衿</p>
         </div>
       </el-footer>
     </el-container>
