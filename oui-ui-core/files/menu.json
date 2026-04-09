@@ -24,7 +24,7 @@
     "/network": {
         "title": "Network",
         "icon": "md-git-network",
-        "index": 70,
+        "index": 20,
         "locales": {
             "en": "Network",
             "zh-CN": "网络",

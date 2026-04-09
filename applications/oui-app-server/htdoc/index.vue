@@ -172,7 +172,7 @@ export default {
       if (this.stopped)
         return
       this.stopPolling()
-      this.pollTimer = setTimeout(async () => {
+      this.pollTimer = setTimeout(async() => {
         await this.refreshOnce()
         this.startPolling()
       }, this.pollIntervalMs)
@@ -389,6 +389,7 @@ export default {
       try {
         await this.fetchVPNrtt()
       } catch {
+        return
       } finally {
         this.statusInFlight = false
       }

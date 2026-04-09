@@ -87,15 +87,15 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/oui-rpc': {
-          target: 'http://192.168.16.28',
+          target: 'http://192.168.16.24',
           secure: false
         },
         '/oui-upload': {
-          target: 'http://192.168.16.28',
+          target: 'http://192.168.16.24',
           secure: false
         },
         '/oui-download': {
-          target: 'http://192.168.16.28',
+          target: 'http://192.168.16.24',
           secure: false
         }
       }

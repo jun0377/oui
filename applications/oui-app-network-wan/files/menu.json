@@ -1,8 +1,8 @@
 {
     "/network/wan": {
         "title": "Network Wan Manager",
-        "view": "wan",
-        "index": 20,
+        "view": "network-wan",
+        "index": 1,
         "locales": {
             "en": "Network Wan Mnager",
             "zh-CN": "广域网",

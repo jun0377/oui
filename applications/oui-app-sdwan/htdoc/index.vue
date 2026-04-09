@@ -137,8 +137,14 @@ export default {
     fetchSettingsRemoteIP() {
       // console.log('fetch remote ip')
       this.$oui.call('sdwan', 'getRemoteIP').then(ip => {
-        this.settings.remote_ip = ip[0]
-        // console.log('fetchSettingsRemoteIP: ', this.settings.remote_ip)
+        if (Array.isArray(ip))
+          this.settings.remote_ip = ip[0] || ''
+        else if (typeof ip === 'string')
+          this.settings.remote_ip = ip
+        else
+          this.settings.remote_ip = ''
+      }).catch(() => {
+        this.settings.remote_ip = ''
       })
     },
     fetchSettingsRemotePort() {
