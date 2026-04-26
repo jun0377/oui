@@ -7,7 +7,7 @@
 include $(TOPDIR)/rules.mk
 
 APP_TITLE:=NetworkWan
-APP_NAME:=wan
+APP_NAME:=network-wan
 
 include ../../oui.mk
 
