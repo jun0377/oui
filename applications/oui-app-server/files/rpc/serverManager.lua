@@ -8,10 +8,46 @@ log.usecolor = true
 log.outfile = '/var/log/serverManager.log'
 
 local function exec(command)
+    log.info('cmd', command)
     local pp = io.popen(command)
     local data = pp:read("*a")
     pp:close()
+    log.info('cmd', command, 'done')
     return data
+end
+
+-- 异步执行命令
+local function exec_async(command)
+    log.info('cmd async', command)
+    os.execute(string.format("( %s ) >/dev/null 2>/dev/null &", command))
+end
+
+local function is_valid_ipv4(ip)
+    if not ip then
+        return false
+    end
+    ip = tostring(ip)
+    local a, b, c, d = ip:match("^(%d+)%.(%d+)%.(%d+)%.(%d+)$")
+    if not a then
+        return false
+    end
+    a, b, c, d = tonumber(a), tonumber(b), tonumber(c), tonumber(d)
+    if not a or not b or not c or not d then
+        return false
+    end
+    if a < 0 or a > 255 then
+        return false
+    end
+    if b < 0 or b > 255 then
+        return false
+    end
+    if c < 0 or c > 255 then
+        return false
+    end
+    if d < 0 or d > 255 then
+        return false
+    end
+    return true
 end
 
 -- ping ping -W 3 -c 3 -i 0.5 -I src dst
@@ -60,9 +96,6 @@ local function setShadowsocksIP(server_ip)
     c:commit('shadowsocks-libev')
     c:set("shadowsocks-rust","sss0","server",server_ip)
     c:commit('shadowsocks-rust')
-
-    exec("/etc/init.d/shadowsocks-libev restart >/dev/null 2>/dev/null")
-    exec("/etc/init.d/shadowsocks-rust restart >/dev/null 2>/dev/null")
 end
 
 -- glorytun
@@ -73,9 +106,6 @@ local function setGlorytunIP(server_ip)
     c:commit('glorytun')
     c:set("glorytun-udp","vpn","host",server_ip)
     c:commit('glorytun-udp')
-
-    exec("/etc/init.d/glorytun restart >/dev/null 2>/dev/null")
-	exec("/etc/init.d/glorytun-udp restart >/dev/null 2>/dev/null")
 end
 
 -- dsvpn
@@ -84,8 +114,6 @@ local function setDsvpnIP(server_ip)
     local c = uci.cursor()
     c:set("dsvpn","vpn","host",server_ip)
     c:commit('dsvpn')
-
-    exec("/etc/init.d/dsvpn restart >/dev/null 2>/dev/null")
 end
 
 -- mlvpn
@@ -94,34 +122,33 @@ local function setMLVPNip(server_ip)
     local c = uci.cursor()
     c:set("mlvpn","general","host",server_ip)
     c:commit('mlvpn')
-
-    exec("/etc/init.d/mlvpn restart >/dev/null 2>/dev/null")
 end
 
 -- openvpn
 local function setOpenVpnIP(server_ip)
     log.info('set OpenVPN ip: ', server_ip)
     local cmd = "uci -q del openvpn.omr.remote"
-    log.info(cmd)
     exec(cmd)
+
     cmd = "uci -q add_list openvpn.omr.remote=" .. server_ip
-    log.info(cmd)
     exec(cmd)
+
     cmd = "uci commit openvpn"
-    log.info(cmd)
     exec(cmd)
-    exec("/etc/init.d/openvpn restart >/dev/null 2>/dev/null")
 end
 
 -- openmptcprouter vps
 local function setVPSip(server_ip)
     log.info('set vps ip: ', server_ip)
 
-    exec("uci del openmptcprouter.vps.ip")
-    exec("uci add_list openmptcprouter.vps.ip=" .. server_ip)
-    exec('uci commit openmptcprouter')
+    local cmd = "uci del openmptcprouter.vps.ip"
+    exec(cmd)
 
-    exec("/etc/init.d/openmptcprouter-vps restart >/dev/null 2>/dev/null")
+    cmd = "uci add_list openmptcprouter.vps.ip=" .. server_ip
+    exec(cmd)
+
+    cmd = "uci commit openmptcprouter"
+    exec(cmd)
 end
 
 -- uci get openmptcprouter.vps.ip
@@ -132,30 +159,51 @@ end
 
 -- uci set openmptcprouter.vps.ip=xxx.xxx.xxx.xxx
 function M.setServerIP(params)
+    if params == nil or params.ip == nil then
+        return -1
+    end
+    if not is_valid_ipv4(params.ip) then
+        return -1
+    end
 
-    exec("(env -i /bin/ubus call network reload) >/dev/null 2>/dev/null")
-    exec("ip addr flush dev tun0 >/dev/null 2>/dev/null")
-    exec("/etc/init.d/omr-tracker stop >/dev/null 2>/dev/null")
-    exec("/etc/init.d/mptcp restart >/dev/null 2>/dev/null")
-
-    log.info('server IP: ', params.ip)
+    local server_ip = tostring(params.ip)
+    log.info('server IP: ', server_ip)
     -- vps
-    setVPSip(params.ip)
+    setVPSip(server_ip)
     -- shadowsocks
-    setShadowsocksIP(params.ip)
+    setShadowsocksIP(server_ip)
     -- glorytun
-    setGlorytunIP(params.ip)
+    setGlorytunIP(server_ip)
     -- dsvpn
-    setDsvpnIP(params.ip)
+    setDsvpnIP(server_ip)
     -- mlvpn
-    setMLVPNip(params.ip)
+    setMLVPNip(server_ip)
     -- openvpn
-    setOpenVpnIP(params.ip)
+    setOpenVpnIP(server_ip)
 
-    exec("/etc/init.d/omr-tracker start >/dev/null 2>/dev/null")
-    exec("/etc/init.d/omr-6in4 restart >/dev/null 2>/dev/null")
-    exec("/etc/init.d/vnstat restart >/dev/null 2>/dev/null")
-    exec("/etc/init.d/sysntpd restart >/dev/null 2>/dev/null")
+    exec_async([[
+        lock="/tmp/oui_serverManager_setServerIP.lock";
+        if [ -e "$lock" ]; then exit 0; fi;
+        echo $$ > "$lock";
+        trap 'rm -f "$lock"' EXIT;
+        sleep 2;
+        env -i /bin/ubus call network reload;
+        ip addr flush dev tun0;
+        /etc/init.d/omr-tracker stop;
+        /etc/init.d/mptcp restart;
+        /etc/init.d/openmptcprouter-vps restart;
+        /etc/init.d/shadowsocks-libev restart;
+        /etc/init.d/shadowsocks-rust restart;
+        /etc/init.d/glorytun restart;
+        /etc/init.d/glorytun-udp restart;
+        /etc/init.d/dsvpn restart;
+        /etc/init.d/mlvpn restart;
+        /etc/init.d/openvpn restart;
+        /etc/init.d/omr-tracker start;
+        /etc/init.d/omr-6in4 restart;
+        /etc/init.d/vnstat restart;
+        /etc/init.d/sysntpd restart;
+    ]])
 
     return 0
 end

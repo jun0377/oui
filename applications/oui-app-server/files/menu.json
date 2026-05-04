@@ -4,9 +4,9 @@
         "view": "server",
         "index": 10,
         "locales": {
-            "en": "Server",
-            "zh-CN": "服务器",
-            "zh-TW": "服务器"
+            "en": "Mode",
+            "zh-CN": "工作模式",
+            "zh-TW": "工作模式"
         },
         "svg":{"-xmlns":"http://www.w3.org/2000/svg","-xmlns:xlink":"http://www.w3.org/1999/xlink","-viewBox":"0 0 24 24","path":{"-d":"M4 2h16c1.1 0 2 .9 2 2v4c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2zm0 2v4h16V4H4zm0 6h16c1.1 0 2 .9 2 2v4c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2v-4c0-1.1.9-2 2-2zm0 2v4h16v-4H4zm0 6h16c1.1 0 2 .9 2 2v2c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2v-2c0-1.1.9-2 2-2zm0 2v2h16v-2H4zM6 6h2v2H6V6zm0 6h2v2H6v-2zm0 6h2v2H6v-2zm4-12h2v2h-2V6zm0 6h2v2h-2v-2z","-fill":"currentColor"}}
     }

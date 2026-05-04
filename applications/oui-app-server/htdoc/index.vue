@@ -5,201 +5,42 @@
   <!-- 工作模式: 单卡模式 / 负载均衡 / 聚合 -->
   <div class="mode">
     <h2> {{ $t('Mode') }} </h2>
-    <el-radio-group v-model="workMode" class="mode-group" @change="handleWorkModeChange">
-      <el-radio-button label="single">{{ $t('单卡模式') }}</el-radio-button>
-      <el-radio-button label="aggregate">{{ $t('聚合模式') }}</el-radio-button>
-      <el-radio-button label="balance">{{ $t('负载均衡') }}</el-radio-button>
-      
+    <el-radio-group v-model="workMode" class="mode-group" :disabled="!workModeReady" @change="handleWorkModeChange">
+      <el-radio-button value="single">{{ $t('单卡模式') }}</el-radio-button>
+      <el-radio-button value="aggregate">{{ $t('聚合模式') }}</el-radio-button>
+      <el-radio-button value="balance">{{ $t('负载均衡') }}</el-radio-button>
     </el-radio-group>
   </div>
 
   <!-- 单卡模式 -->
-  <template v-if="workMode === 'single'">
-    <div class="server-section">
-      <el-card class="mode-card mode-panel">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <div class="mode-panel-title">单卡模式</div>
-              <div class="mode-panel-subtitle">选择一条链路作为当前业务出口</div>
-            </div>
-          </div>
-        </template>
-        <div class="mode-panel-body">
-          <div class="mode-inline">
-            <span class="mode-inline-label">链路选择</span>
-            <el-radio-group v-model="singleModeLink" class="mode-group" @change="handleSingleModeLinkChange">
-              <el-radio-button label="SIM1">SIM1</el-radio-button>
-              <el-radio-button label="SIM2">SIM2</el-radio-button>
-              <el-radio-button label="SIM3">SIM3</el-radio-button>
-              <el-radio-button label="WAN1">WAN1</el-radio-button>
-              <el-radio-button label="WAN2">WAN2</el-radio-button>
-            </el-radio-group>
-          </div>
-          <div class="mode-inline mode-actions-row">
-            <span class="mode-inline-label"></span>
-            <div class="mode-actions">
-              <el-button type="primary" @click="confirmSaveSingleMode">保存 &amp; 应用</el-button>
-            </div>
-          </div>
-        </div>
-      </el-card>
-    </div>
-  </template>
+  <ModeSingle v-if="workModeReady && workMode === 'single'" :page-active="pageActive" />
 
-  <template v-if="workMode === 'balance'">
-    <div class="server-section">
-      <el-card class="mode-card mode-panel">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <div class="mode-panel-title">负载均衡</div>
-              <div class="mode-panel-subtitle">在多条链路之间按策略分摊业务流量,不需要服务器</div>
-            </div>
-          </div>
-        </template>
-        <div class="mode-panel-body">
-          <el-descriptions :column="1" border>
-            <el-descriptions-item :label="$t('工作模式')">{{ $t('负载均衡') }}</el-descriptions-item>
-            <el-descriptions-item :label="$t('说明')">{{ $t('当前会在多条链路之间分摊流量') }}</el-descriptions-item>
-          </el-descriptions>
-        </div>
-      </el-card>
-    </div>
-  </template>
+  <ModeBalance v-if="workModeReady && workMode === 'balance'" />
 
-  <template v-if="workMode === 'aggregate'">
-    <div class="server-section">
-      <el-card class="mode-card mode-panel">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <div class="mode-panel-title">聚合模式</div>
-              <div class="mode-panel-subtitle">聚合多条链路能力,需要连接聚合服务器,带宽高,延时会有所增加</div>
-            </div>
-          </div>
-        </template>
-        <div class="mode-panel-body">
-          <div class="server-section aggregate-section aggregate-split">
-            <div class="server-settings-card">
-              <el-form :model="ServerConfig" :rules="rules" ref="serverForm" label-width="120px" label-position="left" class="config-form">
-                <el-form-item :label="$t('Server IP')" prop="ip">
-                  <el-input v-model="ServerConfig.ip" class="server-ip-input" :placeholder="$t('Enter Server IP')" @focus="isEditing = true" @blur="isEditing = false" @input="markUnsavedChanges"/>
-                </el-form-item>
-                <el-form-item :label="$t('Server Port')" prop="port">
-                  <el-input-number v-model="ServerConfig.port" :min="1" :max="65535" :controls="false" @focus="isEditing = true" @blur="isEditing = false" @input="markUnsavedChanges"/>
-                </el-form-item>
-                <el-form-item>
-                  <el-button type="primary" @click="saveConfig">{{ $t('Save & Apply') }}</el-button>
-                </el-form-item>
-              </el-form>
-            </div>
-
-            <div class="aggregate-v-divider" aria-hidden="true"></div>
-
-            <div class="server-status-card">
-              <div class="status-info">
-                <el-descriptions :column="1" border>
-                  <el-descriptions-item :label="$t('Status')">
-                    <el-tag :class="{'blink-bg': true}" :type="getStatusTagType()">
-                      {{ serverStatus.connected ? $t('Connected') : $t('Disconnected') }}
-                    </el-tag>
-                  </el-descriptions-item>
-                  <el-descriptions-item :label="$t('RTT')">
-                    <el-tag :type="getRttTagType(serverStatus.rtt)">
-                      {{ serverStatus.rtt }} ms
-                    </el-tag>
-                  </el-descriptions-item>
-                  <el-descriptions-item :label="$t('Location')">
-                    <el-tag type="info">{{ serverStatus.location }}</el-tag>
-                  </el-descriptions-item>
-                  <el-descriptions-item :label="$t('Server Version')">
-                    <el-tag type="info">{{ serverStatus.version }}</el-tag>
-                  </el-descriptions-item>
-                  <el-descriptions-item :label="$t('Server Load')">
-                    <el-tag type="info">{{ serverStatus.load }}</el-tag>
-                  </el-descriptions-item>
-                  <el-descriptions-item :label="$t('Notice')">
-                    <el-tag type="info">{{ serverStatus.notice }}</el-tag>
-                  </el-descriptions-item>
-                </el-descriptions>
-              </div>
-            </div>
-          </div>
-        </div>
-      </el-card>
-    </div>
-  </template>
+  <ModeAggregate v-if="workModeReady && workMode === 'aggregate'" :page-active="pageActive" />
 </div>
 
 </template>
 
 
 <script>
-
-const realtimeLinkDefs = [
-  { key: 'SIM1', title: 'sim1', type: 'sim', index: 0 },
-  { key: 'SIM2', title: 'sim2', type: 'sim', index: 1 },
-  { key: 'SIM3', title: 'sim3', type: 'sim', index: 2 },
-  { key: 'WAN1', title: 'wan1', type: 'wan', index: 0 },
-  { key: 'WAN2', title: 'wan2', type: 'wan', index: 1 }
-]
-
-function createRealtimeLink(def) {
-  return {
-    key: def.key,
-    title: def.title,
-    type: def.type,
-    index: def.index,
-    interfaceName: '-',
-    ip: '-',
-    gateway: '-',
-    protocol: '-',
-    rxBytes: null,
-    txBytes: null,
-    detail: '等待链路状态',
-    updatedAt: '-',
-    online: false
-  }
-}
+import ModeAggregate from './ModeAggregate.vue'
+import ModeBalance from './ModeBalance.vue'
+import ModeSingle from './ModeSingle.vue'
 
 export default {
   name: 'ServerConfig',
+  components: {
+    ModeAggregate,
+    ModeBalance,
+    ModeSingle
+  },
   data() {
     return {
-      ServerConfig: {
-        ip: '',
-        port: 0
-      },
-      serverStatus: {
-        connected: false,
-        rtt: 0,
-        load: 0, // 服务器负载
-        location: '',
-        version: '',
-        notice: ''
-      },
-      workMode: 'single',
-      singleModeLink: 'SIM1',
-      realtimeLinks: realtimeLinkDefs.map(createRealtimeLink),
-      hasUnsavedChanges: false, // 是否有为保存的配置
-      isEditing: false, // 用户是否正在编辑
-      stopped: false,
-      statusInFlight: false,
-      linkStatusInFlight: false,
-      pollTimer: null,
-      pollIntervalMs: 5000,
-      visibilityListenerAdded: false,
-      rules: {
-        ip: [
-          { required: true, message: this.$t('Server IP is required'), trigger: 'blur' },
-          { validator: this.validateIP, trigger: 'blur' }
-        ],
-        port: [
-          { required: true, message: this.$t('Server Port is required'), trigger: 'blur' },
-          { validator: this.validatePort, trigger: 'blur'}
-        ]
-      }
+      workMode: '',
+      workModeReady: false,
+      pageActive: false,
+      stopped: true
     }
   },
   created() {
@@ -210,6 +51,8 @@ export default {
     })
   },
   activated() {
+    if (!this.stopped)
+      return
     this.runAfterFirstFrame(() => {
       this.startAll()
     })
@@ -234,454 +77,42 @@ export default {
     },
     startAll() {
       this.stopped = false
-      this.statusInFlight = false
-      if (typeof document !== 'undefined' && document && !this.visibilityListenerAdded) {
-        document.addEventListener('visibilitychange', this.onVisibilityChange)
-        this.visibilityListenerAdded = true
-      }
-      this.fetchStaticInfo()
-      this.refreshOnce()
-      this.startPolling()
+      this.workModeReady = false
+      this.workMode = ''
+      this.pageActive = true
+      this.fetchWorkMode().finally(() => {
+        if (this.stopped)
+          return
+        this.workModeReady = true
+      })
     },
     stopAll() {
       this.stopped = true
-      this.stopPolling()
-      if (typeof document !== 'undefined' && document && this.visibilityListenerAdded) {
-        document.removeEventListener('visibilitychange', this.onVisibilityChange)
-        this.visibilityListenerAdded = false
-      }
+      this.pageActive = false
     },
-    startPolling() {
-      if (this.stopped)
-        return
-      this.stopPolling()
-      this.pollTimer = setTimeout(async() => {
-        await this.refreshOnce()
-        this.startPolling()
-      }, this.pollIntervalMs)
+    // 把后端返回的工作模组字段归一化处理
+    normalizeWorkMode(rawMode) {
+      const mode = String(rawMode || '').trim().toLowerCase()
+      if (mode === 'single' || mode === 'aggregate' || mode === 'balance')
+        return mode
+      if (mode.includes('agg'))
+        return 'aggregate'
+      if (mode.includes('bal') || mode.includes('load'))
+        return 'balance'
+      return 'single'
     },
-    stopPolling() {
-      if (this.pollTimer) {
-        clearTimeout(this.pollTimer)
-        this.pollTimer = null
-      }
+    // 获取工作模式
+    fetchWorkMode() {
+      return this.$oui.call('mode', 'getMode').then((mode) => {
+        if (this.stopped)
+          return
+        const normalized = this.normalizeWorkMode(mode)
+        this.workMode = normalized
+      })
     },
-    onVisibilityChange() {
-      if (this.stopped)
-        return
-      if (typeof document !== 'undefined' && document && document.hidden) {
-        this.stopPolling()
-      } else {
-        this.refreshOnce()
-        this.startPolling()
-      }
-    },
-    fetchStaticInfo() {
-      setTimeout(() => this.fetchServerIP(), 0)
-      setTimeout(() => this.fetchServerPort(), 50)
-      setTimeout(() => this.fetchServerNode(), 100)
-      setTimeout(() => this.fetchServerVersion(), 150)
-      setTimeout(() => this.fetchServerAnnourcement(), 200)
-    },
+    // 设置工作模式
     handleWorkModeChange() {
-      if (this.workMode === 'single')
-        this.fetchRealtimeLinks()
-    },
-    handleSingleModeLinkChange() {
-      this.fetchRealtimeLinks()
-    },
-    saveSingleMode() {
-      this.hasUnsavedChanges = false
-      this.$message({
-        message: this.$t('Configuration has been applied'),
-        type: 'success'
-      })
-      this.fetchRealtimeLinks()
-    },
-    confirmSaveSingleMode() {
-      const message = `确认保存并应用当前出口链路：${this.singleModeLink}？`
-      const title = '提示'
-      if (typeof this.$confirm === 'function') {
-        this.$confirm(message, title, {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }).then(() => {
-          this.saveSingleMode()
-        }).catch(() => {})
-        return
-      }
-      if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
-        if (window.confirm(message))
-          this.saveSingleMode()
-      }
-    },
-    async refreshOnce() {
-      if (this.stopped)
-        return
-      if (this.isEditing || this.hasUnsavedChanges)
-        return
-      const tasks = [this.fetchServerStatus()]
-      if (this.workMode === 'single')
-        tasks.push(this.fetchRealtimeLinks())
-      await Promise.allSettled(tasks)
-    },
-    withTimeout(promise, ms, operation) {
-      return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-          reject(new Error(`${operation} timeout after ${ms}ms`))
-        }, ms)
-        Promise.resolve(promise).then((value) => {
-          clearTimeout(timer)
-          resolve(value)
-        }, (err) => {
-          clearTimeout(timer)
-          reject(err)
-        })
-      })
-    },
-    saveConfig() {
-      // 表单验证
-      this.$refs.serverForm.validate((valid) => {
-        if (valid) {
-          this.$message({
-            message: this.$t('Configuration has been applied'),
-            type: 'success'
-          })
-          this.setServerIP()
-          this.setServerPort()
-          this.hasUnsavedChanges = false
-          // 保存后立即刷新状态
-          this.fetchServerStatus()
-        } else {
-          // 验证失败，不保存
-          return false
-        }
-      })
-    },
-    // 设置服务器ip
-    setServerIP() {
-      const params = { ip: this.ServerConfig.ip }
-      this.serverStatus.connected = false
-      this.serverStatus.rtt = 0
-      this.$oui.call('serverManager', 'setServerIP', params)
-      this.fetchServerIP()
-    },
-    // 设置服务器端口
-    setServerPort() {
-      const params = { port: this.ServerConfig.port}
-      this.serverStatus.connected = false
-      this.serverStatus.rtt = 0
-      this.$oui.call('serverManager', 'setServerPort', params)
-      this.fetchServerPort()
-    },
-    // ip格式校验
-    validateIP(rule, value, callback) {
-      // IP地址验证
-      if (!value) {
-        callback(new Error(this.$t('Server IP is required')))
-      }
-      // IP地址验证（格式和范围）
-      const ip = String(value)
-      if (!/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(ip) ||
-        ip.split('.').some(part => parseInt(part, 10) < 0 || parseInt(part, 10) > 255)) {
-        callback(new Error(this.$t('Invalid IP address')))
-        return
-      }
-      this.ServerConfig.ip = ip
-      callback() // 验证通过
-    },
-    // 端口范围校验
-    validatePort(rule, value, callback) {
-      if (!value) {
-        callback(new Error(this.$t('Server Port is required')))
-      }
-      const port = Number(value)
-      if (port < 0 || port > 65535) {
-        callback(new Error(this.$t('Port must be between 1 and 65535')))
-        return
-      }
-      this.ServerConfig.port = port
-      callback()
-    },
-    // 获取服务器ip
-    fetchServerIP() {
-      if (this.isEditing) // 当输入框处于focus状态时，不要更新
-        return
-      if (this.hasUnsavedChanges) // 当有未保存的配置时，不要更新
-        return
-      this.$oui.call('serverManager', 'getServerIP').then(ip => {
-        if (this.stopped)
-          return
-        if (ip) {
-          this.ServerConfig.ip = ip
-        }
-      }).catch(() => {})
-    },
-    // 获取服务器端口
-    fetchServerPort() {
-      if (this.isEditing) // 当输入框处于focus状态时，不要更新
-        return
-      if (this.hasUnsavedChanges) // 当有未保存的配置时，不要更新
-        return
-      this.$oui.call('serverManager', 'getServerPort').then(port => {
-        if (this.stopped)
-          return
-        if (port) {
-          this.ServerConfig.port = parseInt(port)
-        }
-      }).catch(() => {})
-    },
-    // 获取服务器节点信息
-    fetchServerNode() {
-      this.$oui.call('serverManager', 'getServerNode').then(node => {
-        if (this.stopped)
-          return
-        if (node) {
-          this.serverStatus.location = node
-        }
-      })
-    },
-    // 获取服务器版本
-    fetchServerVersion() {
-      this.$oui.call('serverManager', 'getServerVersion').then(version => {
-        if (this.stopped)
-          return
-        if (version) {
-          this.serverStatus.version = version
-        }
-      })
-    },
-    // 获取服务器公告
-    fetchServerAnnourcement() {
-      this.$oui.call('serverManager', 'getServerAnnourcement').then(annourcement => {
-        if (this.stopped)
-          return
-        if (annourcement) {
-          this.serverStatus.notice = annourcement
-        }
-      })
-    },
-    // 获取服务器连接状态和rtt
-    fetchServerRTT() {
-      return this.withTimeout(this.$oui.call('serverManager', 'getHostRtt'), 5000, 'getHostRtt').then(state => {
-        if (this.stopped)
-          return
-        if (!state.reachable) {
-          this.serverStatus.connected = false
-          this.serverStatus.rtt = 0
-          return
-        }
-        this.serverStatus.rtt = parseInt(state.rtt_ms)
-      }).catch(() => {
-        if (this.stopped)
-          return
-        this.serverStatus.rtt = 0
-      })
-    },
-    // 获取VPN隧道状态和RTT
-    fetchVPNrtt() {
-      return this.withTimeout(this.$oui.call('serverManager', 'getVPNrtt'), 5000, 'getVPNrtt').then(state => {
-        if (this.stopped)
-          return
-        if (!state.reachable) {
-          this.serverStatus.connected = false
-          return this.fetchServerRTT()
-            .catch(() => {})
-        }
-        this.serverStatus.connected = true
-        this.serverStatus.rtt = parseInt(state.rtt_ms)
-      }).catch(() => {
-        if (this.stopped)
-          return
-        this.serverStatus.connected = false
-        this.serverStatus.rtt = 0
-      })
-    },
-    // 获取服务器状态 - 异步并行执行
-    async fetchServerStatus() {
-      if (this.stopped)
-        return
-      if (this.statusInFlight)
-        return
-      this.statusInFlight = true
-      try {
-        await this.fetchVPNrtt()
-      } catch {
-        return
-      } finally {
-        this.statusInFlight = false
-      }
-    },
-    async fetchRealtimeLinks() {
-      if (this.stopped || this.linkStatusInFlight)
-        return
-      this.linkStatusInFlight = true
-      try {
-        const simTasks = realtimeLinkDefs
-          .filter(link => link.type === 'sim')
-          .map(link => this.fetchSimRealtimeLink(link))
-        await Promise.allSettled(simTasks.concat([this.fetchWanRealtimeLinks()]))
-      } finally {
-        this.linkStatusInFlight = false
-      }
-    },
-    fetchSimRealtimeLink(linkDef) {
-      return Promise.allSettled([
-        this.$oui.call('sim', 'getStatus', { index: linkDef.index }),
-        this.$oui.call('sim', 'getInterfaceStatus', { index: linkDef.index })
-      ]).then(([statusResult, interfaceResult]) => {
-        if (this.stopped)
-          return
-        const link = this.findRealtimeLink(linkDef.key)
-        if (!link)
-          return
-
-        const statusData = this.parseRpcJson(statusResult.status === 'fulfilled' ? statusResult.value : null)
-        const interfaceData = this.parseRpcJson(interfaceResult.status === 'fulfilled' ? interfaceResult.value : null)
-        const ip = interfaceData.ip || '-'
-        const gateway = interfaceData.gateway || '-'
-        const rat = statusData && statusData.monsc && statusData.monsc.rat ? statusData.monsc.rat : '-'
-        const operator = statusData && statusData.operator_name ? statusData.operator_name : ''
-        const simState = statusData && statusData.sim ? String(statusData.sim) : ''
-
-        link.interfaceName = interfaceData.device || interfaceData.ifname || interfaceData.name || `sim${linkDef.index + 1}`
-        link.ip = ip
-        link.gateway = gateway
-        link.protocol = rat
-        link.rxBytes = this.normalizeRealtimeNumber(interfaceData.rxBytes)
-        link.txBytes = this.normalizeRealtimeNumber(interfaceData.txBytes)
-        link.online = ip !== '-' || gateway !== '-' || (simState && simState !== 'nosim')
-        link.detail = [operator, simState].filter(Boolean).join(' / ') || '未检测到链路信息'
-        link.updatedAt = this.getNowTimeText()
-      }).catch(() => {
-        const link = this.findRealtimeLink(linkDef.key)
-        if (!link)
-          return
-        link.online = false
-        link.detail = '链路状态读取失败'
-      })
-    },
-    fetchWanRealtimeLinks() {
-      return this.$oui.call('network', 'get_wan_networks').then((response) => {
-        if (this.stopped)
-          return
-        const networks = response && response.networks
-        const items = Array.isArray(networks) ? networks : []
-        realtimeLinkDefs
-          .filter(link => link.type === 'wan')
-          .forEach((linkDef, orderIndex) => {
-            const link = this.findRealtimeLink(linkDef.key)
-            if (!link)
-              return
-            const net = items[orderIndex] || {}
-            const ipv4 = Array.isArray(net['ipv4-address']) ? net['ipv4-address'][0] : null
-            const routes = Array.isArray(net.route) ? net.route : []
-            const defaultRoute = routes.find(route => route.target === '0.0.0.0' && route.mask === 0)
-            link.interfaceName = net.device || net.l3_device || net.interface || net.ifname || link.title
-            link.ip = ipv4 && ipv4.address ? `${ipv4.address}/${ipv4.mask}` : '-'
-            link.gateway = defaultRoute && defaultRoute.nexthop ? defaultRoute.nexthop : '-'
-            link.protocol = net.proto || '-'
-            link.rxBytes = null
-            link.txBytes = null
-            link.online = Boolean(net.up || (ipv4 && ipv4.address))
-            link.detail = net.proto ? `协议 ${net.proto}` : '未检测到 WAN 状态'
-            link.updatedAt = this.getNowTimeText()
-          })
-      }).catch(() => {
-        realtimeLinkDefs
-          .filter(link => link.type === 'wan')
-          .forEach((linkDef) => {
-            const link = this.findRealtimeLink(linkDef.key)
-            if (!link)
-              return
-            link.online = false
-            link.detail = 'WAN 状态读取失败'
-          })
-      })
-    },
-    findRealtimeLink(key) {
-      return this.realtimeLinks.find(link => link.key === key)
-    },
-    parseRpcJson(value) {
-      if (!value)
-        return {}
-      if (typeof value === 'string') {
-        try {
-          return JSON.parse(value)
-        } catch {
-          return {}
-        }
-      }
-      return value
-    },
-    normalizeRealtimeNumber(value) {
-      const num = Number(value)
-      return Number.isFinite(num) ? num : null
-    },
-    formatRealtimeBytes(value) {
-      if (value === null || value === undefined || value === '')
-        return '-'
-      const num = Number(value)
-      if (!Number.isFinite(num))
-        return '-'
-      if (num < 1024)
-        return `${num.toFixed(0)} B`
-      if (num < 1024 * 1024)
-        return `${(num / 1024).toFixed(1)} KB`
-      if (num < 1024 * 1024 * 1024)
-        return `${(num / 1024 / 1024).toFixed(1)} MB`
-      return `${(num / 1024 / 1024 / 1024).toFixed(2)} GB`
-    },
-    getNowTimeText() {
-      return new Date().toLocaleTimeString('zh-CN', { hour12: false })
-    },
-    getRouterAddress() {
-      if (typeof window !== 'undefined' && window.location && window.location.hostname)
-        return window.location.hostname
-      return '-'
-    },
-    isRealtimeLinkOnline(link) {
-      return Boolean(link && link.online)
-    },
-    getRealtimeLinkStatusText(link) {
-      return this.isRealtimeLinkOnline(link) ? '在线' : '离线'
-    },
-    getRealtimeLinkTagType(link) {
-      return this.isRealtimeLinkOnline(link) ? 'success' : 'danger'
-    },
-    getRealtimeLinkRole(link) {
-      if (this.singleModeLink === link.key)
-        return '当前业务出口'
-      return this.isRealtimeLinkOnline(link) ? '可用备用链路' : '待机/未连接'
-    },
-    getOnlineRealtimeLinkCount() {
-      return this.realtimeLinks.filter(link => this.isRealtimeLinkOnline(link)).length
-    },
-    getPollIntervalSeconds() {
-      const seconds = Math.round(this.pollIntervalMs / 1000)
-      return seconds > 0 ? seconds : 1
-    },
-    // 根据rtt判断连接状态
-    getRttTagType(rtt) {
-      // 根据RTT值返回不同的标签类型
-      if (rtt < 50) {
-        return 'success' // 优秀
-      } else if (rtt < 100) {
-        return 'info' // 正常
-      } else if (rtt < 150) {
-        return 'warning' // 较慢
-      } else {
-        return 'danger' // 很慢
-      }
-    },
-    // 不同状态使用不同颜色标识
-    getStatusTagType() {
-      return this.serverStatus.connected ? 'success' : 'danger'
-    },
-    // 有未保存的改动
-    markUnsavedChanges() {
-      this.hasUnsavedChanges = true
+      return
     }
   }
 }
