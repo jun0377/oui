@@ -5,7 +5,7 @@
         <div class="card-header">
           <div>
             <div class="mode-panel-title">聚合模式</div>
-            <div class="mode-panel-subtitle">聚合多条链路能力,需要连接聚合服务器,带宽高,延时会有所增加</div>
+            <div class="mode-panel-subtitle">聚合多条链路带宽,需要连接聚合服务器,带宽高,延时会有所增加</div>
           </div>
         </div>
       </template>

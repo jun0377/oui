@@ -8,6 +8,12 @@ log.level = 'trace'
 log.usecolor = true
 log.outfile = '/var/log/mode.log'
 
+-- 异步执行命令
+local function exec_async(command)
+    log.info('cmd async', command)
+    os.execute(string.format("( %s ) >/dev/null 2>/dev/null &", command))
+end
+
 -- 获取所有可用链路
 function M.getAllChannel()
     local c = uci.cursor()
@@ -38,7 +44,9 @@ function M.setMode(params)
     local mode = tostring(params.mode)
     local c = uci.cursor()
     c:set('global', 'global', 'mode', mode)
-    return c:commit('global')
+    c:commit('global')
+
+    exec_async('/etc/init.d/openmptcprouter-vps restart')
 end
 
 -- 获取单卡模式所用链路
@@ -59,7 +67,8 @@ function M.setSingleChannel(params)
     local channel = tostring(params.channel)
     local c = uci.cursor()
     c:set('global', 'single', 'channel', channel)
-    return c:commit('global')
+    c:commit('global')
+    exec_async('/etc/init.d/openmptcprouter-vps restart')
 end
 
 return M
