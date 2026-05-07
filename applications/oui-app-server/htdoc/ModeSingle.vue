@@ -5,7 +5,7 @@
         <div class="card-header">
           <div>
             <div class="mode-panel-title">单卡模式</div>
-            <div class="mode-panel-subtitle">选择一条链路作为当前业务出口</div>
+            <div class="mode-panel-subtitle">强制选择一条链路作为当前业务出口,即使该链路异常也不会自动切换</div>
           </div>
         </div>
       </template>
@@ -46,23 +46,7 @@ function getChannelSortKey(value) {
   return { group, num: Number(match[2]), raw: value }
 }
 
-function createRealtimeLink(def) {
-  return {
-    key: def.key,
-    title: def.title,
-    type: def.type,
-    index: def.index,
-    interfaceName: '-',
-    ip: '-',
-    gateway: '-',
-    protocol: '-',
-    rxBytes: null,
-    txBytes: null,
-    detail: '等待链路状态',
-    updatedAt: '-',
-    online: false
-  }
-}
+const realtimeLinkDefs = []
 
 export default {
   name: 'ModeSingle',

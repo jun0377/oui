@@ -195,7 +195,7 @@ export default {
       this.$refs.serverForm.validate((valid) => {
         if (valid) {
           this.$message({
-            message: this.$t('Configuration has been applied'),
+            message: this.$t('保存成功'),
             type: 'success'
           })
           this.setWorkMode()
@@ -269,7 +269,7 @@ export default {
         }
       })
     },
-    // 获取服务器端口 
+    // 获取服务器端口
     fetchServerPort() {
       if (this.isEditing)
         return
