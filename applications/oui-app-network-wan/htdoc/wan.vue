@@ -1,5 +1,82 @@
 <template>
-  <div class="wan-config-container">
+  <div v-if="isWired" class="wan-config-container">
+    <div class="header">
+      <h2>{{ settings.alias || 'WAN' }}</h2>
+    </div>
+
+    <div class="config-section wired-config-section">
+      <div class="left-column">
+        <el-card class="config-card">
+          <template #header>
+            <div class="card-header">
+              <span>{{ $t('Basic Settings') }}</span>
+            </div>
+          </template>
+          <el-form :model="settings" label-width="120px" class="config-form" label-align="left" label-position="left">
+            <el-form-item :label="$t('Label')">
+              <el-input v-model="settings.alias" readonly disabled/>
+            </el-form-item>
+            <el-form-item :label="$t('Interface')">
+              <el-input v-model="settings.interface" readonly disabled/>
+            </el-form-item>
+            <el-form-item label="协议">
+              <el-input v-model="settings.net" readonly disabled/>
+            </el-form-item>
+            <el-form-item label="配置名">
+              <el-input v-model="settings.name" readonly disabled/>
+            </el-form-item>
+          </el-form>
+          <div class="action-buttons card-actions">
+            <el-button @click="$emit('go-back')" native-type="button" type="primary" size="large">
+              {{ $t('Back') }}
+            </el-button>
+          </div>
+        </el-card>
+      </div>
+
+      <div class="right-column">
+        <el-card class="config-card compact-card">
+          <template #header>
+            <div class="card-header">
+              <span>接口状态</span>
+            </div>
+          </template>
+          <div class="status-info">
+            <div class="status-item">
+              <span class="status-label">协议:</span>
+              <span class="status-value">{{ settings.net || '-' }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">IP:</span>
+              <span class="status-value">{{ status.interface.ip }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">掩码:</span>
+              <span class="status-value">{{ status.interface.mask }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">网关:</span>
+              <span class="status-value">{{ status.interface.gateway }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">MAC:</span>
+              <span class="status-value">{{ status.interface.mac }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">接收流量:</span>
+              <span class="status-value">{{ formatBytes(status.interface.rxBytes) }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">发送流量:</span>
+              <span class="status-value">{{ formatBytes(status.interface.txBytes) }}</span>
+            </div>
+          </div>
+        </el-card>
+      </div>
+    </div>
+  </div>
+
+  <div v-else class="wan-config-container">
     <div class="header">
       <h2> {{ status.alias }}</h2>
     </div>
@@ -529,11 +606,17 @@
 <script>
 
 export default {
-  name: 'settings',
+  name: 'wan-settings',
+  emits: ['go-back'],
   props: {
     wanData: {
       type: Object,
       required: true
+    }
+  },
+  computed: {
+    isWired() {
+      return this.wanData && this.wanData.kind === 'wan'
     }
   },
   data() {
@@ -734,6 +817,20 @@ export default {
     }
   },
   methods: {
+    formatBytes(bytes) {
+      const n = Number(bytes)
+      if (!Number.isFinite(n) || n < 0)
+        return '-'
+      const units = ['B', 'KB', 'MB', 'GB', 'TB']
+      let v = n
+      let u = 0
+      while (v >= 1024 && u < units.length - 1) {
+        v /= 1024
+        u += 1
+      }
+      const digits = u === 0 ? 0 : 2
+      return `${v.toFixed(digits)} ${units[u]}`
+    },
     getFreqLockTypeText(type) {
       const map = { '0': '解锁状态', '1': '锁频点+锁频段', '2': '锁小区+频点+锁频段', '3': '锁频段' }
       return map[type] || type
@@ -800,6 +897,24 @@ export default {
     // 将 props.wanData 映射到本地状态（wanInfo / wanConfig）
     applyWanData(data) {
       if (!data) return
+
+      if (data.kind === 'wan') {
+        const uci = data.uci || {}
+        this.status = {
+          ...this.status,
+          alias: data.settings && data.settings.alias ? data.settings.alias : (uci.name ? String(uci.name).toUpperCase() : 'WAN'),
+          rat: data.status && data.status.rat ? data.status.rat : (uci.proto ? String(uci.proto).toUpperCase() : '-'),
+          interface: {
+            ...this.status.interface,
+            ...(data.status && data.status.interface ? data.status.interface : {})
+          }
+        }
+        this.settings.alias = data.settings && data.settings.alias ? data.settings.alias : (uci.name ? String(uci.name).toUpperCase() : 'WAN')
+        this.settings.interface = data.settings && data.settings.interface ? data.settings.interface : (uci.device || '-')
+        this.settings.net = data.status && data.status.rat ? data.status.rat : (uci.proto ? String(uci.proto).toUpperCase() : '-')
+        this.settings.name = uci.name || '-'
+        return
+      }
 
       // 实时状态
       this.status = data.status

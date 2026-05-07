@@ -6,45 +6,74 @@
       <div class="section">
         <div class="section-header">{{ $t('Wan Area') }}</div>
         <div class="section-content wan-section">
-          <!-- 表头行 -->
-          <div class="subnet-item">
-            <div class="subnet-header-empty"></div>
-            <div class="subnet-info-wan">
-              <span>名称</span>
-              <!-- <span>{{ $t('Interface') }}</span> -->
-              <span>{{ $t('Operator') }}</span>
-              <span>{{ $t('Real Network Access') }}</span>
-              <span>APN</span>
-              <span>{{ $t('Frequency Band') }}</span>
-              <span>RSRP</span>
-              <span class="status-column">{{ $t('Status') }}</span>
-              <span> </span>
+          <div class="wan-group">
+            <div class="wan-table-row wan-table-row-sim wan-table-row-header">
+              <div class="wan-group-title">移动数据</div>
+              <div class="subnet-info-wan">
+                <span>名称</span>
+                <span>{{ $t('Operator') }}</span>
+                <span>{{ $t('Real Network Access') }}</span>
+                <span>APN</span>
+                <span>{{ $t('Frequency Band') }}</span>
+                <span>RSRP</span>
+                <span class="status-column">{{ $t('Status') }}</span>
+                <span> </span>
+              </div>
+            </div>
+            <hr />
+            <div class="wan-table-row wan-table-row-sim wan-table-row-clickable" v-for="(item, idx) in simEntries" :key="'sim-' + item.index" @click="editSubWan(item.wan, item.index)">
+              <div class="wan-table-leading">
+                <svg class="subnet-icon-svg" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 3C5.44772 3 5 3.44772 5 4V20C5 20.5523 5.44772 21 6 21H18C18.5523 21 19 20.5523 19 20V8L14 3H6Z" fill="#DCFCE7" stroke="#22C55E" stroke-width="1.5"/>
+                  <path d="M14 3V7C14 7.55228 14.4477 8 15 8H19" fill="none" stroke="#22C55E" stroke-width="1.5"/>
+                  <text x="10" y="16" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#15803D">{{ idx + 1 }}</text>
+                </svg>
+              </div>
+              <div class="subnet-info-wan">
+                <span>{{ item.wan.settings.alias }}</span>
+                <span>{{ item.wan.sim.mcc }}{{ item.wan.sim.mnc }}</span>
+                <span>{{ item.wan.status.rat }}</span>
+                <span>{{ item.wan.settings.apn }}</span>
+                <span>{{ getRealBandTypeText(item.index) }}</span>
+                <span>{{ getRsrpText(item.index) }}</span>
+                <span class="status-marquee"><span class="status-marquee-text">{{ getStstusText(item.index) }}</span></span>
+                <span class="subnet-arrow">›</span>
+              </div>
             </div>
           </div>
 
-          <!-- 分割线 -->
-          <hr />
-
-          <!-- 数据行 -->
-          <div class="subnet-item" v-for="(wan, index) in wanLinks" :key="index" @click="editSubWan(wan, index)">
-            <svg class="subnet-icon-svg" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <!-- SIM卡外框 -->
-              <path d="M6 3C5.44772 3 5 3.44772 5 4V20C5 20.5523 5.44772 21 6 21H18C18.5523 21 19 20.5523 19 20V8L14 3H6Z" fill="#DCFCE7" stroke="#22C55E" stroke-width="1.5"/>
-              <!-- SIM卡切角 -->
-              <path d="M14 3V7C14 7.55228 14.4477 8 15 8H19" fill="none" stroke="#22C55E" stroke-width="1.5"/>
-              <!-- SIM标识 -->
-              <text x="10" y="16" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#15803D">{{ index + 1 }}</text>
-            </svg>
-            <div class="subnet-info-wan">
-              <span>{{ wan.settings.alias }}</span>
-              <!-- <span>{{ wan.settings.interface }}</span> -->
-              <span>{{ wan.sim.mcc }}{{ wan.sim.mnc }}</span>
-              <span>{{ wan.status.rat }}</span>
-              <span>{{ wan.settings.apn }}</span>
-              <span>{{ getRealBandTypeText(index) }}</span>
-              <span>{{ getRsrpText(index) }}</span>
-              <span class="status-marquee"><span class="status-marquee-text">{{ getStstusText(index) }}</span></span>
-              <span class="subnet-arrow">›</span>
+          <div class="wan-group">
+            <div class="wan-table-row wan-table-row-port wan-table-row-header">
+              <div class="wan-group-title">有线网</div>
+              <div class="subnet-info-wan-port">
+                <span>名称</span>
+                <span>{{ $t('Interface') }}</span>
+                <span>协议</span>
+                <span class="status-column">{{ $t('Status') }}</span>
+                <span> </span>
+              </div>
+            </div>
+            <hr />
+            <div class="wan-table-row wan-table-row-port wan-table-row-clickable" v-for="(item, idx) in wanPortEntries" :key="'wan-' + (item.wan.uci && item.wan.uci.name ? item.wan.uci.name : idx)" @click="editSubWan(item.wan, item.index)">
+              <div class="wan-table-leading">
+                <svg class="subnet-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="5" width="20" height="14" rx="2" ry="2" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
+                  <rect x="6" y="8" width="12" height="8" rx="1" ry="1" fill="#000"/>
+                  <rect x="7" y="10" width="1" height="4" fill="#fff"/>
+                  <rect x="9" y="10" width="1" height="4" fill="#fff"/>
+                  <rect x="11" y="10" width="1" height="4" fill="#fff"/>
+                  <rect x="13" y="10" width="1" height="4" fill="#fff"/>
+                  <rect x="15" y="10" width="1" height="4" fill="#fff"/>
+                  <rect x="16" y="10" width="1" height="4" fill="#fff"/>
+                </svg>
+              </div>
+              <div class="subnet-info-wan-port">
+                <span>{{ item.wan.settings.alias }}</span>
+                <span>{{ item.wan.settings.interface || '-' }}</span>
+                <span>{{ item.wan.status.rat || '-' }}</span>
+                <span class="status-marquee"><span class="status-marquee-text">-</span></span>
+                <span class="subnet-arrow">›</span>
+              </div>
             </div>
           </div>
 
@@ -65,10 +94,10 @@
               <div class="traffic-chart">
                 <svg class="traffic-svg" :viewBox="`0 0 ${traffic.width} ${traffic.height}`" preserveAspectRatio="none">
                   <polyline
-                    v-for="(wan, index) in wanLinks"
-                    :key="'rx-' + index"
-                    :points="getTrafficPoints('rx', index)"
-                    :style="getTrafficLineStyle(index)"
+                    v-for="item in trafficEntries"
+                    :key="'rx-' + item.index"
+                    :points="getTrafficPoints('rx', item.index)"
+                    :style="getTrafficLineStyle(item.index)"
                   />
                   <line x1="0" :y1="traffic.height * 0.25" :x2="traffic.width" :y2="traffic.height * 0.25" style="stroke:black;stroke-width:0.1" />
                   <text x="20" :y="traffic.height * 0.24" class="traffic-label">{{ getTrafficLabel('rx', 0.75) }}</text>
@@ -86,10 +115,10 @@
               <div class="traffic-chart">
                 <svg class="traffic-svg" :viewBox="`0 0 ${traffic.width} ${traffic.height}`" preserveAspectRatio="none">
                   <polyline
-                    v-for="(wan, index) in wanLinks"
-                    :key="'tx-' + index"
-                    :points="getTrafficPoints('tx', index)"
-                    :style="getTrafficLineStyle(index)"
+                    v-for="item in trafficEntries"
+                    :key="'tx-' + item.index"
+                    :points="getTrafficPoints('tx', item.index)"
+                    :style="getTrafficLineStyle(item.index)"
                   />
                   <line x1="0" :y1="traffic.height * 0.25" :x2="traffic.width" :y2="traffic.height * 0.25" style="stroke:black;stroke-width:0.1" />
                   <text x="20" :y="traffic.height * 0.24" class="traffic-label">{{ getTrafficLabel('tx', 0.75) }}</text>
@@ -142,34 +171,34 @@
                 </span>
               </div>
             </div>
-            <div class="traffic-legend-row" v-for="(wan, index) in wanLinks" :key="'legend-' + index">
+            <div class="traffic-legend-row" v-for="item in trafficEntries" :key="'legend-' + item.index">
               <div class="traffic-legend-cell">
-                <span class="traffic-legend-badge" :style="getTrafficBadgeStyle(index)">{{ wan.settings.alias || ('WAN' + (index + 1)) }}</span>
+                <span class="traffic-legend-badge" :style="getTrafficBadgeStyle(item.index)">{{ item.wan.settings.alias || ('WAN' + (item.index + 1)) }}</span>
               </div>
               <div class="traffic-legend-cell">
                 <span class="traffic-rate">
-                  <span class="traffic-rate-value">{{ formatRateValue(getTrafficStat('rx', index, 'cur')) }}</span>
-                  <span class="traffic-rate-unit">{{ formatRateUnit(getTrafficStat('rx', index, 'cur')) }}</span>
-                  <span class="traffic-rate-pct">{{ formatPercent(getTrafficStat('rx', index, 'cur'), getTrafficTotal('rx', 'cur')) }}</span>
+                  <span class="traffic-rate-value">{{ formatRateValue(getTrafficStat('rx', item.index, 'cur')) }}</span>
+                  <span class="traffic-rate-unit">{{ formatRateUnit(getTrafficStat('rx', item.index, 'cur')) }}</span>
+                  <span class="traffic-rate-pct">{{ formatPercent(getTrafficStat('rx', item.index, 'cur'), getTrafficTotal('rx', 'cur')) }}</span>
                 </span>
               </div>
               <div class="traffic-legend-cell">
                 <span class="traffic-bytes">
-                  <span class="traffic-bytes-value">{{ formatBytesValue(getInterfaceBytes(index, 'rx')) }}</span>
-                  <span class="traffic-bytes-unit">{{ formatBytesUnit(getInterfaceBytes(index, 'rx')) }}</span>
+                  <span class="traffic-bytes-value">{{ formatBytesValue(getInterfaceBytes(item.index, 'rx')) }}</span>
+                  <span class="traffic-bytes-unit">{{ formatBytesUnit(getInterfaceBytes(item.index, 'rx')) }}</span>
                 </span>
               </div>
               <div class="traffic-legend-cell">
                 <span class="traffic-rate">
-                  <span class="traffic-rate-value">{{ formatRateValue(getTrafficStat('tx', index, 'cur')) }}</span>
-                  <span class="traffic-rate-unit">{{ formatRateUnit(getTrafficStat('tx', index, 'cur')) }}</span>
-                  <span class="traffic-rate-pct">{{ formatPercent(getTrafficStat('tx', index, 'cur'), getTrafficTotal('tx', 'cur')) }}</span>
+                  <span class="traffic-rate-value">{{ formatRateValue(getTrafficStat('tx', item.index, 'cur')) }}</span>
+                  <span class="traffic-rate-unit">{{ formatRateUnit(getTrafficStat('tx', item.index, 'cur')) }}</span>
+                  <span class="traffic-rate-pct">{{ formatPercent(getTrafficStat('tx', item.index, 'cur'), getTrafficTotal('tx', 'cur')) }}</span>
                 </span>
               </div>
               <div class="traffic-legend-cell">
                 <span class="traffic-bytes">
-                  <span class="traffic-bytes-value">{{ formatBytesValue(getInterfaceBytes(index, 'tx')) }}</span>
-                  <span class="traffic-bytes-unit">{{ formatBytesUnit(getInterfaceBytes(index, 'tx')) }}</span>
+                  <span class="traffic-bytes-value">{{ formatBytesValue(getInterfaceBytes(item.index, 'tx')) }}</span>
+                  <span class="traffic-bytes-unit">{{ formatBytesUnit(getInterfaceBytes(item.index, 'tx')) }}</span>
                 </span>
               </div>
             </div>
@@ -226,7 +255,10 @@
     </div>
 
     <KeepAlive>
-      <WanConfig v-if="currentView === 'wan-config'" :wan-data="selectedWan" @go-back="goBackToMain" />
+      <SimConfig v-if="currentView === 'sim-config' && selectedWan" :wan-data="selectedWan" @go-back="goBackToMain" />
+    </KeepAlive>
+    <KeepAlive>
+      <WanConfig v-if="currentView === 'wan-config' && selectedWan" :wan-data="selectedWan" @go-back="goBackToMain" />
     </KeepAlive>
     <DhcpConfig v-if="currentView === 'dhcp'" @go-back="goBackToMain" />
     <WirelessConfig v-if="currentView === 'wireless'" @go-back="goBackToMain" />
@@ -234,197 +266,192 @@
 </template>
 
 <script>
+import SimConfig from './sim.vue'
 import WanConfig from './wan.vue'
 import DhcpConfig from './dhcp.vue'
 import WirelessConfig from './wireless.vue'
 
 const trafficMockDefault = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.MODE === 'development'
 
+const createDefaultWanLink = (index) => {
+
+  return {
+    settings: {
+      index: index,
+      enable: true,
+      alias: '',
+      interface: '',
+      net: '',
+      band: '-',
+      pcid: '-',
+      apn: '',
+      auth: '-',
+      username: '-',
+      password: '-'
+    },
+    productInfo: {
+      vendor: '',
+      product: '',
+      revision: '',
+      imei: '',
+      iccid: '',
+      imsi: ''
+    },
+    sim: {
+      operator: '',
+      status: '',
+      country: '',
+      mcc: '',
+      mnc: ''
+    },
+    freqInfo: {
+      sysmode: '',
+      class: []
+    },
+    NR_5GCore: {
+      stat: '',
+      tac: '',
+      ci: '',
+      act: ''
+    },
+    CS: {
+      stat: '',
+      lac: '',
+      ci: '',
+      act: ''
+    },
+    monsc: {
+      rat: '',
+      nr:{
+        cell_id:'',
+        arfcn:'',
+        scs:'',
+        pci:'',
+        tac:'',
+        rsrp:'',
+        rsrq:'',
+        sinr:''
+      },
+      lte:{
+        cell_id:'',
+        arfcn:'',
+        pci:'',
+        tac:'',
+        rsrp:'',
+        rsrq:'',
+        rssi:''
+      },
+      wcdma:{
+        arfcn:'',
+        pcs:'',
+        cell_id:'',
+        lac:'',
+        rscp:'',
+        rxlev:'',
+        ecno:''
+      }
+    },
+    monnc: {
+      gsm: [],
+      wcdma: [],
+      lte: [],
+      nr: []
+    },
+    // 配置
+    realSettings:{
+      rat:'',
+      pdp: {
+        cid: '',
+        pdp_type: '',
+        apn: '',
+        pdp_addr: ''
+      },
+      auth:{
+        cid: '',
+        auth_type: '',
+        passwd: '',
+        username: '',
+        plmn: ''
+      },
+      nrfreqlock:{
+        operatetype: '',
+        forbid_flag: '',
+        num: '',
+        band: [],
+        arfcn: [],
+        scstype: [],
+        pci: []
+      },
+      ltefreqlock:{
+        operatetype: '',
+        forbid_flag: '',
+        num: '',
+        band: [],
+        arfcn: [],
+        pci: []
+      }
+    },
+    // 实时状态
+    status: {
+      status: '',
+      timestamp: '',
+      rat: '-',
+      // 5G NR实时状态
+      nr: {
+        rsrp: '',
+        rsrq: '',
+        sinr: '',
+        band: ''
+      },
+      // LTE 实时状态
+      lte: {
+        rsrp: '',
+        rsrq: '',
+        sinr: '',
+        rssi: '',
+        band: ''
+      },
+      // 网口interface实时状态
+      interface: {
+        ip: '-',
+        mask: '-',
+        gateway: '-',
+        mac: '-',
+        rxBytes: '-',
+        txBytes: '-'
+      }
+    }
+  }
+}
+
 export default {
   components: {
+    SimConfig,
     WanConfig,
     DhcpConfig,
     WirelessConfig
   },
-  data() {
-    const createDefaultWanLink = (index) => {
-      const aliasMap = {
-        0: '5G-1',
-        1: '5G-2',
-        2: '5G-3',
-        3: '有线网'
-      }
-      return {
-        // uci配置文件
-        settings: {
-          index: index,
-          enable: true,
-          alias: aliasMap[index] || '',
-          interface: '',
-          net: '',
-          band: '-',
-          pcid: '-',
-          apn: '',
-          auth: '-',
-          username: '-',
-          password: '-'
-        },
-        // 模组基本信息
-        productInfo: {
-          vendor: '',
-          product: '',
-          revision: '',
-          imei: '',
-          iccid: '',
-          imsi: ''
-        },
-        // sim卡基本信息
-        sim: {
-          operator: '',
-          status: '',
-          country: '',
-          mcc: '',
-          mnc: ''
-        },
-        // NR/LTE 工作频率信息
-        freqInfo: {
-          sysmode: '',
-          class: []
-        },
-        // 5G Core注册状态
-        NR_5GCore: {
-          stat: '',
-          tac: '',
-          ci: '',
-          act: ''
-        },
-        // CS域注册状态, 可用于反应LTE注册状态
-        CS: {
-          stat: '',
-          lac: '',
-          ci: '',
-          act: ''
-        },
-        // 驻留小区信息
-        monsc: {
-          rat: '',
-          nr:{
-            cell_id:'',
-            arfcn:'',
-            scs:'',
-            pci:'',
-            tac:'',
-            rsrp:'',
-            rsrq:'',
-            sinr:''
-          },
-          lte:{
-            cell_id:'',
-            arfcn:'',
-            pci:'',
-            tac:'',
-            rsrp:'',
-            rsrq:'',
-            rssi:''
-          },
-          wcdma:{
-            arfcn:'',
-            pcs:'',
-            cell_id:'',
-            lac:'',
-            rscp:'',
-            rxlev:'',
-            ecno:''
-          }
-        },
-        // 相邻小区信息
-        monnc: {
-          gsm: [],
-          wcdma: [],
-          lte: [],
-          nr: []
-        },
-        // 从模组中查到的配置
-        realSettings:{
-          // 入网设置
-          rat:'',
-          // pdp上下文
-          pdp: {
-            cid: '',
-            pdp_type: '',
-            apn: '',
-            pdp_addr: ''
-          },
-          // 鉴权设置
-          auth:{
-            cid: '',
-            auth_type: '',
-            passwd: '',
-            username: '',
-            plmn: ''
-          },
-          // NR锁频段 锁频点 锁小区设置
-          nrfreqlock:{
-            operatetype: '',
-            forbid_flag: '',
-            num: '',
-            band: [],
-            arfcn: [],
-            scstype: [],
-            pci: []
-          },
-          // LTE锁频段 锁频点 锁小区配置
-          ltefreqlock:{
-            operatetype: '',
-            forbid_flag: '',
-            num: '',
-            band: [],
-            arfcn: [],
-            pci: []
-          }
-        },
-        // 基本状态
-        status: {
-          status: '',
-          timestamp: '', // 状态更新时间戳
-          rat: '-', // 实时入网方式
-          // NR信号强度
-          nr: {
-            rsrp: '',
-            rsrq: '',
-            sinr: '',
-            band: ''
-          },
-          // lte信号强度
-          lte: {
-            rsrp: '',
-            rsrq: '',
-            sinr: '',
-            rssi: '',
-            band: ''
-          },
-          // 网络接口信息
-          interface: {
-            ip: '-',
-            mask: '-',
-            gateway: '-',
-            mac: '-',
-            rxBytes: '-', // 接收流量
-            txBytes: '-' // 发送流量
-          }
-        }
-      }
+  computed: {
+    simEntries() {
+      return (this.wanLinks || [])
+        .map((wan, index) => ({ wan, index }))
+        .filter(item => item.wan && item.wan.kind === 'sim')
+    },
+    wanPortEntries() {
+      return (this.wanLinks || [])
+        .map((wan, index) => ({ wan, index }))
+        .filter(item => item.wan && item.wan.kind === 'wan')
+    },
+    trafficEntries() {
+      return this.simEntries
     }
+  },
+  data() {
     return {
       currentView: 'main', // 'main' 或 'wan-config'
       selectedWan: null,
       selectedWanIndex: null,
-      wanLinks: [
-        createDefaultWanLink(0),
-        createDefaultWanLink(1),
-        createDefaultWanLink(2)
-        // createDefaultWanLink(3)
-      ],
+      wanLinks: [],
       subnets: [
         {
           name: 'DHCP Service'
@@ -463,6 +490,112 @@ export default {
   },
 
   methods: {
+    getRpcIndex(index) {
+      const link = this.wanLinks && this.wanLinks[index]
+      if (link && link.kind && link.kind !== 'sim')
+        return null
+      const v = link && link.settings && link.settings.index
+      return typeof v === 'number' ? v : null
+    },
+    bootstrap() {
+      return this.loadAvailWanLinks().then(() => {
+        this.initTrafficSeries()
+        this.startTrafficMock()
+        this.wanLinks.forEach((_, index) => this.getSimSettings(index))
+
+        this.wanLinks.forEach((_, index) => {
+          if (this.getRpcIndex(index) === null)
+            return
+          this.$timer.create('sim-product' + index, () => this.getProductInfo(index), { time: 15000, repeat: true, autostart: false })
+          this.$timer.create('sim-status' + index, () => this.getStatus(index), { time: 10000, repeat: true, autostart: false })
+          this.$timer.create('modules' + index, () => this.getModuleSettings(index), { time: 12000, repeat: true, autostart: false })
+          this.$timer.create('interface' + index, () => this.getInterfaceStatus(index), { time: 1000, repeat: true, autostart: false })
+        })
+
+        this.updatePolling()
+      })
+    },
+    loadAvailWanLinks() {
+      return this.$oui.call('wan', 'getAvailWan', {}).then((result) => {
+        let data = result
+        if (typeof result === 'string') {
+          try {
+            data = JSON.parse(result)
+          } catch {
+            data = null
+          }
+        }
+
+        const links = data && Array.isArray(data.links) ? data.links : []
+        const uiLinks = []
+
+        for (const item of links) {
+          if (!item || !item.kind)
+            continue
+
+          if (item.kind === 'sim') {
+            const n = Number(item.sim_index)
+            if (!Number.isFinite(n) || n < 0)
+              continue
+            const model = createDefaultWanLink(n)
+            model.kind = 'sim'
+            model.uci = item
+            model.settings.index = n
+            if (item.name) model.settings.interfaceName = item.name
+            uiLinks.push(model)
+            continue
+          }
+
+          if (item.kind === 'wan') {
+            const model = createDefaultWanLink(0)
+            model.kind = 'wan'
+            model.uci = item
+            model.settings.index = null
+            model.settings.alias = item.name ? String(item.name).toUpperCase() : 'WAN'
+            model.settings.interface = item.device || ''
+            model.status.rat = item.proto ? String(item.proto).toUpperCase() : '-'
+            uiLinks.push(model)
+          }
+        }
+
+        if (uiLinks.length) {
+          uiLinks.sort((a, b) => {
+            const ak = a && a.kind === 'sim' ? 0 : 1
+            const bk = b && b.kind === 'sim' ? 0 : 1
+            if (ak !== bk)
+              return ak - bk
+
+            if (ak === 0) {
+              const ai = Number(a?.settings?.index)
+              const bi = Number(b?.settings?.index)
+              if (Number.isFinite(ai) && Number.isFinite(bi))
+                return ai - bi
+              if (Number.isFinite(ai))
+                return -1
+              if (Number.isFinite(bi))
+                return 1
+              return 0
+            }
+
+            const aw = Number(a?.uci?.wan_index)
+            const bw = Number(b?.uci?.wan_index)
+            if (Number.isFinite(aw) && Number.isFinite(bw))
+              return aw - bw
+            if (Number.isFinite(aw))
+              return -1
+            if (Number.isFinite(bw))
+              return 1
+            return 0
+          })
+          this.wanLinks = uiLinks
+          return
+        }
+
+        this.wanLinks = [createDefaultWanLink(0), createDefaultWanLink(1), createDefaultWanLink(2)]
+      }).catch(() => {
+        this.wanLinks = [createDefaultWanLink(0), createDefaultWanLink(1), createDefaultWanLink(2)]
+      })
+    },
     refreshTrafficNow() {
       if (this.currentView !== 'main' || !this.trafficEnabled)
         return
@@ -529,16 +662,21 @@ export default {
       this.stopAllPolling()
 
       if (this.currentView === 'main') {
-        this.startPollingForIndexes([0, 1, 2], { status: true, interface: this.trafficEnabled })
+        const indexes = this.wanLinks
+          .map((_, index) => index)
+          .filter(index => this.getRpcIndex(index) !== null)
+        this.startPollingForIndexes(indexes, { status: true, interface: this.trafficEnabled })
         return
       }
 
-      if (this.currentView === 'wan-config' && typeof this.selectedWanIndex === 'number') {
+      if (this.currentView === 'sim-config' && typeof this.selectedWanIndex === 'number') {
         this.startPollingForIndexes([this.selectedWanIndex], { status: true, product: true, modules: true, interface: true })
       }
     },
     startPollingForIndexes(indexes, plan) {
       indexes.forEach((index) => {
+        if (this.getRpcIndex(index) === null)
+          return
         if (plan.product) {
           this.$timer.start('sim-product' + index)
           this.getProductInfo(index)
@@ -587,10 +725,13 @@ export default {
     getProductInfo(index) {
       return this.withInFlight('getProductInfo:' + index, () => {
         const token = this._pollingToken
-        return this.$oui.call('sim', 'getProductInfo', { index }).then(result => {
+        const rpcIndex = this.getRpcIndex(index)
+        if (rpcIndex === null)
+          return
+        return this.$oui.call('sim', 'getProductInfo', { index: rpcIndex }).then(result => {
           if (token !== this._pollingToken)
             return
-          if (!(this.currentView === 'wan-config' && this.selectedWanIndex === index))
+          if (!(this.currentView === 'sim-config' && this.selectedWanIndex === index))
             return
 
           const data = typeof result === 'string' ? JSON.parse(result) : result
@@ -608,10 +749,13 @@ export default {
     getModuleSettings(index) {
       return this.withInFlight('getModuleSettings:' + index, () => {
         const token = this._pollingToken
-        return this.$oui.call('sim', 'getModuleSettings', { index }).then(result => {
+        const rpcIndex = this.getRpcIndex(index)
+        if (rpcIndex === null)
+          return
+        return this.$oui.call('sim', 'getModuleSettings', { index: rpcIndex }).then(result => {
           if (token !== this._pollingToken)
             return
-          if (!(this.currentView === 'wan-config' && this.selectedWanIndex === index))
+          if (!(this.currentView === 'sim-config' && this.selectedWanIndex === index))
             return
 
           const data = typeof result === 'string' ? JSON.parse(result) : result
@@ -654,7 +798,10 @@ export default {
     getStatus(index) {
       return this.withInFlight('getStatus:' + index, () => {
         const token = this._pollingToken
-        return this.$oui.call('sim', 'getStatus', { index }).then(result => {
+        const rpcIndex = this.getRpcIndex(index)
+        if (rpcIndex === null)
+          return
+        return this.$oui.call('sim', 'getStatus', { index: rpcIndex }).then(result => {
           if (token !== this._pollingToken)
             return
 
@@ -675,7 +822,7 @@ export default {
           if (data.country) sim.country = data.country
           if (data.mcc) sim.mcc = data.mcc
           if (data.mnc) sim.mnc = data.mnc
-          const isDetail = this.currentView === 'wan-config' && this.selectedWanIndex === index
+          const isDetail = this.currentView === 'sim-config' && this.selectedWanIndex === index
           const isMain = this.currentView === 'main'
           if (!isDetail && !isMain)
             return
@@ -810,10 +957,13 @@ export default {
     getInterfaceStatus(index) {
       return this.withInFlight('getInterfaceStatus:' + index, () => {
         const token = this._pollingToken
-        return this.$oui.call('sim', 'getInterfaceStatus', { index }).then(result => {
+        const rpcIndex = this.getRpcIndex(index)
+        if (rpcIndex === null)
+          return
+        return this.$oui.call('sim', 'getInterfaceStatus', { index: rpcIndex }).then(result => {
           if (token !== this._pollingToken)
             return
-          if (!((this.currentView === 'wan-config' && this.selectedWanIndex === index) || (this.currentView === 'main' && this.trafficEnabled)))
+          if (!((this.currentView === 'sim-config' && this.selectedWanIndex === index) || (this.currentView === 'main' && this.trafficEnabled)))
             return
 
           const data = typeof result === 'string' ? JSON.parse(result) : result
@@ -1129,11 +1279,14 @@ export default {
       return stat
     },
     getSimSettings(index) {
-      this.$oui.call('sim', 'getSimUciSettings', { index }).then(result => {
+      const rpcIndex = this.getRpcIndex(index)
+      if (rpcIndex === null)
+        return
+      this.$oui.call('sim', 'getSimUciSettings', { index: rpcIndex }).then(result => {
         const data = typeof result === 'string' ? JSON.parse(result) : result
         const settings = this.wanLinks[index].settings
 
-        settings.index = index
+        settings.index = rpcIndex
         if (data.alias) settings.alias = data.alias
         if (data.enable) settings.enable = data.enable === '1' || data.enable === 1 || data.enable === true
         if (data.usb) settings.usb = data.usb
@@ -1220,7 +1373,7 @@ export default {
     editSubWan(wan, index) {
       this.selectedWan = wan
       this.selectedWanIndex = index
-      this.currentView = 'wan-config'
+      this.currentView = wan && wan.kind === 'sim' ? 'sim-config' : 'wan-config'
     },
     // 返回主页面
     goBackToMain() {
@@ -1239,18 +1392,7 @@ export default {
     }
   },
   created() {
-    this.initTrafficSeries()
-    this.startTrafficMock()
-    this.wanLinks.forEach((_, index) => this.getSimSettings(index))
-
-    this.wanLinks.forEach((wan, index) => {
-      this.$timer.create('sim-product' + index, () => this.getProductInfo(index), { time: 15000, repeat: true, autostart: false })
-      this.$timer.create('sim-status' + index, () => this.getStatus(index), { time: 10000, repeat: true, autostart: false })
-      this.$timer.create('modules' + index, () => this.getModuleSettings(index), { time: 12000, repeat: true, autostart: false })
-      this.$timer.create('interface' + index, () => this.getInterfaceStatus(index), { time: 1000, repeat: true, autostart: false })
-    })
-
-    this.updatePolling()
+    this.bootstrap()
   },
   beforeUnmount() {
     this.stopTrafficMock()
@@ -1291,6 +1433,82 @@ export default {
 
 .wan-section {
   min-height: 80px;
+}
+
+.wan-group {
+  padding-bottom: 14px;
+}
+
+.wan-group + .wan-group {
+  border-top: 1px solid var(--el-border-color);
+  padding-top: 14px;
+}
+
+.wan-group-title {
+  width: 56px;
+  margin-right: 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+}
+
+.wan-table-row {
+  display: grid;
+  column-gap: 12px;
+  align-items: center;
+  padding: 12px 20px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  color: var(--el-text-color-primary);
+  font-size: 13px;
+}
+
+.wan-table-row-sim {
+  grid-template-columns: 56px 100px 100px 120px 100px 120px 90px 1fr 18px;
+}
+
+.wan-table-row-port {
+  grid-template-columns: 56px 120px 100px 100px 100px 18px;
+}
+
+.wan-table-row-header {
+  margin-bottom: 0;
+}
+
+.wan-table-row-clickable {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.wan-table-row-clickable:hover {
+  background-color: var(--el-fill-color-light);
+}
+
+.wan-table-leading {
+  width: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wan-table-leading .subnet-icon-svg {
+  margin-right: 0;
+}
+
+.subnet-info-wan-port {
+  display: contents;
+}
+
+.subnet-info-wan-port span {
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .subnet-section {
@@ -1490,12 +1708,7 @@ export default {
 }
 
 .subnet-info-wan {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 0.5fr 0.5fr 1fr 1fr 1fr 1fr 1fr 1fr 0.5fr;
-  gap: 10px;
-  align-items: center;
-  width: 100%;
+  display: contents;
 }
 
 .subnet-info-wan span {
