@@ -529,6 +529,8 @@ export default {
           }
         }
 
+        console.log(data)
+
         const links = data && Array.isArray(data.links) ? data.links : []
         const uiLinks = []
 
@@ -556,7 +558,7 @@ export default {
             model.settings.index = null
             model.settings.alias = item.name ? String(item.name).toUpperCase() : 'WAN'
             model.settings.interface = item.device || ''
-            model.status.rat = item.proto ? String(item.proto).toUpperCase() : '-'
+            // model.status.rat = item.proto ? String(item.proto).toUpperCase() : '-'
             model.status.interface.proto = item.proto ? String(item.proto).toUpperCase() : ''
             uiLinks.push(model)
           }
@@ -1178,7 +1180,7 @@ export default {
     },
     getTrafficScaleText() {
       const minutes = Math.round((this.traffic.dataWanted * this.traffic.intervalSec) / 60)
-      return `(${minutes} minutes window, ${this.traffic.intervalSec} seconds interval)`
+      return `(${minutes}分钟, ${this.traffic.intervalSec}秒采样)`
     },
     smoothTrafficSeries(series) {
       const n = series.length
@@ -1434,11 +1436,19 @@ export default {
       this.updateWanPortStatePolling()
     },
     // 返回主页面
-    goBackToMain() {
+    goBackToMain(payload) {
       this.currentView = 'main'
       this.selectedWan = null
       this.selectedWanIndex = null
       this.updateWanPortStatePolling()
+      if (payload && payload.refresh) {
+        this.loadAvailWanLinks().then(() => {
+          this.initTrafficSeries()
+          this.wanLinks.forEach((_, index) => this.getSimSettings(index))
+          this.fetchWanPortStatesOnce()
+          this.updatePolling()
+        }).catch(() => {})
+      }
     },
     editSubNet(lan) {
       if (lan.name === 'DHCP Service') {

@@ -49,7 +49,7 @@
             <el-button @click="saveConfig" type="primary" size="large">
               {{ $t('保存 & 应用') }}
             </el-button>
-            <el-button @click="$emit('go-back')" native-type="button" type="info" size="large">
+            <el-button @click="goBack" native-type="button" type="info" size="large">
               {{ $t('Back') }}
             </el-button>
           </div>
@@ -247,6 +247,9 @@ export default {
     },
     handleEnableChange(enabled) {
       this.settings.enable = enabled
+    },
+    goBack() {
+      this.$emit('go-back', { refresh: true })
     },
     fetchWanState() {
       const iface = this.settings && this.settings.interface ? this.settings.interface : ''

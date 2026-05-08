@@ -302,9 +302,9 @@ function M.getAvailWan()
             end
 
             local auto = s.auto
-            if auto ~= nil and tostring(auto) == '0' then
-                goto continue
-            end
+            -- if auto ~= nil and tostring(auto) == '0' then
+            --     goto continue
+            -- end
 
             local proto = s.proto and tostring(s.proto) or ''
             if proto == '' or proto == 'none' then
