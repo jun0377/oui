@@ -70,8 +70,8 @@
               <div class="subnet-info-wan-port">
                 <span>{{ item.wan.settings.alias }}</span>
                 <span>{{ item.wan.settings.interface || '-' }}</span>
-                <span>{{ item.wan.status.rat || '-' }}</span>
-                <span class="status-marquee"><span class="status-marquee-text">-</span></span>
+                <span>{{ item.wan.status.interface.proto === 'STATIC' ? '静态IP' : (item.wan.status.interface.proto || '-') }}</span>
+                <span class="status-marquee"><span class="status-marquee-text">{{ item.wan.status.interface.status || '-' }}</span></span>
                 <span class="subnet-arrow">›</span>
               </div>
             </div>
@@ -413,6 +413,8 @@ const createDefaultWanLink = (index) => {
       },
       // 网口interface实时状态
       interface: {
+        proto: '',
+        status: '-',
         ip: '-',
         mask: '-',
         gateway: '-',
@@ -452,6 +454,7 @@ export default {
       selectedWan: null,
       selectedWanIndex: null,
       wanLinks: [],
+      wanPortStateTimerId: null,
       subnets: [
         {
           name: 'DHCP Service'
@@ -554,6 +557,7 @@ export default {
             model.settings.alias = item.name ? String(item.name).toUpperCase() : 'WAN'
             model.settings.interface = item.device || ''
             model.status.rat = item.proto ? String(item.proto).toUpperCase() : '-'
+            model.status.interface.proto = item.proto ? String(item.proto).toUpperCase() : ''
             uiLinks.push(model)
           }
         }
@@ -588,13 +592,66 @@ export default {
             return 0
           })
           this.wanLinks = uiLinks
+          this.updateWanPortStatePolling()
           return
         }
 
         this.wanLinks = [createDefaultWanLink(0), createDefaultWanLink(1), createDefaultWanLink(2)]
+        this.updateWanPortStatePolling()
       }).catch(() => {
         this.wanLinks = [createDefaultWanLink(0), createDefaultWanLink(1), createDefaultWanLink(2)]
+        this.updateWanPortStatePolling()
       })
+    },
+    updateWanPortStatePolling() {
+      if (this.currentView === 'main')
+        this.startWanPortStatePolling()
+      else
+        this.stopWanPortStatePolling()
+    },
+    fetchWanPortStatesOnce() {
+      if (this.currentView !== 'main')
+        return
+
+      const links = Array.isArray(this.wanLinks) ? this.wanLinks : []
+      for (const wan of links) {
+        if (!wan || wan.kind !== 'wan')
+          continue
+        const section = wan.uci && wan.uci.name ? String(wan.uci.name) : ''
+        const iface = wan.settings && wan.settings.interface ? String(wan.settings.interface) : ''
+        if (!section || !iface)
+          continue
+
+        this.$oui.call('wan', 'getWanState', { section, interface: iface }).then((result) => {
+          let data = result
+          if (typeof result === 'string') {
+            try {
+              data = JSON.parse(result)
+            } catch {
+              data = null
+            }
+          }
+          if (!data || data.code !== 0)
+            return
+          if (!wan.status || !wan.status.interface)
+            return
+          if (typeof data.status === 'string')
+            wan.status.interface.status = data.status
+        }).catch(() => {})
+      }
+    },
+    startWanPortStatePolling() {
+      this.stopWanPortStatePolling()
+      this.fetchWanPortStatesOnce()
+      this.wanPortStateTimerId = setInterval(() => {
+        this.fetchWanPortStatesOnce()
+      }, 3000)
+    },
+    stopWanPortStatePolling() {
+      if (this.wanPortStateTimerId) {
+        clearInterval(this.wanPortStateTimerId)
+        this.wanPortStateTimerId = null
+      }
     },
     refreshTrafficNow() {
       if (this.currentView !== 'main' || !this.trafficEnabled)
@@ -1374,18 +1431,22 @@ export default {
       this.selectedWan = wan
       this.selectedWanIndex = index
       this.currentView = wan && wan.kind === 'sim' ? 'sim-config' : 'wan-config'
+      this.updateWanPortStatePolling()
     },
     // 返回主页面
     goBackToMain() {
       this.currentView = 'main'
       this.selectedWan = null
       this.selectedWanIndex = null
+      this.updateWanPortStatePolling()
     },
     editSubNet(lan) {
       if (lan.name === 'DHCP Service') {
         this.currentView = 'dhcp'
+        this.updateWanPortStatePolling()
       } else if (lan.name === 'Wireless Lan') {
         this.currentView = 'wireless'
+        this.updateWanPortStatePolling()
       } else {
         alert('修改LAN设置: ' + lan.name)
       }
@@ -1395,6 +1456,7 @@ export default {
     this.bootstrap()
   },
   beforeUnmount() {
+    this.stopWanPortStatePolling()
     this.stopTrafficMock()
   }
 }

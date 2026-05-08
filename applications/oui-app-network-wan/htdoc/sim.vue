@@ -159,13 +159,13 @@
             <el-button @click="saveConfig" type="primary" size="large">
               {{ $t('Save Configuration') }}
             </el-button>
-            <el-button @click="testConnection" type="success" size="large" disabled>
+            <el-button @click="testConnection" type="success" size="large" disabled class="btn-disabled-success">
               {{ $t('Test Connection') }}
             </el-button>
-            <el-button @click="resetConfig" type="warning" size="large" disabled>
+            <el-button @click="resetConfig" type="warning" size="large" disabled class="btn-disabled-warning">
               {{ $t('Reset to Default') }}
             </el-button>
-            <el-button @click="goBack" type="primary" size="large">
+            <el-button @click="goBack" type="info" size="large">
               {{ $t('Back') }}
             </el-button>
           </div>
@@ -1095,6 +1095,20 @@ export default {
 :deep(.wan-enable-switch.el-switch:not(.is-checked) .el-switch__inner .is-text),
 :deep(.wan-enable-switch:not(.is-checked) .el-switch__inner .is-text) {
   color: var(--el-color-danger);
+}
+
+:deep(.btn-disabled-success.is-disabled) {
+  background-color: var(--el-color-success-light-7);
+  border-color: var(--el-color-success-light-5);
+  color: var(--el-color-success);
+  opacity: 1;
+}
+
+:deep(.btn-disabled-warning.is-disabled) {
+  background-color: var(--el-color-warning-light-7);
+  border-color: var(--el-color-warning-light-5);
+  color: var(--el-color-warning);
+  opacity: 1;
 }
 
 @media (max-width: 768px) {
