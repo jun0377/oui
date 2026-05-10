@@ -47,7 +47,8 @@ define Package/$(PKG_NAME)/install
 		$(INSTALL_CONF) ./files/menu.json $(1)/usr/share/oui/menu.d/$(APP_NAME).json; \
 	fi
 	if [ -d ./files/rpc ]; then \
-		$(CP) ./files/rpc $(1)/usr/share/oui/rpc; \
+		$(INSTALL_DIR) $(1)/usr/share/oui; \
+		$(CP) ./files/rpc $(1)/usr/share/oui; \
 	fi
 endef
 
