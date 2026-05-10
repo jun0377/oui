@@ -1,14 +1,25 @@
 <template>
   <el-container class="oui-container" style="height: calc(100vh - 16px);">
-    <el-aside width="auto">
+    <el-aside :width="isCollapse ? '64px' : '248px'" class="layout-aside">
       <el-scrollbar>
-        <div v-if="!isCollapse" style="text-align: center;">
-          <el-link type="primary" @click="$router.push('/')" :underline="false" style="font-size: large;">{{ $oui.state.hostname }}</el-link>
+        <div v-if="!isCollapse" class="aside-brand">
+          <div class="aside-brand-link">{{ $oui.state.hostname }}</div>
         </div>
-        <el-divider v-if="!isCollapse"/>
-        <el-menu unique-opened router :default-active="selectedMenu" :collapse="isCollapse">
-          <template v-for="menu in menus" :key="menu.path">
-            <el-sub-menu v-if="menu.children" :index="menu.path">
+        <div v-if="!isCollapse" class="aside-divider"></div>
+
+        <el-menu
+          unique-opened
+          router
+          :default-active="selectedMenu"
+          :collapse="isCollapse"
+          class="aside-menu"
+        >
+          <el-menu-item index="/">
+            <el-icon><House /></el-icon>
+            <template #title>首页</template>
+          </el-menu-item>
+          <template v-for="menu in filteredMenus" :key="menu.path">
+            <el-sub-menu v-if="menu.children && menu.children.length" :index="menu.path">
               <template #title>
                 <el-icon v-if="menu.svg"><div v-html="renderSvg('svg', menu.svg)"></div></el-icon>
                 <span>{{ $t('menus.' + menu.title) }}</span>
@@ -78,6 +89,10 @@ import {
 } from '@vicons/carbon'
 
 import {
+  House
+} from '@element-plus/icons-vue'
+
+import {
   Moon as MoonIcon,
   SunnySharp as SunnySharpIcon,
   LogOutOutline as LogoutIcon
@@ -96,17 +111,26 @@ export default {
   data() {
     return {
       selectedMenu: '',
-      isCollapse: false
+      isCollapse: false,
+      menuKeyword: ''
     }
   },
   setup() {
     return {
+      House,
       LogoutIcon,
       MoonIcon,
       SunnySharpIcon
     }
   },
   computed: {
+    filteredMenus() {
+      const keyword = this.menuKeyword.trim().toLowerCase()
+      if (!keyword)
+        return this.menus
+
+      return this.filterMenus(this.menus, keyword)
+    },
     localeOptions() {
       const titles = {
         'en': 'English',
@@ -131,6 +155,23 @@ export default {
     }
   },
   methods: {
+    filterMenus(menus, keyword) {
+      return menus.reduce((result, menu) => {
+        const title = String(this.$t(`menus.${menu.title}`) || '').toLowerCase()
+        const rawTitle = String(menu.title || '').toLowerCase()
+        const children = Array.isArray(menu.children) ? this.filterMenus(menu.children, keyword) : null
+        const matched = title.includes(keyword) || rawTitle.includes(keyword)
+
+        if (matched || (children && children.length)) {
+          result.push({
+            ...menu,
+            children: matched && Array.isArray(menu.children) ? menu.children : children
+          })
+        }
+
+        return result
+      }, [])
+    },
     renderSvg(el, opt) {
       const props = []
       const children = []
@@ -179,12 +220,111 @@ export default {
 </script>
 
 <style scoped>
+.layout-aside {
+  box-sizing: border-box;
+}
+
 .oui-container .el-menu {
   border-right: none;
+  background: transparent;
 }
 
 .oui-container .el-aside {
+  padding: 18px 12px 12px;
   border-right: 1px var(--el-border-color) var(--el-border-style);
+  background:
+    radial-gradient(circle at top left, rgba(129, 140, 248, 0.16) 0%, rgba(129, 140, 248, 0) 34%),
+    linear-gradient(180deg, #f7f7ff 0%, #f3f4f8 100%);
+}
+
+.aside-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  padding: 8px 0 2px;
+  text-align: center;
+}
+
+.aside-brand-link {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #5b5ce6;
+  text-shadow: 0 6px 18px rgba(99, 102, 241, 0.18);
+}
+
+.aside-divider {
+  height: 1px;
+  margin: 0 8px 16px;
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0) 0%, rgba(99, 102, 241, 0.35) 18%, rgba(99, 102, 241, 0.7) 50%, rgba(99, 102, 241, 0.35) 82%, rgba(99, 102, 241, 0) 100%);
+}
+
+.aside-search {
+  margin-bottom: 14px;
+}
+
+.aside-menu {
+  background: transparent;
+}
+
+:deep(.aside-search .el-input__wrapper) {
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.7) inset;
+  background: #ffffff;
+}
+
+:deep(.aside-search .el-input__inner) {
+  text-align: left;
+}
+
+:deep(.aside-menu .el-menu-item),
+:deep(.aside-menu .el-sub-menu__title) {
+  height: 44px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  color: #5c6677;
+  font-size: 15px;
+  font-weight: 600;
+  transition: transform 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+}
+
+:deep(.aside-menu .el-menu-item:hover),
+:deep(.aside-menu .el-sub-menu__title:hover) {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+  transform: translateX(2px);
+}
+
+:deep(.aside-menu .el-menu-item.is-active) {
+  background: linear-gradient(90deg, #7c6cf4 0%, #6366f1 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(99, 102, 241, 0.24);
+}
+
+:deep(.aside-menu .el-menu-item.is-active .el-icon),
+:deep(.aside-menu .el-menu-item.is-active svg) {
+  color: #ffffff;
+  fill: currentColor;
+}
+
+:deep(.aside-menu .el-sub-menu .el-menu) {
+  background: transparent;
+}
+
+:deep(.aside-menu .el-sub-menu.is-opened > .el-sub-menu__title) {
+  color: #4f46e5;
+  background: rgba(99, 102, 241, 0.08);
+}
+
+:deep(.aside-menu .el-icon),
+:deep(.aside-menu svg) {
+  color: #8f99ac;
+  fill: currentColor;
+}
+
+:deep(.layout-aside .el-scrollbar__view) {
+  min-height: 100%;
 }
 
 .oui-container .el-header {

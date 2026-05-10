@@ -13,7 +13,6 @@
         <div class="server-section aggregate-section balance-split">
           <div class="server-settings-card">
             <el-form label-width="120px" label-position="left" class="config-form">
-              
               <div class="balance-section-title">权重分配</div>
               <div class="balance-section-subtitle">按权重分配流量</div>
 

@@ -1,14 +1,6 @@
 <template>
   <div class="home-page">
     <el-card class="mode-card mode-panel">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <div class="mode-panel-title">首页概览</div>
-            <div class="mode-panel-subtitle">集中展示设备资源、网络接口、组网状态和关键服务状态</div>
-          </div>
-        </div>
-      </template>
 
       <div class="mode-panel-body">
         <div class="home-dashboard-grid">
@@ -19,15 +11,13 @@
             <div class="home-metric-head">
               <div>
                 <div class="home-metric-title">{{ featuredWorkModeCard.title }}</div>
-                <div class="home-workmode-label">当前全局工作模式</div>
               </div>
               <el-tag :type="featuredWorkModeCard.type">{{ featuredWorkModeCard.tag }}</el-tag>
             </div>
             <div class="home-metric-value">{{ featuredWorkModeCard.value }}</div>
             <div class="home-metric-subtitle">{{ featuredWorkModeCard.subtitle }}</div>
             <div class="home-workmode-foot">
-              <span class="home-workmode-foot-label">优先展示</span>
-              <span class="home-workmode-foot-value">{{ featuredWorkModeCard.subtitle }}</span>
+              <span class="home-workmode-foot-value">详情: {{ featuredWorkModeCard.detail }}</span>
             </div>
           </div>
 
@@ -79,7 +69,6 @@
 
           <div class="home-section-card home-interface-panel">
             <div class="home-section-title">网络接口状态</div>
-            <div class="home-section-subtitle">所有网络接口的实时状态信息</div>
 
             <div v-if="interfaceCards.length" class="home-interface-list">
               <div
@@ -179,7 +168,7 @@ const SERVICE_CARD_META = [
 
 const INTERFACE_FIELD_META = [
   { key: 'ipv4', label: 'IPv4' },
-  { key: 'ipv6', label: 'IPv6' },
+  // { key: 'ipv6', label: 'IPv6' },
   { key: 'gateway', label: '网关' }
 ]
 
@@ -196,11 +185,14 @@ export default {
       lanIp: null,
       lanMask: null,
       workMode: '',
+      workModeSettings: null,
       dhcpSettings: null,
       dhcpLeases: [],
       cpuTemperature: null,
       currentTimeText: '',
-      clockTimer: null
+      clockTimer: null,
+      rpcTestLoading: false,
+      rpcTestResult: null
     }
   },
   computed: {
@@ -378,12 +370,14 @@ export default {
     interfaceFieldMeta() {
       return INTERFACE_FIELD_META
     },
+    // 工作模式卡片
     featuredWorkModeCard() {
       return {
         key: 'work-mode',
         title: '工作模式',
         value: this.workModeMeta.label,
         subtitle: this.workModeMeta.description,
+        detail: this.workModeSettings?.detail || this.workModeSettings?.detail || '等待工作模式配置',
         tag: '策略',
         type: 'info',
         accentClass: 'is-accent-amber'
@@ -422,16 +416,6 @@ export default {
       const times1CPU = times1[0] + times1[1] + times1[2]
       const val = (times1CPU - times0CPU) * 100.0 / ((times1CPU + times1[3]) - (times0CPU + times0[3]))
       return parseFloat(val.toFixed(2))
-    },
-    normalizeWorkMode(rawMode) {
-      const mode = String(rawMode || '').trim().toLowerCase()
-      if (mode === 'single' || mode === 'aggregate' || mode === 'balance')
-        return mode
-      if (mode.includes('agg'))
-        return 'aggregate'
-      if (mode.includes('bal') || mode.includes('load'))
-        return 'balance'
-      return 'single'
     },
     getAccentClassByType(type) {
       if (type === 'success')
@@ -497,16 +481,35 @@ export default {
         this.wanNetworks = networks
       }).catch(() => {})
     },
-    getWan6Networks() {
-      this.$oui.call('network', 'get_wan6_networks').then(({ networks }) => {
-        this.wan6Networks = networks
-      }).catch(() => {})
+    // 单卡模式配置
+    workModeSingleSettings(result) {
+      const settings = result.settings
+      const channel = settings.channel
+      const ifname = settings.ifname
+
+      return {
+        detail: `当前所有的流量都固定走 ${channel}(${ifname})`,
+      }
     },
+    // 工作模式配置信息
     fetchWorkMode() {
-      this.$oui.call('mode', 'getMode').then((mode) => {
-        this.workMode = this.normalizeWorkMode(mode)
+      this.$oui.call('home', 'workModeSettings').then((result) => {
+        const mode = result.mode
+        this.workMode = mode
+        switch (mode) {
+          case 'single':
+            this.workModeSettings = this.workModeSingleSettings(result)
+            break
+          default:
+            this.workModeSettings = result.settings || null
+            break
+        }
+
+        console.log('xxx', this.workModeSettings)
+
       }).catch(() => {
         this.workMode = ''
+        this.workModeSettings = null
       })
     },
     fetchDHCPSettings() {
@@ -548,8 +551,8 @@ export default {
     this.$timer.create('homeGetCpuTimes', this.getCpuTimes, { repeat: true, immediate: true, time: 3000 })
     this.$timer.create('homeGetSysinfo', this.getSysinfo, { repeat: true, immediate: true, time: 3000 })
     this.$timer.create('homeGetWanNetworks', this.getWanNetworks, { repeat: true, immediate: true, time: 5000 })
-    this.$timer.create('homeGetWan6Networks', this.getWan6Networks, { repeat: true, immediate: true, time: 5000 })
-    this.$timer.create('homeGetWorkMode', this.fetchWorkMode, { repeat: true, immediate: true, time: 5000 })
+    // this.$timer.create('homeGetWan6Networks', this.getWan6Networks, { repeat: true, immediate: true, time: 5000 })
+    this.fetchWorkMode()
     this.$timer.create('homeGetDhcpSettings', this.fetchDHCPSettings, { repeat: true, immediate: true, time: 5000 })
     this.$timer.create('homeGetDhcpLeases', this.fetchDhcpLeases, { repeat: true, immediate: true, time: 5000 })
     this.$timer.create('homeGetCpuTemperature', this.fetchCpuTemperature, { repeat: true, immediate: true, time: 5000 })
@@ -625,6 +628,33 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
+}
+
+.home-rpc-test-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.home-rpc-test-text {
+  min-width: 0;
+}
+
+.home-rpc-test-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.home-rpc-test-subtitle {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .mode-panel-title {
@@ -794,7 +824,7 @@ export default {
 .home-workmode-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
   margin-top: 18px;
   padding-top: 14px;
@@ -815,7 +845,7 @@ export default {
 
 .home-workmode-foot-value {
   flex: 1 1 auto;
-  text-align: right;
+  text-align: left;
   font-size: 13px;
   font-weight: 600;
   color: var(--el-text-color-primary);
@@ -1020,8 +1050,15 @@ export default {
 }
 
 @media (max-width: 768px) {
+  .card-header,
   .home-metric-head {
     flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .home-rpc-test-bar {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .home-interface-row {
