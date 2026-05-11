@@ -162,7 +162,7 @@ const SERVICE_CARD_META = [
   { key: 'admin-backend', title: '管理平台' },
   { key: 'network-status', title: '组网状态' },
   { key: 'dhcp-status', title: 'DHCP服务器' },
-  { key: 'dns-status', title: 'DNS服务' },
+  { key: 'dns-status', title: 'DNS服务' }
 ]
 
 const INTERFACE_FIELD_META = [
@@ -627,9 +627,9 @@ export default {
       }).catch(() => {})
     },
     // 负载均衡模式配置
-    workModeBalanceSettings(result) {
+    workModeBalanceSettings() {
       return {
-        detail: `负载均衡模式`
+        detail: '负载均衡模式'
       }
     },
     // 聚合模式配置
@@ -650,7 +650,7 @@ export default {
       const ifname = settings.ifname
 
       return {
-        detail: `当前所有的流量都固定走 ${channel}(${ifname})`,
+        detail: `当前所有的流量都固定走 ${channel}(${ifname})`
       }
     },
     // 工作模式配置信息
@@ -659,21 +659,19 @@ export default {
         const mode = result.mode
         this.workMode = mode
         switch (mode) {
-          case 'single':
-            this.workModeSettings = this.workModeSingleSettings(result)
-            break
-          case 'aggregate':
-            this.workModeSettings = this.workModeAggregateSettings(result)
-            break;
-          case 'balance':
-            this.workModeSettings = this.workModeBalanceSettings(result)
-          default:
-            this.workModeSettings = result.settings || null
-            break
+        case 'single':
+          this.workModeSettings = this.workModeSingleSettings(result)
+          break
+        case 'aggregate':
+          this.workModeSettings = this.workModeAggregateSettings(result)
+          break
+        case 'balance':
+          this.workModeSettings = this.workModeBalanceSettings()
+          break
+        default:
+          this.workModeSettings = result.settings || null
+          break
         }
-
-        console.log('xxx', this.workModeSettings)
-
       }).catch(() => {
         this.workMode = ''
         this.workModeSettings = null
@@ -789,6 +787,8 @@ export default {
 
 .mode-panel {
   border-radius: 12px;
+  border: 0;
+  box-shadow: none;
 }
 
 .card-header {

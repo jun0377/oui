@@ -22,6 +22,76 @@ local function exec_async(command)
     os.execute(string.format("( %s ) >/dev/null 2>/dev/null &", command))
 end
 
+local PING_CACHE_DIR = '/tmp/oui_ping_cache'
+local PING_CACHE_TTL = 5
+
+local function get_ping_default_state()
+    return {reachable = false, rtt_ms = 0, pkt_loss = 0}
+end
+
+local function get_ping_cache_file(src, dst)
+    local key = string.format('%s__%s', tostring(src or 'default'), tostring(dst or 'unknown'))
+    key = key:gsub('[^%w%-_%.]', '_')
+    return string.format('%s/%s.state', PING_CACHE_DIR, key)
+end
+
+local function read_ping_cache(src, dst)
+    local path = get_ping_cache_file(src, dst)
+    local file = io.open(path, 'r')
+    if not file then
+        return nil
+    end
+
+    local cache = {}
+    for line in file:lines() do
+        local key, value = line:match('^([%w_]+)=(.*)$')
+        if key then
+            cache[key] = value
+        end
+    end
+    file:close()
+
+    local timestamp = tonumber(cache.timestamp)
+    if not timestamp then
+        return nil
+    end
+
+    return {
+        timestamp = timestamp,
+        reachable = tonumber(cache.reachable) == 1,
+        rtt_ms = tonumber(cache.rtt_ms) or 0,
+        pkt_loss = tonumber(cache.pkt_loss) or 0
+    }
+end
+
+local function trigger_ping_refresh(src, dst)
+    local cache_file = get_ping_cache_file(src, dst)
+    local cmd = 'ping -W 3 -c 3 -i 0.5'
+    if src then
+        cmd = cmd .. ' -I ' .. src
+    end
+    cmd = cmd .. ' ' .. dst
+
+    exec_async(string.format([[
+        mkdir -p '%s'
+        tmp_file='%s.tmp.'$$
+        output="$( %s 2>&1 )"
+        pkt_loss="$(printf '%%s\n' "$output" | sed -n 's/.* \([0-9][0-9]*\)%% packet loss.*/\1/p' | tail -n 1)"
+        rtt_avg="$(printf '%%s\n' "$output" | sed -n 's/.*min\/avg\/max\/mdev = [0-9.]*\/\([0-9.][0-9.]*\)\/.*/\1/p' | tail -n 1)"
+        reachable=0
+        if [ -n "$pkt_loss" ] && [ "$pkt_loss" -lt 100 ]; then
+            reachable=1
+        fi
+        {
+            echo "timestamp=$(date +%%s)"
+            echo "reachable=$reachable"
+            echo "rtt_ms=${rtt_avg:-0}"
+            echo "pkt_loss=${pkt_loss:-0}"
+        } > "$tmp_file"
+        mv "$tmp_file" '%s'
+    ]], PING_CACHE_DIR, cache_file, cmd, cache_file))
+end
+
 local function is_valid_ipv4(ip)
     if not ip then
         return false
@@ -52,39 +122,25 @@ end
 
 -- ping ping -W 3 -c 3 -i 0.5 -I src dst
 local function ping(src, dst)
-    local state = {reachable = false, rtt_ms = 0, pkt_loss = 0}
+    local state = get_ping_default_state()
     if not dst then
         log.error('Unknown ping dst')
         return state
     end
 
-    local cmd = 'ping -W 3 -c 3 -i 0.5'
-    if src then
-        cmd = cmd .. ' -I ' .. src
+    local cache = read_ping_cache(src, dst)
+    if cache then
+        local age = os.time() - cache.timestamp
+        if age >= 0 and age <= PING_CACHE_TTL then
+            state.reachable = cache.reachable
+            state.rtt_ms = cache.rtt_ms
+            state.pkt_loss = cache.pkt_loss
+        else
+            state.rtt_ms = 0
+        end
     end
 
-    cmd = cmd .. ' ' .. dst
-    -- log.info(cmd)
-    local ret = exec(cmd)
-    if not ret then
-        log.error(ret)
-        return state
-    end
-
-    -- log.info(ret)
-
-    local pkt_loss = string.match(ret, "(%d+)%% packet loss")
-    if pkt_loss then
-        state.pkt_loss = tonumber(pkt_loss)
-        state.reachable = state.pkt_loss < 100
-    end
-
-    local rttmin, rtt_avg, rtt_max, rtt_mdev = string.match(ret, "min/avg/max/mdev = ([%d%.]+)/([%d%.]+)/([%d%.]+)/([%d%.]+) ms")
-    if rtt_avg then
-        state.rtt_ms = tonumber(rtt_avg)
-    end
-
-    -- log.info('reachable', state.reachable, 'rtt_ms', state.rtt_ms, 'pkt_loss', state.pkt_loss)
+    trigger_ping_refresh(src, dst)
     return state
 end
 

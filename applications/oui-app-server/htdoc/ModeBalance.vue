@@ -1,6 +1,6 @@
 <template>
   <div class="server-section">
-    <el-card class="mode-card mode-panel">
+    <el-card class="mode-card mode-panel mode-panel-balance">
       <template #header>
         <div class="card-header">
           <div>
@@ -36,9 +36,9 @@
                 </div>
               </div>
 
-              <el-form-item class="balance-actions">
+              <el-form-item class="balance-actions" label-width="0">
                 <el-button type="primary" @click="saveConfig">{{ $t('保存 & 应用') }}</el-button>
-                <el-button @click="resetConfig">{{ $t('重置') }}</el-button>
+                <el-button @click="resetConfig">{{ $t('恢复默认') }}</el-button>
               </el-form-item>
             </el-form>
           </div>
@@ -280,20 +280,154 @@ export default {
 </script>
 
 <style scoped>
+.server-section {
+  width: 100%;
+}
+
+.mode-card {
+  width: 100%;
+}
+
+.mode-panel {
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid var(--el-border-color);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.mode-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 16px 0 0 16px;
+  background: #cbd5e1;
+}
+
+.mode-panel-balance::before {
+  background: #22c55e;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.mode-panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+  line-height: 1.2;
+}
+
+.mode-panel-subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.4;
+}
+
+.mode-panel-body {
+  padding: 2px 0 0;
+}
+
+.server-settings-card,
+.server-status-card {
+  position: relative;
+  padding: 18px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.server-settings-card::before,
+.server-status-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 16px 0 0 16px;
+  background: rgba(34, 197, 94, 0.35);
+}
+
+.config-form {
+  width: 100%;
+}
+
+:deep(.mode-panel .el-card__header) {
+  padding: 18px 18px 0;
+  border-bottom: 0;
+}
+
+:deep(.mode-panel .el-card__body) {
+  padding: 12px 18px 18px;
+}
+
+:deep(.config-form .el-form-item__label) {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+}
+
+:deep(.config-form .el-input__wrapper),
+:deep(.config-form .el-input-number) {
+  border-radius: 12px;
+}
+
+:deep(.balance-actions .el-form-item__content) {
+  justify-content: center;
+}
+
+:deep(.balance-actions .el-button--primary) {
+  border-radius: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(22, 163, 74, 0.55);
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 12px 24px rgba(34, 197, 94, 0.18);
+}
+
+:deep(.balance-actions .el-button--primary:hover) {
+  box-shadow: 0 16px 28px rgba(34, 197, 94, 0.22);
+}
+
+:deep(.balance-actions .el-button) {
+  border-radius: 12px;
+  padding: 10px 18px;
+  min-height: 40px;
+  font-weight: 700;
+}
+
 .balance-split {
   position: relative;
+  display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: start;
+  gap: 18px;
+  align-items: stretch;
 }
 
 .balance-split::after {
+  display: none;
   content: '';
   position: absolute;
   top: 0;
   bottom: 0;
   left: 50%;
   width: 1px;
-  background: var(--el-border-color-lighter);
+  background: linear-gradient(
+    180deg,
+    rgba(148, 163, 184, 0) 0%,
+    rgba(148, 163, 184, 0.45) 20%,
+    rgba(148, 163, 184, 0.45) 80%,
+    rgba(148, 163, 184, 0) 100%
+  );
+  border-radius: 999px;
   transform: translateX(-50%);
   pointer-events: none;
 }
@@ -330,6 +464,12 @@ export default {
   border-radius: 16px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.balance-link-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
 }
 
 .balance-link-card-header {
@@ -494,6 +634,7 @@ export default {
 @media (max-width: 768px) {
   .balance-split {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 
   .balance-split::after {
@@ -510,6 +651,21 @@ export default {
   .balance-pie-label-text {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  :deep(.mode-panel .el-card__header) {
+    padding: 16px 16px 0;
+  }
+
+  :deep(.mode-panel .el-card__body) {
+    padding: 12px 16px 16px;
+  }
+
+  .server-settings-card,
+  .server-status-card {
+    padding: 16px;
   }
 }
 </style>

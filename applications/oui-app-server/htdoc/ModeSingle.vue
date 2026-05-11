@@ -1,6 +1,6 @@
 <template>
   <div class="server-section">
-    <el-card class="mode-card mode-panel">
+    <el-card class="mode-card mode-panel mode-panel-single">
       <template #header>
         <div class="card-header">
           <div>
@@ -340,3 +340,180 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.server-section {
+  width: 100%;
+}
+
+.mode-card {
+  width: 100%;
+}
+
+.mode-panel {
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid var(--el-border-color);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.mode-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 16px 0 0 16px;
+  background: #cbd5e1;
+}
+
+.mode-panel-single::before {
+  background: #3b82f6;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.mode-panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+  line-height: 1.2;
+}
+
+.mode-panel-subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.4;
+}
+
+.mode-panel-body {
+  padding: 2px 0 0;
+}
+
+.mode-inline {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 2px;
+}
+
+.mode-inline + .mode-inline {
+  border-top: 1px dashed rgba(148, 163, 184, 0.35);
+}
+
+.mode-inline-label {
+  width: 80px;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+}
+
+.mode-group {
+  flex: 1 1 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(248, 251, 255, 0.8);
+}
+
+.mode-actions-row .mode-inline-label {
+  visibility: hidden;
+}
+
+.mode-actions {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: flex-start;
+}
+
+:deep(.mode-panel .el-card__header) {
+  padding: 18px 18px 0;
+  border-bottom: 0;
+}
+
+:deep(.mode-panel .el-card__body) {
+  padding: 12px 18px 18px;
+}
+
+:deep(.mode-group .el-radio-button) {
+  margin: 0;
+}
+
+:deep(.mode-group .el-radio-button__inner) {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--el-text-color-regular);
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+:deep(.mode-group .el-radio-button__inner:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.09);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+:deep(.mode-group .el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.55);
+  color: #1d4ed8;
+  box-shadow: 0 14px 26px rgba(59, 130, 246, 0.18);
+}
+
+:deep(.mode-group .el-radio-button__original-radio:focus-visible + .el-radio-button__inner) {
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: 2px;
+}
+
+:deep(.mode-actions .el-button--primary) {
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-weight: 700;
+  border: 1px solid rgba(37, 99, 235, 0.6);
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.18);
+}
+
+:deep(.mode-actions .el-button--primary:hover) {
+  box-shadow: 0 16px 28px rgba(59, 130, 246, 0.22);
+}
+
+@media (max-width: 720px) {
+  .mode-inline {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .mode-inline-label {
+    width: auto;
+  }
+
+  .mode-actions-row .mode-inline-label {
+    display: none;
+  }
+
+  .mode-actions {
+    justify-content: stretch;
+  }
+
+  :deep(.mode-actions .el-button--primary) {
+    width: 100%;
+  }
+}
+</style>

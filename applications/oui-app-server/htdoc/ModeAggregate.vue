@@ -1,6 +1,6 @@
 <template>
   <div class="server-section">
-    <el-card class="mode-card mode-panel">
+    <el-card class="mode-card mode-panel mode-panel-aggregate">
       <template #header>
         <div class="card-header">
           <div>
@@ -310,10 +310,12 @@ export default {
         }
       }).catch(() => {})
     },
+    // 获取tun口rtt
     fetchServerRTT() {
       return this.withTimeout(this.$oui.call('serverManager', 'getHostRtt'), 5000, 'getHostRtt').then(state => {
         if (this.stopped)
           return
+        console.log('host rtt:', state)
         if (!state.reachable) {
           this.serverStatus.connected = false
           this.serverStatus.rtt = 0
@@ -330,6 +332,7 @@ export default {
       return this.withTimeout(this.$oui.call('serverManager', 'getVPNrtt'), 5000, 'getVPNrtt').then(state => {
         if (this.stopped)
           return
+        console.log('vpn rtt:', state)
         if (!state.reachable) {
           this.serverStatus.connected = false
           return this.fetchServerRTT()
@@ -378,3 +381,221 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.server-section {
+  width: 100%;
+}
+
+.mode-card {
+  width: 100%;
+}
+
+.mode-panel {
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid var(--el-border-color);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.mode-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 16px 0 0 16px;
+  background: #cbd5e1;
+}
+
+.mode-panel-aggregate::before {
+  background: #8b5cf6;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.mode-panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+  line-height: 1.2;
+}
+
+.mode-panel-subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.4;
+}
+
+.mode-panel-body {
+  padding: 2px 0 0;
+}
+
+.aggregate-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.aggregate-v-divider {
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(148, 163, 184, 0) 0%,
+    rgba(148, 163, 184, 0.45) 20%,
+    rgba(148, 163, 184, 0.45) 80%,
+    rgba(148, 163, 184, 0) 100%
+  );
+  border-radius: 999px;
+}
+
+.server-settings-card,
+.server-status-card {
+  position: relative;
+  padding: 18px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.server-settings-card::before,
+.server-status-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 16px 0 0 16px;
+  background: rgba(139, 92, 246, 0.45);
+}
+
+.config-form {
+  width: 100%;
+}
+
+.server-ip-input {
+  width: 100%;
+}
+
+.status-info {
+  width: 100%;
+}
+
+:deep(.mode-panel .el-card__header) {
+  padding: 18px 18px 0;
+  border-bottom: 0;
+}
+
+:deep(.mode-panel .el-card__body) {
+  padding: 12px 18px 18px;
+}
+
+:deep(.config-form .el-form-item) {
+  margin-bottom: 16px;
+}
+
+:deep(.config-form .el-form-item__label) {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+}
+
+:deep(.config-form .el-input__wrapper),
+:deep(.config-form .el-input-number) {
+  border-radius: 12px;
+}
+
+:deep(.config-form .el-form-item:last-child) {
+  margin-bottom: 0;
+}
+
+:deep(.config-form .el-form-item:last-child .el-form-item__content) {
+  justify-content: flex-start;
+}
+
+:deep(.config-form .el-button--primary) {
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-weight: 700;
+  border: 1px solid rgba(124, 58, 237, 0.55);
+  background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%);
+  box-shadow: 0 12px 24px rgba(139, 92, 246, 0.18);
+}
+
+:deep(.config-form .el-button--primary:hover) {
+  box-shadow: 0 16px 28px rgba(139, 92, 246, 0.22);
+}
+
+:deep(.status-info .el-descriptions) {
+  width: 100%;
+}
+
+:deep(.status-info .el-descriptions__label) {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+}
+
+:deep(.status-info .el-descriptions__content) {
+  font-size: 13px;
+  color: var(--el-text-color-primary);
+}
+
+:deep(.status-info .el-tag) {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+:deep(.blink-bg) {
+  animation: blinkPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes blinkPulse {
+  0% {
+    transform: translateZ(0);
+    box-shadow: 0 0 0 rgba(139, 92, 246, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.12);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(139, 92, 246, 0);
+  }
+}
+
+@media (max-width: 960px) {
+  .aggregate-split {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .aggregate-v-divider {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  :deep(.mode-panel .el-card__header) {
+    padding: 16px 16px 0;
+  }
+
+  :deep(.mode-panel .el-card__body) {
+    padding: 12px 16px 16px;
+  }
+
+  .server-settings-card,
+  .server-status-card {
+    padding: 16px;
+  }
+}
+</style>
