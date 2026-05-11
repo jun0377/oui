@@ -12,27 +12,34 @@ log.outfile = '/var/log/home.log'
 
 -- 获取单卡模式设置
 local function workModeSingleSettings()
-
+    
     local c = uci.cursor()
     local channel = c:get('global', 'single', 'channel')
-    local l3_device = 'N/A'
+   local l3_device = 'N/A'
+   if channel and channel ~= '' then
+   local status = ubus.call(string.format('network.interface.%s', channel), 'status', {})
+       l3_device = status.l3_device or status.device
+   end
 
-    if channel and channel ~= '' then
-        local status = ubus.call(string.format('network.interface.%s', channel), 'status', {})
-        l3_device = status.l3_device or status.device
-    end
+   return {
+       channel = channel,
+       ifname = l3_device
+   }
 
-    return {
-        channel = channel,
-        ifname = l3_device
-    }
 end
 
 -- 获取聚合模式设置
 local function workModeAggregateSettings()
+
+    local c = uci.cursor()
+    local vps_ip = c:get('openmptcprouter', 'vps', 'ip')
+    local vps_port = c:get('openmptcprouter', 'vps', 'port')
+
     return {
-        detail = '聚合多链路带宽'
+        vps_ip = vps_ip,
+        vps_port = vps_port,
     }
+
 end
 
 -- 获取负载均衡模式设置
@@ -46,7 +53,7 @@ end
 function M.workModeSettings()
     local c = uci.cursor()
     
-    -- 工作模式
+    -- 从UCI配置文件/etc/config/global获取工作模式
     local mode = c:get('global', 'global', 'mode')
     local handlers = {
         single = workModeSingleSettings,

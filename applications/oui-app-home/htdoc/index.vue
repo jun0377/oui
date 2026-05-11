@@ -17,7 +17,7 @@
             <div class="home-metric-value">{{ featuredWorkModeCard.value }}</div>
             <div class="home-metric-subtitle">{{ featuredWorkModeCard.subtitle }}</div>
             <div class="home-workmode-foot">
-              <span class="home-workmode-foot-value">详情: {{ featuredWorkModeCard.detail }}</span>
+              <span class="home-workmode-foot-value">{{ featuredWorkModeCard.detail }}</span>
             </div>
           </div>
 
@@ -68,9 +68,25 @@
           </div>
 
           <div class="home-section-card home-interface-panel">
-            <div class="home-section-title">网络接口状态</div>
+            <div class="home-metric-head">
+              <div class="home-section-title">网络接口状态</div>
+              <el-tag type="info">实时</el-tag>
+            </div>
 
             <div v-if="interfaceCards.length" class="home-interface-list">
+              <div class="home-interface-head-row">
+                <div class="home-interface-summary home-interface-summary-head">接口</div>
+                <div class="home-interface-inline-fields home-interface-inline-fields-head">
+                  <div
+                    v-for="field in interfaceFieldMeta"
+                    :key="`head-${field.key}`"
+                    class="home-interface-inline-field home-interface-inline-field-head"
+                  >
+                    {{ field.label }}
+                  </div>
+                </div>
+                <div class="home-interface-status-head">状态</div>
+              </div>
               <div
                 v-for="card in interfaceCards"
                 :key="card.key"
@@ -80,15 +96,26 @@
                 <div class="home-interface-row">
                   <div class="home-interface-summary">
                     <div class="home-interface-name">{{ card.name }}</div>
+                    <div class="home-interface-ifname">{{ card.ifname }}</div>
                   </div>
                   <div class="home-interface-inline-fields">
                     <div
                       v-for="field in interfaceFieldMeta"
                       :key="`${card.key}-${field.key}`"
-                      class="home-interface-inline-field"
+                    class="home-interface-inline-field"
+                    :class="{ 'is-grouped': field.items }"
                     >
-                      <span class="home-interface-label">{{ field.label }}</span>
-                      <span class="home-interface-value">{{ card[field.key] }}</span>
+                      <template v-if="field.items">
+                        <div
+                          v-for="item in field.items"
+                          :key="`${card.key}-${field.key}-${item.key}`"
+                          class="home-interface-value-pair"
+                        >
+                          <span class="home-interface-subvalue-label">{{ item.label }}</span>
+                          <span class="home-interface-value">{{ card[item.key] }}</span>
+                        </div>
+                      </template>
+                      <span v-else class="home-interface-value">{{ card[field.key] }}</span>
                     </div>
                   </div>
                   <el-tag :type="card.online ? 'success' : 'danger'">
@@ -130,46 +157,33 @@ const DEFAULT_WORK_MODE_META = {
   themeClass: 'is-mode-default'
 }
 
-const FALLBACK_INTERFACE_CARDS = [
-  {
-    key: 'mock-wan0',
-    name: 'wan0',
-    ipv4: '192.168.16.37/24',
-    ipv6: '2409:8a55:2c10:1200::37/64',
-    gateway: '192.168.16.1',
-    online: true,
-    statusClass: 'is-online'
-  },
-  {
-    key: 'mock-wan1',
-    name: 'wan1',
-    ipv4: '10.0.8.22/24',
-    ipv6: 'N/A',
-    gateway: '10.0.8.1',
-    online: true,
-    statusClass: 'is-online'
-  },
-  {
-    key: 'mock-cellular0',
-    name: 'cellular0',
-    ipv4: '172.20.10.6/28',
-    ipv6: 'N/A',
-    gateway: '172.20.10.1',
-    online: false,
-    statusClass: 'is-offline'
-  }
-]
-
+// 卡片显示顺序与在此数据中的顺序相同
 const SERVICE_CARD_META = [
+  { key: 'admin-backend', title: '管理平台' },
+  { key: 'network-status', title: '组网状态' },
   { key: 'dhcp-status', title: 'DHCP服务器' },
   { key: 'dns-status', title: 'DNS服务' },
-  { key: 'admin-backend', title: '设备后台管理服务器' }
 ]
 
 const INTERFACE_FIELD_META = [
   { key: 'ipv4', label: 'IPv4' },
-  // { key: 'ipv6', label: 'IPv6' },
-  { key: 'gateway', label: '网关' }
+  { key: 'gateway', label: '网关' },
+  {
+    key: 'traffic-total',
+    label: '流量统计',
+    items: [
+      { key: 'rxTotal', label: '↓' },
+      { key: 'txTotal', label: '↑' }
+    ]
+  },
+  {
+    key: 'traffic-rate',
+    label: '实时带宽',
+    items: [
+      { key: 'rxRate', label: '↓' },
+      { key: 'txRate', label: '↑' }
+    ]
+  }
 ]
 
 export default {
@@ -178,8 +192,9 @@ export default {
       cpuTimes: [],
       sysinfo: null,
       boardinfo: null,
-      wanNetworks: [],
-      wan6Networks: [],
+      wanLinks: [],
+      interfaceStates: [],
+      interfaceSnapshots: {},
       serial: null,
       version: null,
       lanIp: null,
@@ -215,7 +230,7 @@ export default {
     lanAddr() {
       if (this.lanIp && this.lanMask)
         return `${this.lanIp} / ${this.lanMask}`
-      return this.lanIp || 'N/A'
+      return this.lanIp || '-'
     },
     workModeMeta() {
       return WORK_MODE_META[this.workMode] || DEFAULT_WORK_MODE_META
@@ -231,7 +246,7 @@ export default {
         return '未获取地址池'
       const start = this.formatIpv4Sections(this.dhcpSettings.dhcpStart)
       const end = this.formatIpv4Sections(this.dhcpSettings.dhcpEnd)
-      if (start === 'N/A' || end === 'N/A')
+      if (start === '-' || end === '-')
         return '未配置地址池'
       return `${start} - ${end}`
     },
@@ -249,53 +264,20 @@ export default {
       }
     },
     interfaceCards() {
-      const cards = {}
-      const ensureCard = (net, index, family) => {
-        const key = net.interface || net.l3_device || net.device || net.ifname || `${family}-${index}`
-        if (!cards[key]) {
-          cards[key] = {
-            key,
-            name: this.resolveInterfaceName(net, index),
-            ipv4: 'N/A',
-            ipv6: 'N/A',
-            gateway4: 'N/A',
-            gateway6: 'N/A',
-            online: false
-          }
-        }
-        return cards[key]
+      if (this.interfaceStates.length) {
+        return this.interfaceStates.map(card => ({
+          ...card,
+          statusClass: card.online ? 'is-online' : 'is-offline'
+        }))
       }
 
-      this.wanNetworks.forEach((net, index) => {
-        const card = ensureCard(net, index, 'ipv4')
-        card.ipv4 = this.getIpv4Address(net)
-        card.gateway4 = this.getGateway(net, false)
-        card.online = card.online || card.ipv4 !== 'N/A'
-      })
-
-      this.wan6Networks.forEach((net, index) => {
-        const card = ensureCard(net, index, 'ipv6')
-        card.ipv6 = this.getIpv6Address(net)
-        card.gateway6 = this.getGateway(net, true)
-        card.online = card.online || card.ipv6 !== 'N/A'
-      })
-
-      const resolvedCards = Object.values(cards).map(card => ({
-        ...card,
-        gateway: card.gateway4 !== 'N/A' ? card.gateway4 : card.gateway6,
-        statusClass: card.online ? 'is-online' : 'is-offline'
-      }))
-
-      if (resolvedCards.length)
-        return resolvedCards
-
-      return FALLBACK_INTERFACE_CARDS
+      return []
     },
     networkingStatus() {
       const onlineCount = this.interfaceCards.filter(card => card.online).length
       if (onlineCount >= 2) {
         return {
-          label: '双链路在线',
+          label: '聚合组网',
           subtitle: `已检测到 ${onlineCount} 条上行链路在线`,
           tag: '正常',
           type: 'success'
@@ -317,7 +299,7 @@ export default {
       }
     },
     cpuTemperatureText() {
-      return this.cpuTemperature === null ? 'N/A' : `${this.cpuTemperature}°C`
+      return this.cpuTemperature === null ? '-' : `${this.cpuTemperature}°C`
     },
     cpuTemperaturePercent() {
       if (this.cpuTemperature === null)
@@ -347,7 +329,7 @@ export default {
       return [
         {
           title: '设备型号',
-          value: this.boardinfo?.model || 'N/A'
+          value: this.boardinfo?.model || '-'
         },
         {
           title: '序列号',
@@ -355,15 +337,15 @@ export default {
         },
         {
           title: '固件版本',
-          value: this.version || 'N/A'
+          value: this.version || '-'
         },
         {
           title: '已启动',
-          value: this.sysinfo ? this.secondsToHuman(this.sysinfo.uptime) : 'N/A'
+          value: this.sysinfo ? this.secondsToHuman(this.sysinfo.uptime) : '-'
         },
         {
           title: '系统时间',
-          value: this.currentTimeText || 'N/A'
+          value: this.currentTimeText || '-'
         }
       ]
     },
@@ -392,13 +374,17 @@ export default {
       }
     },
     serviceCards() {
-      return SERVICE_CARD_META.map(({ key, title }) => this.createStatusCard(key, title, this.sharedServiceStatus))
+      const statusMap = {
+        'network-status': this.networkingStatus,
+        'admin-backend': this.sharedServiceStatus,
+        'dhcp-status': this.sharedServiceStatus,
+        'dns-status': this.sharedServiceStatus
+      }
+
+      return SERVICE_CARD_META.map(({ key, title }) => this.createStatusCard(key, title, statusMap[key]))
     },
     primaryStatusCards() {
-      return [
-        this.createStatusCard('network-status', '组网状态', this.networkingStatus),
-        ...this.serviceCards
-      ]
+      return this.serviceCards
     }
   },
   methods: {
@@ -428,7 +414,7 @@ export default {
       return {
         key,
         title,
-        value: status.value || status.label || 'N/A',
+        value: status.value || status.label || '-',
         subtitle: status.subtitle || '',
         tag: status.tag || '状态',
         type: status.type || 'info',
@@ -436,33 +422,197 @@ export default {
         accentClass: this.getAccentClassByType(status.type)
       }
     },
-    resolveInterfaceName(net, index) {
-      return net.interface || net.device || net.l3_device || net.ifname || `wan${index}`
-    },
-    getIpv4Address(net) {
-      const list = net['ipv4-address']
-      return Array.isArray(list) && list.length ? `${list[0].address}/${list[0].mask}` : 'N/A'
-    },
-    getIpv6Address(net) {
-      const list = net['ipv6-address']
-      return Array.isArray(list) && list.length ? `${list[0].address}/${list[0].mask}` : 'N/A'
-    },
-    getGateway(net, ipv6) {
-      const routes = Array.isArray(net.route) ? net.route : []
-      if (ipv6) {
-        const route = routes.find(r => r.target === '::' && r.mask === 0)
-        return route ? route.nexthop : 'N/A'
+    parseRpcResult(result) {
+      if (typeof result === 'string') {
+        try {
+          return JSON.parse(result)
+        } catch {
+          return null
+        }
       }
-      const route = routes.find(r => r.target === '0.0.0.0' && r.mask === 0)
-      return route ? route.nexthop : 'N/A'
+      return result
+    },
+    maskToPrefix(mask) {
+      if (!mask || mask === '-' || mask === '-')
+        return ''
+      const parts = String(mask).split('.').map(value => Number.parseInt(value, 10))
+      if (parts.length !== 4 || parts.some(value => Number.isNaN(value)))
+        return mask
+      const bitCount = parts
+        .map(value => value.toString(2).padStart(8, '0'))
+        .join('')
+        .replace(/0/g, '').length
+      return bitCount ? String(bitCount) : mask
+    },
+    formatAddressWithMask(ip, mask) {
+      if (!ip || ip === '-' || ip === '-')
+        return '-'
+      const prefix = this.maskToPrefix(mask)
+      return prefix ? `${ip}/${prefix}` : ip
+    },
+    parseByteValue(value) {
+      const parsed = Number.parseInt(value, 10)
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
+    },
+    // 流量单位转换
+    formatBytes(bytes) {
+      if (!Number.isFinite(bytes) || bytes < 0)
+        return '-'
+      const units = ['B', 'KB', 'MB', 'GB', 'TB']
+      let value = bytes
+      let unitIndex = 0
+      while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024
+        unitIndex += 1
+      }
+      const precision = value >= 100 || unitIndex === 0 ? 0 : value >= 10 ? 1 : 2
+      return `${value.toFixed(precision)} ${units[unitIndex]}`
+    },
+    // 带宽单位转换
+    formatRate(bytesPerSecond) {
+      if (!Number.isFinite(bytesPerSecond) || bytesPerSecond < 0)
+        return '-'
+      const units = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps']
+      let value = bytesPerSecond * 8
+      let unitIndex = 0
+      while (value >= 1000 && unitIndex < units.length - 1) {
+        value /= 1000
+        unitIndex += 1
+      }
+      const precision = value >= 100 ? 0 : value >= 10 ? 1 : 2
+      return `${value.toFixed(precision)} ${units[unitIndex]}`
+    },
+    attachInterfaceStats(card, rxBytes, txBytes, now) {
+      const rxValue = this.parseByteValue(rxBytes)
+      const txValue = this.parseByteValue(txBytes)
+      const previous = this.interfaceSnapshots[card.key]
+      let rxRate = '-'
+      let txRate = '-'
+
+      if (previous && Number.isFinite(previous.timestamp) && now > previous.timestamp) {
+        const seconds = (now - previous.timestamp) / 1000
+        if (seconds > 0) {
+          if (rxValue !== null && previous.rxBytes !== null && rxValue >= previous.rxBytes)
+            rxRate = this.formatRate((rxValue - previous.rxBytes) / seconds)
+          if (txValue !== null && previous.txBytes !== null && txValue >= previous.txBytes)
+            txRate = this.formatRate((txValue - previous.txBytes) / seconds)
+        }
+      }
+
+      this.interfaceSnapshots[card.key] = {
+        rxBytes: rxValue,
+        txBytes: txValue,
+        timestamp: now
+      }
+
+      return {
+        ...card,
+        rxTotal: this.formatBytes(rxValue),
+        txTotal: this.formatBytes(txValue),
+        rxRate,
+        txRate
+      }
+    },
+    buildDefaultInterfaceCard(link, index) {
+      const key = link?.name || link?.device || `link-${index}`
+      return {
+        key,
+        name: link?.name || link?.device || `wan${index}`,
+        ifname: '-',
+        ipv4: '-',
+        gateway: '-',
+        rxTotal: '-',
+        txTotal: '-',
+        rxRate: '-',
+        txRate: '-',
+        online: false
+      }
+    },
+    // 网口 网络接口状态
+    buildWanInterfaceCard(link, index) {
+      const section = link?.name ? String(link.name) : ''
+      const iface = link?.device ? String(link.device) : ''
+      const baseCard = this.buildDefaultInterfaceCard(link, index)
+      if (!section || !iface)
+        return Promise.resolve(baseCard)
+
+      return this.$oui.call('wan', 'getWanState', { section, interface: iface }).then((result) => {
+        const data = this.parseRpcResult(result)
+        if (!data || data.code !== 0)
+          return baseCard
+
+        return {
+          key: section,
+          name: section,
+          ifname: iface || '-',
+          ipv4: this.formatAddressWithMask(data.ip, data.mask),
+          gateway: data.gateway && data.gateway !== '-' ? data.gateway : '-',
+          rxBytes: data.rxBytes,
+          txBytes: data.txBytes,
+          online: data.status === '正常' || (data.ip && data.ip !== '-')
+        }
+      }).catch(() => baseCard)
+    },
+    // sim卡 网络接口状态
+    buildSimInterfaceCard(link, index) {
+      const rpcIndex = Number(link?.sim_index)
+      const baseCard = this.buildDefaultInterfaceCard(link, index)
+      if (!Number.isFinite(rpcIndex) || rpcIndex < 0)
+        return Promise.resolve(baseCard)
+
+      return Promise.all([
+        this.$oui.call('sim', 'getSimUciSettings', { index: rpcIndex }),
+        this.$oui.call('sim', 'getInterfaceStatus', { index: rpcIndex })
+      ]).then(([settingsResult, statusResult]) => {
+        const settings = this.parseRpcResult(settingsResult) || {}
+        const status = this.parseRpcResult(statusResult) || {}
+        const iface = settings.interface || status.interface || link?.device || link?.name || ''
+        const ifname = settings.ifname || status.ifname || '-'
+        return {
+          key: link?.name || iface || `sim${rpcIndex}`,
+          name: settings.alias || link?.name || iface || `sim${rpcIndex}`,
+          ifname,
+          ipv4: this.formatAddressWithMask(status.ip, status.mask),
+          gateway: status.gateway || '-',
+          rxBytes: status.rxBytes,
+          txBytes: status.txBytes,
+          online: Boolean(status.ip && status.ip !== '-' && status.ip !== '-')
+        }
+      }).catch(() => baseCard)
+    },
+    fetchInterfaceStates() {
+      this.$oui.call('wan', 'getAvailWan').then((result) => {
+        const data = this.parseRpcResult(result)
+        const links = Array.isArray(data?.links) ? data.links : []
+        this.wanLinks = links
+
+        if (!links.length) {
+          this.interfaceStates = []
+          return
+        }
+
+        return Promise.all(links.map((link, index) => {
+          if (link?.kind === 'sim')
+            return this.buildSimInterfaceCard(link, index)
+          return this.buildWanInterfaceCard(link, index)
+        })).then((cards) => {
+          const now = Date.now()
+          this.interfaceStates = cards
+            .filter(Boolean)
+            .map(card => this.attachInterfaceStats(card, card.rxBytes, card.txBytes, now))
+        })
+      }).catch(() => {
+        this.wanLinks = []
+        this.interfaceStates = []
+      })
     },
     formatIpv4Sections(sections) {
       if (!sections)
-        return 'N/A'
+        return '-'
       const values = ['section1', 'section2', 'section3', 'section4']
         .map(key => sections[key])
         .filter(value => value !== undefined && value !== null && value !== '')
-      return values.length === 4 ? values.join('.') : 'N/A'
+      return values.length === 4 ? values.join('.') : '-'
     },
     getCpuTimes() {
       this.$oui.call('system', 'get_cpu_time').then(({ times }) => {
@@ -476,10 +626,22 @@ export default {
         this.sysinfo = r
       }).catch(() => {})
     },
-    getWanNetworks() {
-      this.$oui.call('network', 'get_wan_networks').then(({ networks }) => {
-        this.wanNetworks = networks
-      }).catch(() => {})
+    // 负载均衡模式配置
+    workModeBalanceSettings(result) {
+      return {
+        detail: `负载均衡模式`
+      }
+    },
+    // 聚合模式配置
+    workModeAggregateSettings(result) {
+
+      const settings = result.settings
+      const vps_ip = settings.vps_ip
+      const vps_port = settings.vps_port
+
+      return {
+        detail: `聚合服务器: ${vps_ip}:${vps_port}`
+      }
     },
     // 单卡模式配置
     workModeSingleSettings(result) {
@@ -500,6 +662,11 @@ export default {
           case 'single':
             this.workModeSettings = this.workModeSingleSettings(result)
             break
+          case 'aggregate':
+            this.workModeSettings = this.workModeAggregateSettings(result)
+            break;
+          case 'balance':
+            this.workModeSettings = this.workModeBalanceSettings(result)
           default:
             this.workModeSettings = result.settings || null
             break
@@ -550,8 +717,8 @@ export default {
   created() {
     this.$timer.create('homeGetCpuTimes', this.getCpuTimes, { repeat: true, immediate: true, time: 3000 })
     this.$timer.create('homeGetSysinfo', this.getSysinfo, { repeat: true, immediate: true, time: 3000 })
-    this.$timer.create('homeGetWanNetworks', this.getWanNetworks, { repeat: true, immediate: true, time: 5000 })
-    // this.$timer.create('homeGetWan6Networks', this.getWan6Networks, { repeat: true, immediate: true, time: 5000 })
+    this.$timer.create('homeGetInterfaceStates', this.fetchInterfaceStates, { repeat: true, immediate: true, time: 1000 })
+    // 从uci配置文件中获取工作模式配置
     this.fetchWorkMode()
     this.$timer.create('homeGetDhcpSettings', this.fetchDHCPSettings, { repeat: true, immediate: true, time: 5000 })
     this.$timer.create('homeGetDhcpLeases', this.fetchDhcpLeases, { repeat: true, immediate: true, time: 5000 })
@@ -568,18 +735,18 @@ export default {
       command: 'sh',
       params: ['-c', 'cat /proc/cpuinfo | grep Serial | awk \'{print $3}\'']
     }).then(r => {
-      this.serial = r.stdout && r.stdout.trim() ? r.stdout.trim() : 'N/A'
+      this.serial = r.stdout && r.stdout.trim() ? r.stdout.trim() : '-'
     }).catch(() => {
-      this.serial = 'N/A'
+      this.serial = '-'
     })
 
     this.$oui.ubus('file', 'exec', {
       command: 'sh',
       params: ['-c', 'cat /etc/version']
     }).then(r => {
-      this.version = r.stdout ? r.stdout.trim() : 'N/A'
+      this.version = r.stdout ? r.stdout.trim() : '-'
     }).catch(() => {
-      this.version = 'N/A'
+      this.version = '-'
     })
 
     this.$oui.call('uci', 'get', {
@@ -587,9 +754,9 @@ export default {
       section: 'lan',
       option: 'ipaddr'
     }).then(lanip => {
-      this.lanIp = lanip || 'N/A'
+      this.lanIp = lanip || '-'
     }).catch(() => {
-      this.lanIp = 'N/A'
+      this.lanIp = '-'
     })
 
     this.$oui.call('uci', 'get', {
@@ -597,9 +764,9 @@ export default {
       section: 'lan',
       option: 'netmask'
     }).then(lanMask => {
-      this.lanMask = lanMask || 'N/A'
+      this.lanMask = lanMask || '-'
     }).catch(() => {
-      this.lanMask = 'N/A'
+      this.lanMask = '-'
     })
   },
   beforeUnmount() {
@@ -676,10 +843,11 @@ export default {
 
 .home-dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-areas:
-    'workmode resource'
-    'status interface';
+    'workmode workmode interface interface'
+    'status status interface interface'
+    'status status resource resource';
   gap: 16px;
   align-items: stretch;
 }
@@ -960,6 +1128,12 @@ export default {
   color: var(--el-text-color-secondary);
 }
 
+.home-interface-ifname {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
 .home-metric-value {
   margin: 14px 0 6px;
   font-size: 28px;
@@ -971,12 +1145,32 @@ export default {
 
 .home-interface-list {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   margin-top: 16px;
 }
 
+.home-interface-head-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px 2px;
+}
+
+.home-interface-summary-head,
+.home-interface-inline-field-head,
+.home-interface-status-head {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.home-interface-status-head {
+  flex: 0 0 auto;
+}
+
 .home-interface-card {
-  padding: 14px 16px;
+  padding: 10px 14px;
   border-radius: 14px;
   background: #f8fafc;
   border: 1px solid transparent;
@@ -998,31 +1192,58 @@ export default {
 .home-interface-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
 }
 
 .home-interface-summary {
-  flex: 0 0 96px;
+  flex: 0 0 72px;
   min-width: 0;
 }
 
 .home-interface-inline-fields {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
   flex: 1 1 auto;
   min-width: 0;
 }
 
 .home-interface-inline-field {
+  display: flex;
+  align-items: center;
   min-width: 0;
+  white-space: nowrap;
 }
 
-.home-interface-label {
+.home-interface-inline-field.is-grouped {
   display: block;
-  margin-bottom: 4px;
+}
+
+.home-interface-value-pair + .home-interface-value-pair {
+  margin-top: 2px;
+}
+
+.home-interface-value-pair {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.home-interface-subvalue-label {
+  margin-right: 6px;
   font-size: 12px;
   color: #6b7280;
+  flex: 0 0 auto;
+}
+
+.home-interface-value-pair .home-interface-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  word-break: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .home-interface-value {
@@ -1030,8 +1251,11 @@ export default {
   font-size: 13px;
   font-weight: 600;
   color: #111827;
-  line-height: 1.4;
-  word-break: break-all;
+  line-height: 1.25;
+  white-space: nowrap;
+  word-break: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (max-width: 1024px) {
