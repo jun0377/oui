@@ -107,10 +107,10 @@ end
 -- 获取负载均衡权重
 function M.getBalanceWeights()
     local c = uci.cursor()
-    local section = 'banlance'
+    local section = 'balance'
     local weights = {}
 
-    c:foreach('global', 'banlance', function(s)
+    c:foreach('global', 'balance', function(s)
         for k, v in pairs(s) do
             if k:match('_weight$') then
                 local channel = k:gsub('_weight$', '')
@@ -119,7 +119,7 @@ function M.getBalanceWeights()
         end
     end)
 
-    -- 如果 foreach 没拿到数据 (比如 section 类型不是 banlance 或者 section 不存在)
+    -- 如果 foreach 没拿到数据 (比如 section 类型不是 balance 或者 section 不存在)
     -- 尝试直接根据 section 名获取
     if next(weights) == nil then
         local options = c:get_all('global', section)
@@ -144,11 +144,11 @@ function M.setBalanceWeight(params)
     end
 
     local c = uci.cursor()
-    local section = 'banlance'
+    local section = 'balance'
 
     -- 如果 section 不存在则创建
     if not c:get('global', section) then
-        c:set('global', section, 'banlance')
+        c:set('global', section, 'balance')
     end
 
     for channel, weight in pairs(params.weights) do

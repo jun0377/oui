@@ -448,13 +448,10 @@ export default {
         }
       })
 
-      // 1. 设置工作模式为负载均衡
-      this.$oui.call('mode', 'setMode', { mode: 'balance' })
-      // 2. 设置各链路权重
-      this.$oui.call('mode', 'setBalanceWeight', { weights }).then(() => {
+      this.$oui.call('mode', 'setMode', { mode: 'balance' }).then(() => this.$oui.call('mode', 'setBalanceWeight', { weights })).then(() => {
         this.savedLinks = cloneLinks(this.links)
         this.$message({
-          message: this.$t('负载均衡配置保存成功'),
+          message: this.$t('保存成功'),
           type: 'success'
         })
 
@@ -468,6 +465,23 @@ export default {
     resetConfig() {
       this.links = cloneLinks(this.savedLinks)
       this.nextId = this.links.reduce((maxId, link) => Math.max(maxId, link.id), 0) + 1
+
+      const weights = {}
+      this.links.forEach(link => {
+        if (link.enabled) {
+          weights[link.name] = link.weight
+        }
+      })
+
+      this.$oui.call('mode', 'setMode', { mode: 'balance' }).then(() => this.$oui.call('mode', 'setBalanceWeight', { weights })).then(() => {
+        this.$message({
+          message: this.$t('恢复成功'),
+          type: 'success'
+        })
+        console.log('恢复链路权重:', Object.entries(weights).map(([name, weight]) => `${name}: ${weight}`).join(', '))
+      }).catch((err) => {
+        this.$message.error(this.$t('恢复失败: ') + err.message)
+      })
     }
   }
 }
