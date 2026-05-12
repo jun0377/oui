@@ -14,7 +14,10 @@
           <span class="mode-inline-label">链路选择</span>
           <el-radio-group v-model="singleModeLink" class="mode-group" @change="handleSingleModeLinkChange">
             <el-radio-button v-for="item in linkOptions" :key="item.value" :value="item.value">
-              {{ item.label }}
+              <div class="mode-option-text">
+                <div class="mode-option-label">{{ item.label }}</div>
+                <div class="mode-option-iface">{{ item.iface || '--' }}</div>
+              </div>
             </el-radio-button>
           </el-radio-group>
         </div>
@@ -129,6 +132,7 @@ export default {
         this.singleModeLink = normalized
       }).catch(() => {})
     },
+    // 获取所有可用链路
     fetchAllChannels() {
       if (this.stopped)
         return Promise.resolve()
@@ -137,20 +141,42 @@ export default {
           return
         const items = Array.isArray(channels) ? channels : []
         const normalized = items
-          .map(normalizeChannelName)
-          .filter(Boolean)
-          .filter(isSelectableChannel)
-        const uniq = Array.from(new Set(normalized))
+          .map((item) => {
+            if (typeof item === 'string') {
+              return {
+                name: normalizeChannelName(item),
+                iface: ''
+              }
+            }
+            return {
+              name: normalizeChannelName(item && (item.name || item.value)),
+              iface: String(item && item.iface || '')
+            }
+          })
+          .filter(item => item.name)
+          .filter(item => isSelectableChannel(item.name))
+
+        const uniqMap = new Map()
+        normalized.forEach((item) => {
+          if (!uniqMap.has(item.name))
+            uniqMap.set(item.name, item)
+        })
+
+        const uniq = Array.from(uniqMap.values())
         uniq.sort((a, b) => {
-          const ka = getChannelSortKey(a)
-          const kb = getChannelSortKey(b)
+          const ka = getChannelSortKey(a.name)
+          const kb = getChannelSortKey(b.name)
           if (ka.group !== kb.group)
             return ka.group - kb.group
           if (ka.num !== kb.num)
             return ka.num - kb.num
           return ka.raw.localeCompare(kb.raw)
         })
-        this.linkOptions = uniq.map(value => ({ value, label: value.toUpperCase() }))
+        this.linkOptions = uniq.map(item => ({
+          value: item.name,
+          label: item.name.toUpperCase(),
+          iface: item.iface || '--'
+        }))
       }).catch(() => {})
     },
     ensureSelectedChannel() {
@@ -435,6 +461,26 @@ export default {
   flex: 1 1 auto;
   display: flex;
   justify-content: flex-start;
+}
+
+.mode-option-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.mode-option-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mode-option-iface {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
 }
 
 :deep(.mode-panel .el-card__header) {

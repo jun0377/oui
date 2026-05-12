@@ -2,6 +2,7 @@ local M = {}
 
 local uci = require 'eco.uci'
 local log = require 'log'
+local ubus = require 'eco.ubus'
 
 -- log
 log.level = 'trace'
@@ -14,18 +15,50 @@ local function exec_async(command)
     os.execute(string.format("( %s ) >/dev/null 2>/dev/null &", command))
 end
 
+local function get_channel_iface(ubus_conn, channel)
+    if not ubus_conn or not channel then
+        return ''
+    end
+
+    local status, err = ubus_conn:call('network.interface.' .. channel, 'status', {})
+    if not status or type(status) ~= 'table' then
+        log.warn('get channel status failed:', channel, err)
+        return ''
+    end
+
+    return tostring(status.device or status.l3_device or '')
+end
+
+
 -- 获取所有可用链路
 function M.getAllChannel()
     local c = uci.cursor()
-    local channels = {}
+    local channel_names = {}
+
     c:foreach('network', 'interface', function(section)
         if section['.name'] ~= nil then
-            channels[#channels + 1] = tostring(section['.name'])
+            channel_names[#channel_names + 1] = tostring(section['.name'])
         end
     end)
-    log.info('get all channel:', table.concat(channels, ','))
+
+    local channels = {}
+    local ubus_conn = ubus.connect()
+
+    for _, channel in ipairs(channel_names) do
+        channels[#channels + 1] = {
+            name = channel,
+            iface = get_channel_iface(ubus_conn, channel)
+        }
+    end
+
+    if ubus_conn then
+        ubus_conn:close()
+    end
+
+    log.info('get all channel:', table.concat(channel_names, ','))
     return channels
 end
+
 
 -- 获取工作模式
 function M.getMode()

@@ -255,6 +255,7 @@ export default {
         enabled: Boolean(link.enabled)
       }))
     },
+    // 保存配置
     saveConfig() {
       this.normalizeLinks()
       if (this.activeLinksCount === 0) {
@@ -271,6 +272,7 @@ export default {
         type: 'success'
       })
     },
+    // 恢复默认配置
     resetConfig() {
       this.links = cloneLinks(this.savedLinks)
       this.nextId = this.links.reduce((maxId, link) => Math.max(maxId, link.id), 0) + 1
