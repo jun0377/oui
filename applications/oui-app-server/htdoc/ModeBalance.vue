@@ -24,7 +24,7 @@
                       <div class="balance-link-subtitle">{{ $t('接口') }}: {{ link.iface || '-' }}</div>
                     </div>
                     <el-form-item :label="$t('权重')" :label-width="36" class="balance-form-item balance-form-item-inline">
-                      <el-input-number v-model="link.weight" :min="0" :max="100" :step="1" controls-position="right" />
+                      <el-input-number v-model="link.weight" :min="0" :max="10" :step="1" controls-position="right" />
                     </el-form-item>
                     <div class="balance-link-progress">
                       <div class="balance-link-progress-meta">
@@ -89,6 +89,25 @@
                     </div>
                   </div>
                 </div>
+
+                <div class="balance-pie-footer">
+
+                  <div class="balance-pie-footer-legend">
+                    <div v-for="link in pieLegendLinks" :key="link.id" class="balance-pie-footer-legend-item">
+                      <span class="balance-pie-footer-dot" :style="{ backgroundColor: link.color }"></span>
+                      <div class="balance-pie-footer-legend-text">
+                        <div class="balance-pie-footer-legend-top">
+                          <span class="balance-pie-footer-legend-name">{{ link.name || '-' }}({{ link.iface || '-' }})</span>
+                        </div>
+                        <div class="balance-pie-footer-legend-bottom">
+                          <span class="balance-pie-footer-legend-value">{{ link.connections }}</span>
+                          <span class="balance-pie-footer-legend-sep">·</span>
+                          <span class="balance-pie-footer-legend-value">{{ link.sharePercent }}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -99,30 +118,63 @@
 </template>
 
 <script>
-const createDefaultLinks = () => ([
-  { id: 1, name: 'wan0', iface: 'eth1', weight: 50, enabled: true },
-  { id: 2, name: 'wan1', iface: 'eth2', weight: 50, enabled: true }
-])
+function normalizeChannelName(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function isSelectableChannel(value) {
+  return /^(sim\d+|wan\d+)$/.test(value)
+}
+
+function getChannelSortKey(value) {
+  const match = /^(sim|wan)(\d+)$/.exec(value)
+  if (!match)
+    return { group: 9, num: Number.MAX_SAFE_INTEGER, raw: value }
+  const group = match[1] === 'sim' ? 0 : 1
+  return { group, num: Number(match[2]), raw: value }
+}
 
 const cloneLinks = (links) => links.map(link => ({ ...link }))
 
 export default {
   name: 'ModeBalance',
+  props: {
+    pageActive: {
+      type: Boolean,
+      default: false
+    }
+  },
   data() {
-    const links = createDefaultLinks()
     return {
-      links,
-      savedLinks: cloneLinks(links),
-      nextId: links.length + 1,
-      demoPulse: 0,
-      demoTimer: null
+      links: [],
+      savedLinks: [],
+      nextId: 1,
+      conntrackTotal: 0,
+      conntrackByChannel: {},
+      conntrackUpdatedAt: 0,
+      conntrackTimer: null,
+      stopped: true
+    }
+  },
+  watch: {
+    pageActive(value) {
+      if (value)
+        this.startAll()
+      else
+        this.stopAll()
     }
   },
   mounted() {
-    this.startDemoTicker()
+    this.startAll()
+  },
+  activated() {
+    this.startAll()
+  },
+  deactivated() {
+    this.stopAll()
   },
   beforeUnmount() {
-    this.stopDemoTicker()
+    this.stopAll()
   },
   computed: {
     pieColors() {
@@ -142,9 +194,9 @@ export default {
         const percent = link.enabled && this.totalWeight > 0
           ? Math.round((normalizedWeight / this.totalWeight) * 100)
           : 0
-        const baseConnections = link.enabled ? Math.max(1, Math.round(percent * 1.2)) : 0
-        const jitter = link.enabled ? ((this.demoPulse + link.id * 3) % 5) : 0
-        const connections = baseConnections + jitter
+        const connections = link.enabled
+          ? Number(this.conntrackByChannel[link.name] || 0)
+          : 0
         return {
           ...link,
           weight: normalizedWeight,
@@ -160,8 +212,9 @@ export default {
           : 0
       }))
     },
+    // 当前总连接数
     totalConnections() {
-      return this.previewLinks.reduce((sum, link) => sum + Number(link.connections || 0), 0)
+      return Number(this.conntrackTotal || 0)
     },
     pieLegendLinks() {
       return this.previewLinks.map((link, index) => ({
@@ -217,20 +270,141 @@ export default {
     }
   },
   methods: {
+    formatTime(ts) {
+      const date = ts ? new Date(ts) : null
+      if (!date || Number.isNaN(date.getTime()))
+        return '--'
+      const hh = String(date.getHours()).padStart(2, '0')
+      const mm = String(date.getMinutes()).padStart(2, '0')
+      const ss = String(date.getSeconds()).padStart(2, '0')
+      return `${hh}:${mm}:${ss}`
+    },
+    runAfterFirstFrame(fn) {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => requestAnimationFrame(() => fn()))
+      } else {
+        setTimeout(() => fn(), 0)
+      }
+    },
+    startAll() {
+      if (!this.stopped)
+        return
+      this.stopped = false
+      this.runAfterFirstFrame(async() => {
+        if (this.stopped)
+          return
+        await this.fetchAllChannels()
+        if (this.stopped)
+          return
+        this.startConntrackPolling()
+      })
+    },
+    stopAll() {
+      this.stopped = true
+      this.stopConntrackPolling()
+    },
+    startConntrackPolling() {
+      this.stopConntrackPolling()
+      this.refreshConntrackOnce()
+      this.conntrackTimer = setInterval(() => {
+        this.refreshConntrackOnce()
+      }, 3000)
+    },
+    stopConntrackPolling() {
+      if (this.conntrackTimer) {
+        clearInterval(this.conntrackTimer)
+        this.conntrackTimer = null
+      }
+    },
+    async refreshConntrackOnce() {
+      if (this.stopped)
+        return
+
+      try {
+        const channels = this.links.map(link => link.name).filter(Boolean)
+        const stats = await this.$oui.call('mode', 'getIfContrackCnt', { channels })
+        if (this.stopped)
+          return
+
+        this.conntrackTotal = Number(stats && stats.total || 0)
+        this.conntrackByChannel = (stats && stats.by_channel && typeof stats.by_channel === 'object')
+          ? stats.by_channel
+          : {}
+        this.conntrackUpdatedAt = Date.now()
+
+        console.log('连接数统计:', `total=${this.conntrackTotal}`, Object.entries(this.conntrackByChannel).map(([name, cnt]) => `${name}=${cnt}`).join(', '))
+      } catch (_) {
+      }
+    },
+    // 获取所有可用链路
+    async fetchAllChannels() {
+      if (this.stopped)
+        return Promise.resolve()
+
+      try {
+        const [channels, savedWeights] = await Promise.all([
+          this.$oui.call('mode', 'getAllChannel'),
+          this.$oui.call('mode', 'getBalanceWeights')
+        ])
+
+        if (this.stopped)
+          return
+
+        const items = Array.isArray(channels) ? channels : []
+        const normalized = items
+          .map((item) => {
+            if (typeof item === 'string') {
+              return {
+                name: normalizeChannelName(item),
+                iface: ''
+              }
+            }
+            return {
+              name: normalizeChannelName(item && (item.name || item.value)),
+              iface: String(item && item.iface || '')
+            }
+          })
+          .filter(item => item.name)
+          .filter(item => isSelectableChannel(item.name))
+
+        const uniqMap = new Map()
+        normalized.forEach((item) => {
+          if (!uniqMap.has(item.name))
+            uniqMap.set(item.name, item)
+        })
+
+        const uniq = Array.from(uniqMap.values())
+        uniq.sort((a, b) => {
+          const ka = getChannelSortKey(a.name)
+          const kb = getChannelSortKey(b.name)
+          if (ka.group !== kb.group)
+            return ka.group - kb.group
+          if (ka.num !== kb.num)
+            return ka.num - kb.num
+          return ka.raw.localeCompare(kb.raw)
+        })
+
+        this.links = uniq.map((item, index) => {
+          const weight = (savedWeights && savedWeights[item.name]) !== undefined ? savedWeights[item.name] : 1
+          return {
+            id: index + 1,
+            name: item.name,
+            iface: item.iface || '--',
+            weight: weight,
+            enabled: true
+          }
+        })
+        this.savedLinks = cloneLinks(this.links)
+        this.nextId = this.links.length + 1
+
+        console.log('获取链路权重:', this.links.map(l => `${l.name}: ${l.weight}`).join(', '))
+
+      } catch (err) {
+        console.error('Fetch channels or weights failed:', err)
+      }
+    },
     getLinkPreview(linkId) {
       return this.previewLinks.find(link => link.id === linkId) || { percent: 0 }
-    },
-    startDemoTicker() {
-      this.stopDemoTicker()
-      this.demoTimer = setInterval(() => {
-        this.demoPulse = (this.demoPulse + 1) % 10000
-      }, 2000)
-    },
-    stopDemoTicker() {
-      if (this.demoTimer) {
-        clearInterval(this.demoTimer)
-        this.demoTimer = null
-      }
     },
     addLink() {
       this.links.push({
@@ -266,10 +440,28 @@ export default {
         this.$message.warning(this.$t('已启用链路的权重总和必须大于 0'))
         return
       }
-      this.savedLinks = cloneLinks(this.links)
-      this.$message({
-        message: this.$t('已保存当前权重配置(UI示意, 未接入后台)'),
-        type: 'success'
+
+      const weights = {}
+      this.links.forEach(link => {
+        if (link.enabled) {
+          weights[link.name] = link.weight
+        }
+      })
+
+      // 1. 设置工作模式为负载均衡
+      this.$oui.call('mode', 'setMode', { mode: 'balance' })
+      // 2. 设置各链路权重
+      this.$oui.call('mode', 'setBalanceWeight', { weights }).then(() => {
+        this.savedLinks = cloneLinks(this.links)
+        this.$message({
+          message: this.$t('负载均衡配置保存成功'),
+          type: 'success'
+        })
+
+        console.log('设置链路权重:', Object.entries(weights).map(([name, weight]) => `${name}: ${weight}`).join(', '))
+
+      }).catch((err) => {
+        this.$message.error(this.$t('保存失败: ') + err.message)
       })
     },
     // 恢复默认配置
@@ -633,6 +825,104 @@ export default {
   color: var(--el-text-color-secondary);
 }
 
+.balance-pie-footer {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.6);
+}
+
+.balance-pie-footer-meta {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.balance-pie-footer-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.balance-pie-footer-legend {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  overflow-x: hidden;
+}
+
+.balance-pie-footer-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(248, 250, 252, 0.6);
+}
+
+.balance-pie-footer-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.balance-pie-footer-legend-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.balance-pie-footer-legend-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.balance-pie-footer-legend-top {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.balance-pie-footer-legend-bottom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.balance-pie-footer-legend-value {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.2;
+  flex: 0 0 auto;
+}
+
+.balance-pie-footer-legend-sep {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  opacity: 0.7;
+  flex: 0 0 auto;
+}
+
 @media (max-width: 768px) {
   .balance-split {
     grid-template-columns: 1fr;
@@ -646,6 +936,10 @@ export default {
   .balance-pie-stage {
     width: 280px;
     height: 280px;
+  }
+
+  .balance-pie-footer-meta {
+    justify-content: center;
   }
 
   .balance-links-header,

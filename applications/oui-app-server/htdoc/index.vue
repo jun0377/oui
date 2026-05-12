@@ -15,7 +15,7 @@
   <!-- 单卡模式 -->
   <ModeSingle v-if="workModeReady && workMode === 'single'" :page-active="pageActive" />
 
-  <ModeBalance v-if="workModeReady && workMode === 'balance'" />
+  <ModeBalance v-if="workModeReady && workMode === 'balance'" :page-active="pageActive" />
 
   <ModeAggregate v-if="workModeReady && workMode === 'aggregate'" :page-active="pageActive" />
 </div>
