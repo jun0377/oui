@@ -1,27 +1,35 @@
 <template>
-  <div class="wan-config-container">
-    <div class="header">
-      <h2> {{ status.alias }}</h2>
-    </div>
+  <div class="sim-page">
+    <el-card class="sim-panel">
+      <div class="sim-panel-body">
+        <div class="sim-hero">
+          <div class="sim-metric-head">
+            <div class="sim-metric-main">
+              <div class="sim-metric-title">{{ settings.alias }}</div>
+              <div class="sim-metric-subtitle">{{ settings.interface || '-' }}</div>
+            </div>
+          </div>
+        </div>
 
-    <div class="config-section">
-      <div class="left-column">
-        <el-card class="config-card">
+        <div class="config-section">
+          <div class="left-column">
+            <el-card class="config-card sim-accent-slate">
           <template #header>
             <div class="card-header">
-              <span>{{ $t('Basic Settings') }}</span>
+              <span class="sim-card-title">{{ $t('Basic Settings') }}</span>
+              <el-tag type="info">{{ $t('配置') }}</el-tag>
             </div>
           </template>
           <el-form :model="settings" label-width="120px" class="config-form" label-align="left" label-position="left">
-            <el-form-item :label="$t('Label')">
+            <!-- <el-form-item :label="$t('Label')">
               <el-input v-model="settings.alias" :placeholder="$t('Enter WAN label')" readonly disabled/>
             </el-form-item>
             <el-form-item :label="$t('Interface')">
               <el-input v-model="settings.interface" :placeholder="$t('Enter interface name')" readonly disabled/>
-            </el-form-item>
+            </el-form-item> -->
 
             <el-form-item :label="$t('Network Access')">
-              <el-select v-model="settings.net" :placeholder="$t('Select access type')" style="width: 100%">
+              <el-select v-model="settings.net" :placeholder="$t('Select access type')" class="sim-full-width">
                 <el-option :label="$t('AUTO')" value="AUTO"/>
                 <el-option label="SA" value="SA"/>
                 <el-option label="NSA" value="NSA"/>
@@ -30,7 +38,7 @@
             </el-form-item>
 
             <el-form-item :label="$t('Authentication')">
-              <el-select v-model="settings.auth" :placeholder="$t('Select auth type')" style="width: 100%">
+              <el-select v-model="settings.auth" :placeholder="$t('Select auth type')" class="sim-full-width">
                 <el-option :label="$t('AUTO')" value="AUTO"/>
                 <el-option label="PAP" value="PAP"/>
                 <el-option label="CHAP" value="CHAP"/>
@@ -50,97 +58,133 @@
               <el-input v-model="settings.apn" placeholder="Enter APN"/>
             </el-form-item>
 
-            <div style="display: flex; gap: 10px;">
-              <el-form-item label="锁NR频段" style="flex: 1; margin-bottom: 0;">
-                <div v-if="getNRBandOptions().length" class="band-option-list">
-                  <el-tag
-                    v-for="opt in getNRBandOptions()"
-                    :key="opt"
-                    class="band-option-tag"
-                    :type="isNRBandOptionActive(opt) ? 'primary' : 'info'"
-                    :effect="isNRBandOptionActive(opt) ? 'dark' : 'plain'"
-                    @click="selectNRBandOption(opt)"
-                  >
-                    {{ opt }}
-                  </el-tag>
+            <div class="sim-inline-row">
+              <el-form-item label="锁NR频段" class="sim-inline-form-item">
+                <div class="sim-lock-section">
+                  <div class="sim-lock-toggle">
+                    <el-switch
+                      v-model="settings.nrBandLockEnabled"
+                      inline-prompt
+                      :active-text="'开'"
+                      :inactive-text="'关'"
+                      @change="handleNrBandLockEnabledChange"
+                      class="wan-enable-switch"
+                    />
+                  </div>
+                  <div v-if="settings.nrBandLockEnabled">
+                    <div v-if="getNRBandOptions().length" class="band-option-list">
+                      <el-tag
+                        v-for="opt in getNRBandOptions()"
+                        :key="opt"
+                        class="band-option-tag"
+                        :type="isNRBandOptionActive(opt) ? 'primary' : 'info'"
+                        :effect="isNRBandOptionActive(opt) ? 'dark' : 'plain'"
+                        @click="selectNRBandOption(opt)"
+                      >
+                        {{ opt }}
+                      </el-tag>
+                    </div>
+                    <div v-else class="band-option-empty">暂无可选频段</div>
+                  </div>
                 </div>
-                <div v-else class="band-option-empty">暂无可选频段</div>
               </el-form-item>
             </div>
 
-            <div style="display: flex; gap: 10px;">
-              <el-form-item label="锁LTE频段" style="flex: 1; margin-bottom: 0;">
-                <div v-if="getLTEBandOptions().length" class="band-option-list">
-                  <el-tag
-                    v-for="opt in getLTEBandOptions()"
-                    :key="opt"
-                    class="band-option-tag"
-                    :type="isLTEBandOptionActive(opt) ? 'primary' : 'info'"
-                    :effect="isLTEBandOptionActive(opt) ? 'dark' : 'plain'"
-                    @click="selectLTEBandOption(opt)"
-                  >
-                    {{ opt }}
-                  </el-tag>
+            <div class="sim-inline-row">
+              <el-form-item label="锁LTE频段" class="sim-inline-form-item">
+                <div class="sim-lock-section">
+                  <div class="sim-lock-toggle">
+                    <el-switch
+                      v-model="settings.lteBandLockEnabled"
+                      inline-prompt
+                      :active-text="'开'"
+                      :inactive-text="'关'"
+                      @change="handleLteBandLockEnabledChange"
+                      class="wan-enable-switch"
+                    />
+                  </div>
+                  <div v-if="settings.lteBandLockEnabled">
+                    <div v-if="getLTEBandOptions().length" class="band-option-list">
+                      <el-tag
+                        v-for="opt in getLTEBandOptions()"
+                        :key="opt"
+                        class="band-option-tag"
+                        :type="isLTEBandOptionActive(opt) ? 'primary' : 'info'"
+                        :effect="isLTEBandOptionActive(opt) ? 'dark' : 'plain'"
+                        @click="selectLTEBandOption(opt)"
+                      >
+                        {{ opt }}
+                      </el-tag>
+                    </div>
+                    <div v-else class="band-option-empty">暂无可选频段</div>
+                  </div>
                 </div>
-                <div v-else class="band-option-empty">暂无可选频段</div>
               </el-form-item>
             </div>
 
             <el-form-item label="锁NR PCI小区">
-              <div style="display: flex; align-items: center; gap: 6px; width: 100%;">
-                <el-switch
-                  v-model="settings.nr_pci.enabled"
-                  inline-prompt
-                  :active-text="'开'"
-                  :inactive-text="'关'"
-                  @change="handleNRPciLock"
-                  class="wan-enable-switch"
-                />
-                <el-input v-model="settings.nr_pci.pcid" placeholder="PCID" style="flex: 0.9;" size="small"/>
-                <el-input v-model="settings.nr_pci.freq" placeholder="频点" style="flex: 0.9;" size="small"/>
-                <el-select v-model="settings.nr_pci.band" placeholder="频段" style="flex: 0.9;" size="small">
-                  <el-option label="n1" value="1"/>
-                  <el-option label="n3" value="3"/>
-                  <el-option label="n5" value="5"/>
-                  <el-option label="n8" value="8"/>
-                  <el-option label="n28" value="28"/>
-                  <el-option label="n41" value="41"/>
-                  <el-option label="n78" value="78"/>
-                </el-select>
-                <el-tooltip content="子载波间隔" placement="top">
-                  <el-select v-model="settings.nr_pci.scs" placeholder="子载波间隔" style="flex: 1.3; min-width: 120px;" size="small">
-                    <el-option label="15KHz" value="0"/>
-                    <el-option label="30KHz" value="1"/>
-                    <el-option label="60KHz" value="2"/>
-                    <el-option label="120KHz" value="3"/>
-                    <el-option label="240KHz" value="4"/>
+              <div class="sim-lock-section">
+                <div class="sim-lock-toggle">
+                  <el-switch
+                    v-model="settings.nr_pci.enabled"
+                    inline-prompt
+                    :active-text="'开'"
+                    :inactive-text="'关'"
+                    @change="handleNRPciLock"
+                    class="wan-enable-switch"
+                  />
+                </div>
+                <div v-if="settings.nr_pci.enabled" class="sim-pci-row">
+                  <el-input v-model="settings.nr_pci.pcid" placeholder="PCID" class="sim-pci-input" size="small"/>
+                  <el-input v-model="settings.nr_pci.freq" placeholder="频点" class="sim-pci-input" size="small"/>
+                  <el-select v-model="settings.nr_pci.band" placeholder="频段" class="sim-pci-input" size="small">
+                    <el-option label="n1" value="1"/>
+                    <el-option label="n3" value="3"/>
+                    <el-option label="n5" value="5"/>
+                    <el-option label="n8" value="8"/>
+                    <el-option label="n28" value="28"/>
+                    <el-option label="n41" value="41"/>
+                    <el-option label="n78" value="78"/>
                   </el-select>
-                </el-tooltip>
+                  <el-tooltip content="子载波间隔" placement="top">
+                    <el-select v-model="settings.nr_pci.scs" placeholder="子载波间隔" class="sim-pci-input sim-pci-input-wide" size="small">
+                      <el-option label="15KHz" value="0"/>
+                      <el-option label="30KHz" value="1"/>
+                      <el-option label="60KHz" value="2"/>
+                      <el-option label="120KHz" value="3"/>
+                      <el-option label="240KHz" value="4"/>
+                    </el-select>
+                  </el-tooltip>
+                </div>
               </div>
             </el-form-item>
 
             <el-form-item label="锁LTE PCI小区">
-              <div style="display: flex; align-items: center; gap: 6px; width: 100%;">
-                <el-switch
-                  v-model="settings.lte_pci.enabled"
-                  inline-prompt
-                  :active-text="'开'"
-                  :inactive-text="'关'"
-                  @change="handleLtePciLock"
-                  class="wan-enable-switch"
-                />
-                <el-input v-model="settings.lte_pci.pcid" placeholder="PCID" style="flex: 0.9;" size="small"/>
-                <el-input v-model="settings.lte_pci.freq" placeholder="频点" style="flex: 0.9;" size="small"/>
-                <el-select v-model="settings.lte_pci.band" placeholder="频段" style="flex: 0.9;" size="small">
-                  <el-option label="b1" value="1"/>
-                  <el-option label="b3" value="3"/>
-                  <el-option label="b5" value="5"/>
-                  <el-option label="b8" value="8"/>
-                  <el-option label="b34" value="34"/>
-                  <el-option label="b39" value="39"/>
-                  <el-option label="b40" value="40"/>
-                  <el-option label="b41" value="40"/>
-                </el-select>
+              <div class="sim-lock-section">
+                <div class="sim-lock-toggle">
+                  <el-switch
+                    v-model="settings.lte_pci.enabled"
+                    inline-prompt
+                    :active-text="'开'"
+                    :inactive-text="'关'"
+                    @change="handleLtePciLock"
+                    class="wan-enable-switch"
+                  />
+                </div>
+                <div v-if="settings.lte_pci.enabled" class="sim-pci-row">
+                  <el-input v-model="settings.lte_pci.pcid" placeholder="PCID" class="sim-pci-input" size="small"/>
+                  <el-input v-model="settings.lte_pci.freq" placeholder="频点" class="sim-pci-input" size="small"/>
+                  <el-select v-model="settings.lte_pci.band" placeholder="频段" class="sim-pci-input" size="small">
+                    <el-option label="b1" value="1"/>
+                    <el-option label="b3" value="3"/>
+                    <el-option label="b5" value="5"/>
+                    <el-option label="b8" value="8"/>
+                    <el-option label="b34" value="34"/>
+                    <el-option label="b39" value="39"/>
+                    <el-option label="b40" value="40"/>
+                    <el-option label="b41" value="40"/>
+                  </el-select>
+                </div>
               </div>
             </el-form-item>
 
@@ -174,10 +218,11 @@
 
       <div class="right-column">
         <div class="top-cards">
-          <el-card class="config-card compact-card connection-card">
+          <el-card class="config-card compact-card connection-card sim-accent-green">
             <template #header>
               <div class="card-header">
-                <span>{{ $t('连接状态') }}</span>
+                <span class="sim-card-title">{{ $t('连接状态') }}</span>
+                <el-tag type="info">{{ $t('实时') }}</el-tag>
               </div>
             </template>
 
@@ -203,7 +248,7 @@
               </div>
 
               <div class="signal-row signal-row-right" v-if="String(status.rat).toUpperCase() !== 'LTE'">
-                <div class="signal-title">NR信号:</div>
+                <div class="signal-title">NR信号强度:</div>
                 <div class="signal-item">
                   <span class="status-label">rsrp:</span>
                   <span class="status-value">{{ status.nr.rsrp }}</span>
@@ -273,10 +318,11 @@
           </el-card>
 
           <div class="vertical-cards">
-            <el-card class="config-card compact-card">
+            <el-card class="config-card compact-card sim-accent-purple">
               <template #header>
                 <div class="card-header">
-                  <span>{{ $t('SIM卡状态') }}</span>
+                  <span class="sim-card-title">{{ $t('SIM卡状态') }}</span>
+                  <el-tag type="info">{{ $t('实时') }}</el-tag>
                 </div>
               </template>
 
@@ -304,10 +350,11 @@
               </div>
             </el-card>
 
-            <el-card class="config-card compact-card">
+            <el-card class="config-card compact-card sim-accent-cyan">
               <template #header>
                 <div class="card-header">
-                  <span>{{ $t('模组信息') }}</span>
+                  <span class="sim-card-title">{{ $t('模组信息') }}</span>
+                  <el-tag type="info">{{ $t('实时') }}</el-tag>
                 </div>
               </template>
 
@@ -329,10 +376,11 @@
           </div>
 
           <div class="vertical-cards freqlock-cards">
-            <el-card class="config-card compact-card">
+            <el-card class="config-card compact-card sim-accent-amber">
               <template #header>
                 <div class="card-header">
-                  <span>{{ $t('NR锁频锁小区状态') }}</span>
+                  <span class="sim-card-title">{{ $t('NR锁频锁小区状态') }}</span>
+                  <el-tag type="info">{{ $t('实时') }}</el-tag>
                 </div>
               </template>
               <div class="status-info">
@@ -359,10 +407,11 @@
               </div>
             </el-card>
 
-            <el-card class="config-card compact-card">
+            <el-card class="config-card compact-card sim-accent-amber">
               <template #header>
                 <div class="card-header">
-                  <span>{{ $t('LTE锁频锁小区状态') }}</span>
+                  <span class="sim-card-title">{{ $t('LTE锁频锁小区状态') }}</span>
+                  <el-tag type="info">{{ $t('实时') }}</el-tag>
                 </div>
               </template>
               <div class="status-info">
@@ -387,16 +436,20 @@
           </div>
         </div>
 
-        <el-card class="config-card compact-card">
+        <el-card class="config-card compact-card sim-accent-slate">
           <template #header>
             <div class="card-header">
-              <span>{{ $t('当前驻留小区信息') }}</span>
+              <span class="sim-card-title">{{ $t('当前驻留小区信息') }}</span>
+              <el-tag type="info">{{ $t('实时') }}</el-tag>
             </div>
           </template>
 
           <div class="status-table">
-            <div class="table-title" v-if="monsc.nr">NR 驻留小区</div>
-            <div class="table-row header-row" v-if="monsc.nr">
+            <div class="no-data" v-if="!monsc.nr.arfcn && !monsc.lte.arfcn">
+              {{ $t('暂无数据') }}
+            </div>
+            <div class="table-title" v-if="monsc.nr.arfcn">NR 驻留小区</div>
+            <div class="table-row header-row" v-if="monsc.nr.arfcn">
               <div class="table-cell">ARFCN</div>
               <div class="table-cell">SCS</div>
               <div class="table-cell">Cell_ID</div>
@@ -406,7 +459,7 @@
               <div class="table-cell">RSRQ/dB</div>
               <div class="table-cell">SINR/dBm</div>
             </div>
-            <div class="table-row" v-if="monsc.nr">
+            <div class="table-row" v-if="monsc.nr.arfcn">
               <div class="table-cell">{{ monsc.nr.arfcn }}</div>
               <div class="table-cell">{{ monsc.nr.scs }}</div>
               <div class="table-cell">{{ monsc.nr.cell_id }}</div>
@@ -439,16 +492,20 @@
           </div>
         </el-card>
 
-        <el-card class="config-card neighbor-card">
+        <el-card class="config-card neighbor-card sim-accent-red">
           <template #header>
             <div class="card-header">
-              <span>{{ $t('相邻小区信息') }}</span>
+              <span class="sim-card-title">{{ $t('相邻小区信息') }}</span>
+              <el-tag type="info">{{ $t('实时') }}</el-tag>
             </div>
           </template>
 
           <div class="status-table">
-            <div class="table-title">NR相邻小区</div>
-            <div class="table-row header-row">
+            <div class="no-data" v-if="!monnc.nr.length && !monnc.lte.length">
+              {{ $t('暂无数据') }}
+            </div>
+            <div class="table-title" v-if="monnc.nr.length">NR相邻小区</div>
+            <div class="table-row header-row" v-if="monnc.nr.length">
               <div class="table-cell">ARFCN</div>
               <div class="table-cell">PCI</div>
               <div class="table-cell">RSRP/dBm</div>
@@ -462,12 +519,10 @@
               <div class="table-cell">{{ cell.rsrq }}</div>
               <div class="table-cell">{{ cell.sinr }}</div>
             </div>
-            <div class="no-data" v-if="monnc.nr.length === 0">
-              {{ $t('暂无NR相邻小区数据') }}
-            </div>
+ 
 
-            <div class="table-title">LTE相邻小区</div>
-            <div class="table-row header-row">
+            <div class="table-title" v-if="monnc.lte.length">LTE相邻小区</div>
+            <div class="table-row header-row" v-if="monnc.lte.length">
               <div class="table-cell">ARFCN</div>
               <div class="table-cell">PCI</div>
               <div class="table-cell">RSRP</div>
@@ -481,13 +536,13 @@
               <div class="table-cell">{{ cell.rsrq }}</div>
               <div class="table-cell">{{ cell.rxlev }}</div>
             </div>
-            <div class="no-data" v-if="monnc.lte.length === 0">
-              {{ $t('暂无LTE相邻小区数据') }}
-            </div>
+
           </div>
         </el-card>
       </div>
     </div>
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -570,8 +625,10 @@ export default {
         net: '',
         apn: '',
         nrBand: '',
+        nrBandLockEnabled: false,
         nrBandUnLock: true,
         lteBand: '',
+        lteBandLockEnabled: false,
         lteBandUnLock: true,
         nr_pci: { enabled: false, pcid: '', band: '', freq: '', scs: '' },
         lte_pci: { enabled: false, pcid: '', band: '', freq: '' },
@@ -683,6 +740,8 @@ export default {
         this.settings.lteBand = lteRealBand || lteStoredBand
         this.settings.nrBandUnLock = (this.settings.nrBand === 'none' || this.settings.nrBand === '')
         this.settings.lteBandUnLock = (this.settings.lteBand === 'none' || this.settings.lteBand === '')
+        this.settings.nrBandLockEnabled = !this.settings.nrBandUnLock
+        this.settings.lteBandLockEnabled = !this.settings.lteBandUnLock
         if (this.settings.nrBandUnLock)
           this.settings.nrBand = 'none'
         if (this.settings.lteBandUnLock)
@@ -761,23 +820,51 @@ export default {
         this.settings.lte_pci.freq = ''
       }
     },
-    selectNRBandOption(value) {
-      if (value === '解锁') {
+    handleNrBandLockEnabledChange(enabled) {
+      if (!enabled) {
         this.settings.nrBand = 'none'
         this.settings.nrBandUnLock = true
         return
       }
+      this.settings.nrBandUnLock = false
+      if (this.settings.nrBand === 'none' || this.settings.nrBand === '') {
+        const next = (this.getNRBandOptions().find(opt => opt !== '解锁') || 'none')
+        this.settings.nrBand = next
+      }
+    },
+    handleLteBandLockEnabledChange(enabled) {
+      if (!enabled) {
+        this.settings.lteBand = 'none'
+        this.settings.lteBandUnLock = true
+        return
+      }
+      this.settings.lteBandUnLock = false
+      if (this.settings.lteBand === 'none' || this.settings.lteBand === '') {
+        const next = (this.getLTEBandOptions().find(opt => opt !== '解锁') || 'none')
+        this.settings.lteBand = next
+      }
+    },
+    selectNRBandOption(value) {
+      if (value === '解锁') {
+        this.settings.nrBand = 'none'
+        this.settings.nrBandUnLock = true
+        this.settings.nrBandLockEnabled = false
+        return
+      }
       this.settings.nrBand = value
       this.settings.nrBandUnLock = false
+      this.settings.nrBandLockEnabled = true
     },
     selectLTEBandOption(value) {
       if (value === '解锁') {
         this.settings.lteBand = 'none'
         this.settings.lteBandUnLock = true
+        this.settings.lteBandLockEnabled = false
         return
       }
       this.settings.lteBand = value
       this.settings.lteBandUnLock = false
+      this.settings.lteBandLockEnabled = true
     },
     isNRBandOptionActive(value) {
       if (value === '解锁')
@@ -794,30 +881,67 @@ export default {
 </script>
 
 <style scoped>
-.wan-config-container {
+.sim-page {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 18px;
   --status-value-col-width: 10ch;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-  gap: 15px;
+.sim-panel {
+  width: 100%;
+  border-radius: 12px;
+  border: 0;
+  box-shadow: none;
 }
 
-.header h2 {
-  margin: 0;
+:deep(.sim-panel .el-card__body) {
+  padding: 0;
+}
+
+.sim-panel-body {
+  padding: 10px 8px;
+}
+
+.sim-hero {
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  box-shadow: 0 14px 30px rgba(59, 130, 246, 0.12);
+}
+
+.sim-metric-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sim-metric-main {
+  flex: 1;
+  text-align: center;
+}
+
+.sim-metric-title {
+  font-size: 18px;
+  font-weight: 700;
   color: var(--el-text-color-primary);
+  line-height: 1.2;
+}
+
+.sim-metric-subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  word-break: break-word;
 }
 
 .config-section {
   display: grid;
-  grid-template-columns: 0.7fr 1.3fr;
-  gap: 20px;
-  margin-bottom: 30px;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 16px;
   align-items: start;
 }
 
@@ -829,25 +953,18 @@ export default {
 .right-column {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .top-cards {
-  display: flex;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr) minmax(0, 0.95fr);
+  gap: 16px;
   align-items: stretch;
 }
 
-.top-cards .config-card {
-  flex: 1;
-}
-
-.top-cards .connection-card {
-  flex: 1.1;
-}
-
 .vertical-cards {
-  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -868,15 +985,66 @@ export default {
 }
 
 .config-card {
-  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--el-border-color);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
 }
 
-.compact-card .card-header {
-  font-size: 14px;
+.config-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 16px 0 0 16px;
+  background: #cbd5e1;
 }
 
-.vertical-cards .compact-card .card-header {
-  padding: 0 15px;
+.sim-accent-blue::before {
+  background: #3b82f6;
+}
+
+.sim-accent-green::before {
+  background: #22c55e;
+}
+
+.sim-accent-purple::before {
+  background: #8b5cf6;
+}
+
+.sim-accent-cyan::before {
+  background: #06b6d4;
+}
+
+.sim-accent-amber::before {
+  background: #f59e0b;
+}
+
+.sim-accent-red::before {
+  background: #ef4444;
+}
+
+.sim-accent-slate::before {
+  background: #64748b;
+}
+
+:deep(.config-card .el-card__header) {
+  padding: 14px 18px 0;
+  border-bottom: 0;
+}
+
+:deep(.config-card .el-card__body) {
+  padding: 12px 18px 18px;
+}
+
+:deep(.compact-card .el-card__header) {
+  padding: 12px 16px 0;
+}
+
+:deep(.compact-card .el-card__body) {
+  padding: 10px 16px 16px;
 }
 
 .compact-card .status-item {
@@ -912,12 +1080,38 @@ export default {
 }
 
 .card-header {
-  font-weight: 500;
-  font-size: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.sim-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
 }
 
 .config-form {
   padding: 10px 0;
+}
+
+:deep(.config-form .el-form-item) {
+  margin-bottom: 14px;
+}
+
+:deep(.config-form .el-form-item:last-child) {
+  margin-bottom: 0;
+}
+
+:deep(.config-form .el-form-item__label) {
+  line-height: 32px;
+  padding-bottom: 0;
+}
+
+:deep(.config-form .el-form-item__content) {
+  min-height: 32px;
+  align-items: center;
 }
 
 .status-info {
@@ -1075,6 +1269,49 @@ export default {
   gap: 15px;
 }
 
+.sim-full-width {
+  width: 100%;
+}
+
+.sim-inline-row {
+  display: flex;
+  gap: 10px;
+}
+
+.sim-inline-form-item {
+  flex: 1;
+}
+
+.sim-lock-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.sim-lock-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sim-pci-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.sim-pci-input {
+  flex: 0.9;
+  min-width: 0;
+}
+
+.sim-pci-input-wide {
+  flex: 1.3;
+  min-width: 120px;
+}
+
 .band-option-list {
   display: flex;
   flex-wrap: wrap;
@@ -1113,6 +1350,10 @@ export default {
 
 @media (max-width: 768px) {
   .config-section {
+    grid-template-columns: 1fr;
+  }
+
+  .top-cards {
     grid-template-columns: 1fr;
   }
 

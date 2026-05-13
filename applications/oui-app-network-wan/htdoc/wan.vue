@@ -1,15 +1,22 @@
 <template>
-  <div class="wan-config-container">
-    <div class="header">
-      <h2>{{ settings.alias || 'WAN' }}</h2>
-    </div>
-
-    <div class="config-section wired-config-section">
-      <div class="left-column">
-        <el-card class="config-card">
+  <div class="wan-page">
+    <el-card class="wan-panel">
+      <div class="wan-panel-body">
+        <div class="wan-layout wired-config-section" :class="{ 'is-equal-height': settings.proto === 'DHCP' }">
+          <div class="wan-hero">
+            <div class="wan-metric-head">
+              <div class="wan-metric-main">
+                <div class="wan-metric-title">{{ settings.alias || 'WAN' }}</div>
+                <div class="wan-metric-subtitle">{{ settings.interface || '-' }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="left-column">
+            <el-card class="config-card wan-accent-slate">
           <template #header>
             <div class="card-header">
-              <span>{{ $t('Basic Settings') }}</span>
+              <span class="wan-card-title">{{ $t('Basic Settings') }}</span>
+              <el-tag type="info">{{ $t('配置') }}</el-tag>
             </div>
           </template>
           <el-form :model="settings" label-width="120px" class="config-form" label-align="left" label-position="left">
@@ -20,7 +27,7 @@
               <el-input v-model="settings.interface" readonly disabled/>
             </el-form-item>
             <el-form-item label="协议">
-              <el-select v-model="settings.proto" style="width: 100%">
+              <el-select v-model="settings.proto" class="wan-full-width">
                 <el-option label="DHCP" value="DHCP"/>
                 <el-option label="静态IP" value="STATIC"/>
               </el-select>
@@ -57,10 +64,11 @@
       </div>
 
       <div class="right-column">
-        <el-card class="config-card compact-card">
+        <el-card class="config-card compact-card wan-accent-blue">
           <template #header>
             <div class="card-header">
-              <span>接口状态</span>
+              <span class="wan-card-title">接口状态</span>
+              <el-tag type="info">{{ $t('实时') }}</el-tag>
             </div>
           </template>
           <div class="status-info">
@@ -96,6 +104,8 @@
         </el-card>
       </div>
     </div>
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -411,28 +421,88 @@ export default {
 </script>
 
 <style scoped>
-.wan-config-container {
+.wan-page {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 18px;
 }
 
-.header {
+.wan-panel {
+  width: 100%;
+  border-radius: 12px;
+  border: 0;
+  box-shadow: none;
+}
+
+:deep(.wan-panel .el-card__body) {
+  padding: 0;
+}
+
+.wan-panel-body {
+  padding: 10px 8px;
+}
+
+.wan-hero {
+  grid-column: 1 / -1;
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  box-shadow: 0 14px 30px rgba(59, 130, 246, 0.12);
+}
+
+.wan-metric-head {
   display: flex;
-  align-items: center;
-  margin-bottom: 20px;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
 }
 
-.header h2 {
-  margin: 0;
+.wan-metric-main {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.wan-metric-title {
+  font-size: 18px;
+  font-weight: 700;
   color: var(--el-text-color-primary);
+  line-height: 1.2;
 }
 
-.config-section {
+.wan-metric-subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  word-break: break-word;
+}
+
+.wan-metric-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wan-layout {
   display: grid;
-  gap: 20px;
-  margin-bottom: 30px;
+  gap: 16px;
   align-items: start;
+}
+
+.wan-layout.is-equal-height {
+  align-items: stretch;
+}
+
+.wan-layout.is-equal-height .left-column,
+.wan-layout.is-equal-height .right-column {
+  height: 100%;
+}
+
+.wan-layout.is-equal-height .left-column .config-card,
+.wan-layout.is-equal-height .right-column .config-card {
+  height: 100%;
 }
 
 .wired-config-section {
@@ -448,16 +518,81 @@ export default {
 
 .config-card {
   width: 100%;
-  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--el-border-color);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.config-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 16px 0 0 16px;
+  background: #cbd5e1;
+}
+
+.wan-accent-blue::before {
+  background: #3b82f6;
+}
+
+.wan-accent-slate::before {
+  background: #64748b;
+}
+
+:deep(.config-card .el-card__header) {
+  padding: 14px 18px 0;
+  border-bottom: 0;
+}
+
+:deep(.config-card .el-card__body) {
+  padding: 12px 18px 18px;
+}
+
+:deep(.compact-card .el-card__header) {
+  padding: 12px 16px 0;
+}
+
+:deep(.compact-card .el-card__body) {
+  padding: 10px 16px 16px;
 }
 
 .card-header {
-  font-weight: 500;
-  font-size: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.wan-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
 }
 
 .config-form {
   padding: 10px 0;
+}
+
+:deep(.config-form .el-form-item) {
+  margin-bottom: 14px;
+}
+
+:deep(.config-form .el-form-item:last-child) {
+  margin-bottom: 0;
+}
+
+:deep(.config-form .el-form-item__label) {
+  line-height: 32px;
+  padding-bottom: 0;
+}
+
+:deep(.config-form .el-form-item__content) {
+  min-height: 32px;
+  align-items: center;
 }
 
 .status-info {
@@ -486,6 +621,10 @@ export default {
 .status-value {
   font-weight: 400;
   color: var(--el-text-color-primary);
+}
+
+.wan-full-width {
+  width: 100%;
 }
 
 .action-buttons {
