@@ -105,6 +105,32 @@
                   <text x="20" :y="traffic.height * 0.49" class="traffic-label">{{ getTrafficLabel('rx', 0.50) }}</text>
                   <line x1="0" :y1="traffic.height * 0.75" :x2="traffic.width" :y2="traffic.height * 0.75" style="stroke:black;stroke-width:0.1" />
                   <text x="20" :y="traffic.height * 0.74" class="traffic-label">{{ getTrafficLabel('rx', 0.25) }}</text>
+                  <line
+                    v-for="item in trafficMarkerEntriesRx"
+                    :key="'rx-marker-line-' + item.index"
+                    x1="0"
+                    :x2="traffic.width"
+                    :y1="getTrafficLatestY('rx', item.index)"
+                    :y2="getTrafficLatestY('rx', item.index)"
+                    :style="getTrafficMarkerLineStyle(item.index)"
+                  />
+                  <circle
+                    v-for="item in trafficMarkerEntriesRx"
+                    :key="'rx-marker-dot-' + item.index"
+                    :cx="getTrafficLatestX('rx', item.index)"
+                    :cy="getTrafficLatestY('rx', item.index)"
+                    r="2.2"
+                    :style="getTrafficMarkerDotStyle(item.index)"
+                  />
+                  <text
+                    v-for="item in trafficMarkerEntriesRx"
+                    :key="'rx-marker-text-' + item.index"
+                    :x="traffic.width - 6"
+                    :y="Math.max(10, getTrafficLatestY('rx', item.index) - 6)"
+                    text-anchor="end"
+                    class="traffic-marker-text"
+                    :style="{ fill: getTrafficColor(item.index) }"
+                  >{{ formatRateValue(getTrafficStat('rx', item.index, 'cur')) }} {{ formatRateUnit(getTrafficStat('rx', item.index, 'cur')) }}</text>
                 </svg>
               </div>
               <div class="traffic-scale">{{ getTrafficScaleText() }}</div>
@@ -126,6 +152,32 @@
                   <text x="20" :y="traffic.height * 0.49" class="traffic-label">{{ getTrafficLabel('tx', 0.50) }}</text>
                   <line x1="0" :y1="traffic.height * 0.75" :x2="traffic.width" :y2="traffic.height * 0.75" style="stroke:black;stroke-width:0.1" />
                   <text x="20" :y="traffic.height * 0.74" class="traffic-label">{{ getTrafficLabel('tx', 0.25) }}</text>
+                  <line
+                    v-for="item in trafficMarkerEntriesTx"
+                    :key="'tx-marker-line-' + item.index"
+                    x1="0"
+                    :x2="traffic.width"
+                    :y1="getTrafficLatestY('tx', item.index)"
+                    :y2="getTrafficLatestY('tx', item.index)"
+                    :style="getTrafficMarkerLineStyle(item.index)"
+                  />
+                  <circle
+                    v-for="item in trafficMarkerEntriesTx"
+                    :key="'tx-marker-dot-' + item.index"
+                    :cx="getTrafficLatestX('tx', item.index)"
+                    :cy="getTrafficLatestY('tx', item.index)"
+                    r="2.2"
+                    :style="getTrafficMarkerDotStyle(item.index)"
+                  />
+                  <text
+                    v-for="item in trafficMarkerEntriesTx"
+                    :key="'tx-marker-text-' + item.index"
+                    :x="traffic.width - 6"
+                    :y="Math.max(10, getTrafficLatestY('tx', item.index) - 6)"
+                    text-anchor="end"
+                    class="traffic-marker-text"
+                    :style="{ fill: getTrafficColor(item.index) }"
+                  >{{ formatRateValue(getTrafficStat('tx', item.index, 'cur')) }} {{ formatRateUnit(getTrafficStat('tx', item.index, 'cur')) }}</text>
                 </svg>
               </div>
               <div class="traffic-scale">{{ getTrafficScaleText() }}</div>
@@ -142,13 +194,12 @@
             </div>
             <div class="traffic-legend-row">
               <div class="traffic-legend-cell">
-                <span class="traffic-legend-badge" :style="getTrafficBadgeStyle(-1)">总计</span>
+                <span class="traffic-legend-badge" :style="{ ...getTrafficBadgeStyle(-1), color: '#000' }">总计</span>
               </div>
               <div class="traffic-legend-cell">
                 <span class="traffic-rate">
                   <span class="traffic-rate-value">{{ formatRateValue(getTrafficTotal('rx', 'cur')) }}</span>
                   <span class="traffic-rate-unit">{{ formatRateUnit(getTrafficTotal('rx', 'cur')) }}</span>
-                  <!-- <span class="traffic-rate-pct">{{ formatPercent(getTrafficTotal('rx', 'cur'), getTrafficTotal('rx', 'cur')) }}</span> -->
                 </span>
               </div>
               <div class="traffic-legend-cell">
@@ -161,7 +212,6 @@
                 <span class="traffic-rate">
                   <span class="traffic-rate-value">{{ formatRateValue(getTrafficTotal('tx', 'cur')) }}</span>
                   <span class="traffic-rate-unit">{{ formatRateUnit(getTrafficTotal('tx', 'cur')) }}</span>
-                  <!-- <span class="traffic-rate-pct">{{ formatPercent(getTrafficTotal('tx', 'cur'), getTrafficTotal('tx', 'cur')) }}</span> -->
                 </span>
               </div>
               <div class="traffic-legend-cell">
@@ -173,7 +223,7 @@
             </div>
             <div class="traffic-legend-row" v-for="item in trafficEntries" :key="'legend-' + item.index">
               <div class="traffic-legend-cell">
-                <span class="traffic-legend-badge" :style="getTrafficBadgeStyle(item.index)">{{ item.wan.settings.alias || ('WAN' + (item.index + 1)) }}</span>
+                <span class="traffic-legend-badge" :style="{ ...getTrafficBadgeStyle(item.index), color: '#000' }">{{ item.wan.settings.alias || ('WAN' + (item.index + 1)) }}</span>
               </div>
               <div class="traffic-legend-cell">
                 <span class="traffic-rate">
@@ -270,8 +320,6 @@ import SimConfig from './sim.vue'
 import WanConfig from './wan.vue'
 import DhcpConfig from './dhcp.vue'
 import WirelessConfig from './wireless.vue'
-
-const trafficMockDefault = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.MODE === 'development'
 
 const createDefaultWanLink = (index) => {
 
@@ -444,8 +492,25 @@ export default {
         .map((wan, index) => ({ wan, index }))
         .filter(item => item.wan && item.wan.kind === 'wan')
     },
+    // 返回所有的可用链路
     trafficEntries() {
-      return this.simEntries
+      return (this.wanLinks || [])
+        .map((wan, index) => ({ wan, index }))
+        .filter(item => item.wan && (item.wan.kind === 'sim' || item.wan.kind === 'wan'))
+    },
+    trafficMarkerEntriesRx() {
+      return this.trafficEntries.filter((item) => {
+        if (!this.hasTrafficSeries('rx', item.index))
+          return false
+        return this.getTrafficStat('rx', item.index, 'cur') > 0
+      })
+    },
+    trafficMarkerEntriesTx() {
+      return this.trafficEntries.filter((item) => {
+        if (!this.hasTrafficSeries('tx', item.index))
+          return false
+        return this.getTrafficStat('tx', item.index, 'cur') > 0
+      })
     }
   },
   data() {
@@ -476,16 +541,13 @@ export default {
         },
         last: {}
       },
-      trafficEnabled: true,
-      trafficMock: trafficMockDefault,
-      trafficMockScenario: trafficMockDefault ? 'skewed' : 'balanced',
-      trafficMockTimer: null,
-      trafficMockPhase: 0
+      trafficEnabled: true
     }
   },
   watch: {
     currentView() {
       this.updatePolling()
+      this.updateWanPortStatePolling()
     },
     selectedWanIndex() {
       this.updatePolling()
@@ -503,7 +565,6 @@ export default {
     bootstrap() {
       return this.loadAvailWanLinks().then(() => {
         this.initTrafficSeries()
-        this.startTrafficMock()
         this.wanLinks.forEach((_, index) => this.getSimSettings(index))
 
         this.wanLinks.forEach((_, index) => {
@@ -616,7 +677,8 @@ export default {
         return
 
       const links = Array.isArray(this.wanLinks) ? this.wanLinks : []
-      for (const wan of links) {
+      for (let index = 0; index < links.length; index += 1) {
+        const wan = links[index]
         if (!wan || wan.kind !== 'wan')
           continue
         const section = wan.uci && wan.uci.name ? String(wan.uci.name) : ''
@@ -637,8 +699,16 @@ export default {
             return
           if (!wan.status || !wan.status.interface)
             return
-          if (typeof data.status === 'string')
-            wan.status.interface.status = data.status
+          const inter = wan.status.interface
+          if (typeof data.status === 'string') inter.status = data.status
+          if (typeof data.ip === 'string') inter.ip = data.ip
+          if (typeof data.mask === 'string') inter.mask = data.mask
+          if (typeof data.gateway === 'string') inter.gateway = data.gateway
+          if (typeof data.mac === 'string') inter.mac = data.mac
+          if (data.rxBytes !== undefined && data.rxBytes !== null) inter.rxBytes = data.rxBytes
+          if (data.txBytes !== undefined && data.txBytes !== null) inter.txBytes = data.txBytes
+          if (this.trafficEnabled)
+            this.recordTrafficSample(index, data.rxBytes, data.txBytes)
         }).catch(() => {})
       }
     },
@@ -647,7 +717,7 @@ export default {
       this.fetchWanPortStatesOnce()
       this.wanPortStateTimerId = setInterval(() => {
         this.fetchWanPortStatesOnce()
-      }, 3000)
+      }, this.traffic.intervalSec * 1000)
     },
     stopWanPortStatePolling() {
       if (this.wanPortStateTimerId) {
@@ -661,60 +731,22 @@ export default {
 
       this.resetTrafficSeries()
 
-      if (this.trafficMock) {
-        this.pushTrafficMockSample()
-        this.startTrafficMock()
-        return
-      }
-
       this.wanLinks.forEach((_, index) => this.getInterfaceStatus(index))
+      this.fetchWanPortStatesOnce()
       setTimeout(() => {
         if (this.currentView !== 'main' || !this.trafficEnabled)
           return
         this.wanLinks.forEach((_, index) => this.getInterfaceStatus(index))
+        this.fetchWanPortStatesOnce()
       }, this.traffic.intervalSec * 1000)
     },
     resetTrafficSeries() {
-      this.stopTrafficMock()
       const wanted = this.traffic.dataWanted
       this.wanLinks.forEach((_, index) => {
         this.traffic.series.rx[index] = Array.from({ length: wanted }, () => 0)
         this.traffic.series.tx[index] = Array.from({ length: wanted }, () => 0)
       })
       this.traffic.last = {}
-      this.trafficMockPhase = 0
-    },
-    pushTrafficMockSample() {
-      this.trafficMockPhase += 1
-      const t = this.trafficMockPhase
-      const wanted = this.traffic.dataWanted
-      for (let index = 0; index < this.wanLinks.length; index += 1) {
-        let rx
-        let tx
-        if (this.trafficMockScenario === 'skewed') {
-          const rxMbitTargets = [1, 100, 20]
-          const txMbitTargets = [0.5, 10, 3]
-          const rxMbit = rxMbitTargets[index] || (5 + index * 2)
-          const txMbit = txMbitTargets[index] || (2 + index)
-          const rxBase = (rxMbit * 1024 * 1024) / 8
-          const txBase = (txMbit * 1024 * 1024) / 8
-          const rxWave = 0.9 + 0.1 * Math.sin((t / 8) + index)
-          const txWave = 0.9 + 0.1 * Math.cos((t / 9) + index)
-          rx = Math.max(0, rxBase * rxWave * (0.95 + Math.random() * 0.10))
-          tx = Math.max(0, txBase * txWave * (0.95 + Math.random() * 0.10))
-        } else {
-          const rxMax = 6 * 1024 * 1024
-          const txMax = 2 * 1024 * 1024
-          const rxBase = (Math.sin((t / 10) + index) * 0.5 + 0.5) * rxMax
-          const txBase = (Math.cos((t / 12) + index) * 0.5 + 0.5) * txMax
-          rx = Math.max(0, rxBase * (0.6 + Math.random() * 0.4))
-          tx = Math.max(0, txBase * (0.6 + Math.random() * 0.4))
-        }
-        this.traffic.series.rx[index].push(rx)
-        this.traffic.series.tx[index].push(tx)
-        if (this.traffic.series.rx[index].length > wanted) this.traffic.series.rx[index].shift()
-        if (this.traffic.series.tx[index].length > wanted) this.traffic.series.tx[index].shift()
-      }
     },
     updatePolling() {
       this._pollingToken = (this._pollingToken || 0) + 1
@@ -1045,52 +1077,6 @@ export default {
         if (!this.traffic.series.tx[index]) this.traffic.series.tx[index] = Array.from({ length: wanted }, () => 0)
       })
     },
-    startTrafficMock() {
-      if (!this.trafficMock || !this.trafficEnabled)
-        return
-      this.stopTrafficMock()
-      this.initTrafficSeries()
-      this.trafficMockTimer = setInterval(() => {
-        if (!this.trafficEnabled || this.currentView !== 'main')
-          return
-        this.trafficMockPhase += 1
-        const t = this.trafficMockPhase
-        const wanted = this.traffic.dataWanted
-        for (let index = 0; index < this.wanLinks.length; index += 1) {
-          let rx
-          let tx
-          if (this.trafficMockScenario === 'skewed') {
-            const rxMbitTargets = [1, 100, 20]
-            const txMbitTargets = [0.5, 10, 3]
-            const rxMbit = rxMbitTargets[index] || (5 + index * 2)
-            const txMbit = txMbitTargets[index] || (2 + index)
-            const rxBase = (rxMbit * 1024 * 1024) / 8
-            const txBase = (txMbit * 1024 * 1024) / 8
-            const rxWave = 0.9 + 0.1 * Math.sin((t / 8) + index)
-            const txWave = 0.9 + 0.1 * Math.cos((t / 9) + index)
-            rx = Math.max(0, rxBase * rxWave * (0.95 + Math.random() * 0.10))
-            tx = Math.max(0, txBase * txWave * (0.95 + Math.random() * 0.10))
-          } else {
-            const rxMax = 6 * 1024 * 1024
-            const txMax = 2 * 1024 * 1024
-            const rxBase = (Math.sin((t / 10) + index) * 0.5 + 0.5) * rxMax
-            const txBase = (Math.cos((t / 12) + index) * 0.5 + 0.5) * txMax
-            rx = Math.max(0, rxBase * (0.6 + Math.random() * 0.4))
-            tx = Math.max(0, txBase * (0.6 + Math.random() * 0.4))
-          }
-          this.traffic.series.rx[index].push(rx)
-          this.traffic.series.tx[index].push(tx)
-          if (this.traffic.series.rx[index].length > wanted) this.traffic.series.rx[index].shift()
-          if (this.traffic.series.tx[index].length > wanted) this.traffic.series.tx[index].shift()
-        }
-      }, this.traffic.intervalSec * 1000)
-    },
-    stopTrafficMock() {
-      if (this.trafficMockTimer) {
-        clearInterval(this.trafficMockTimer)
-        this.trafficMockTimer = null
-      }
-    },
     normalizeBytes(value) {
       if (value === null || value === undefined)
         return null
@@ -1105,8 +1091,6 @@ export default {
       const tx = this.normalizeBytes(txBytes)
       if (rx === null || tx === null)
         return
-      if (this.trafficMockTimer)
-        this.stopTrafficMock()
       const last = this.traffic.last[index]
       this.traffic.last[index] = { rxBytes: rx, txBytes: tx, ts: now }
       if (!last || !last.ts)
@@ -1125,13 +1109,44 @@ export default {
       if (this.traffic.series.rx[index].length > this.traffic.dataWanted) this.traffic.series.rx[index].shift()
       if (this.traffic.series.tx[index].length > this.traffic.dataWanted) this.traffic.series.tx[index].shift()
     },
+    // 每个链路用不同的颜色标识
     getTrafficColor(index) {
-      const colors = ['#e41a1c', '#377eb8', '#4daf4a', '#ff7f00', '#984ea3', '#f781bf', '#a65628']
+      const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ec4899', '#f59e0b', '#14b8a6', '#06b6d4', '#84cc16']
       return colors[index % colors.length]
     },
     getTrafficLineStyle(index) {
       const color = this.getTrafficColor(index)
       return `fill:${color};fill-opacity:${this.traffic.fillOpacity};stroke:black;stroke-width:0.15;stroke-linejoin:round;stroke-linecap:round`
+    },
+    hasTrafficSeries(direction, index) {
+      const series = this.traffic.series && this.traffic.series[direction] && this.traffic.series[direction][index]
+      return Array.isArray(series) && series.length > 0
+    },
+    getTrafficLatestX(direction, index) {
+      const series = this.traffic.series && this.traffic.series[direction] && this.traffic.series[direction][index]
+      if (!Array.isArray(series) || !series.length)
+        return 0
+      return (series.length - 1) * this.traffic.step
+    },
+    getTrafficLatestY(direction, index) {
+      const series = this.traffic.series && this.traffic.series[direction] && this.traffic.series[direction][index]
+      const h = this.traffic.height
+      if (!Array.isArray(series) || !series.length)
+        return h
+      const max = this.getTrafficMax(direction) || 1
+      const v = series[series.length - 1] || 0
+      const y = h - (v / max) * h
+      if (!Number.isFinite(y))
+        return h
+      return Math.min(h, Math.max(0, y))
+    },
+    getTrafficMarkerLineStyle(index) {
+      const color = this.getTrafficColor(index)
+      return `stroke:${color};stroke-width:0.25;opacity:0.85`
+    },
+    getTrafficMarkerDotStyle(index) {
+      const color = this.getTrafficColor(index)
+      return `fill:${color};stroke:#000;stroke-width:0.35`
     },
     hexToRgba(hex, alpha) {
       const raw = String(hex || '').replace('#', '')
@@ -1172,7 +1187,40 @@ export default {
           if (v > max) max = v
         }
       })
-      return max > 1 ? max : 1
+
+      if (!(max > 1))
+        return 1
+
+      const bits = max * 8
+      const kbit = bits / 1024
+      const mbit = kbit / 1024
+      const gbit = mbit / 1024
+
+      const roundNice = (x) => {
+        const v = Number(x)
+        if (!(Number.isFinite(v) && v > 0))
+          return 1
+        const exp = Math.floor(Math.log10(v))
+        const base = 10 ** exp
+        const m = v / base
+        const steps = [1, 2, 3, 4, 5, 6, 8, 10]
+        for (let i = 0; i < steps.length; i += 1) {
+          if (m <= steps[i])
+            return steps[i] * base
+        }
+        return 10 * base
+      }
+
+      if (gbit >= 1) {
+        const nice = roundNice(gbit)
+        return (nice * 1024 * 1024 * 1024) / 8
+      }
+      if (mbit >= 1) {
+        const nice = roundNice(mbit)
+        return (nice * 1024 * 1024) / 8
+      }
+      const nice = roundNice(kbit)
+      return (nice * 1024) / 8
     },
     getTrafficLabel(direction, ratio) {
       const max = this.getTrafficMax(direction)
@@ -1243,20 +1291,53 @@ export default {
     },
     formatTraffic(bytesPerSec) {
       const bytes = Math.max(0, Number(bytesPerSec) || 0)
+      const bits = bytes * 8
+      const kbit = bits / 1024
+      const mbit = kbit / 1024
+      const gbit = mbit / 1024
       const kby = bytes / 1024
-      const kbi = (bytes * 8) / 1024
-      const byUnit = kby >= 1024 ? 'MB/s' : 'KB/s'
-      const biUnit = kbi >= 1024 ? 'Mbit/s' : 'Kbit/s'
-      const byValue = kby >= 1024 ? (kby / 1024) : kby
-      const biValue = kbi >= 1024 ? (kbi / 1024) : kbi
+      const mby = kby / 1024
+      const gby = mby / 1024
+
+      let biValue
+      let biUnit
+      if (gbit >= 1) {
+        biValue = gbit
+        biUnit = 'Gbit/s'
+      } else if (mbit >= 1) {
+        biValue = mbit
+        biUnit = 'Mbit/s'
+      } else {
+        biValue = kbit
+        biUnit = 'Kbit/s'
+      }
+
+      let byValue
+      let byUnit
+      if (gby >= 1) {
+        byValue = gby
+        byUnit = 'GB/s'
+      } else if (mby >= 1) {
+        byValue = mby
+        byUnit = 'MB/s'
+      } else {
+        byValue = kby
+        byUnit = 'KB/s'
+      }
+
       return `${biValue.toFixed(2)} ${biUnit} (${byValue.toFixed(2)} ${byUnit})`
     },
     calcRate(bytesPerSec) {
       const bytes = Math.max(0, Number(bytesPerSec) || 0)
-      const kbi = (bytes * 8) / 1024
-      if (kbi >= 1024)
-        return { value: (kbi / 1024), unit: 'Mbit/s' }
-      return { value: kbi, unit: 'Kbit/s' }
+      const bits = bytes * 8
+      const kbit = bits / 1024
+      const mbit = kbit / 1024
+      const gbit = mbit / 1024
+      if (gbit >= 1)
+        return { value: gbit, unit: 'Gbit/s' }
+      if (mbit >= 1)
+        return { value: mbit, unit: 'Mbit/s' }
+      return { value: kbit, unit: 'Kbit/s' }
     },
     formatRateValue(bytesPerSec) {
       return this.calcRate(bytesPerSec).value.toFixed(2)
@@ -1467,7 +1548,6 @@ export default {
   },
   beforeUnmount() {
     this.stopWanPortStatePolling()
-    this.stopTrafficMock()
   }
 }
 </script>
@@ -1636,6 +1716,15 @@ export default {
   font-family: sans-serif;
 }
 
+.traffic-marker-text {
+  font-size: 10px;
+  font-family: sans-serif;
+  stroke: #fff;
+  stroke-width: 3px;
+  paint-order: stroke;
+  dominant-baseline: central;
+}
+
 .traffic-scale {
   text-align: right;
   font-size: 12px;
@@ -1659,7 +1748,7 @@ export default {
 
 .traffic-legend-header {
   font-weight: 600;
-  color: var(--el-text-color-secondary);
+  color: #000;
 }
 
 .traffic-legend-cell {

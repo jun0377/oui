@@ -333,7 +333,8 @@ export default {
         this.conntrackUpdatedAt = Date.now()
 
         console.log('连接数统计:', `total=${this.conntrackTotal}`, Object.entries(this.conntrackByChannel).map(([name, cnt]) => `${name}=${cnt}`).join(', '))
-      } catch (_) {
+      } catch (err) {
+        console.warn('连接数统计获取失败:', err)
       }
     },
     // 获取所有可用链路
