@@ -159,10 +159,10 @@ const DEFAULT_WORK_MODE_META = {
 
 // 卡片显示顺序与在此数据中的顺序相同
 const SERVICE_CARD_META = [
-  { key: 'admin-backend', title: '管理平台' },
-  { key: 'network-status', title: '组网状态' },
-  { key: 'dhcp-status', title: 'DHCP服务器' },
-  { key: 'dns-status', title: 'DNS服务' }
+  { key: 'admin-backend', title: '管理平台', accentClass: 'is-accent-purple' },
+  { key: 'network-status', title: '组网状态', accentClass: 'is-accent-cyan' },
+  { key: 'dhcp-status', title: 'DHCP服务器', accentClass: 'is-accent-green' },
+  { key: 'dns-status', title: 'DNS服务', accentClass: 'is-accent-blue' }
 ]
 
 const INTERFACE_FIELD_META = [
@@ -206,6 +206,9 @@ export default {
       cpuTemperature: null,
       currentTimeText: '',
       clockTimer: null,
+      stopped: false,
+      serverIp: '',
+      serverPort: null,
       rpcTestLoading: false,
       rpcTestResult: null
     }
@@ -373,15 +376,28 @@ export default {
         type: this.dhcpStatus.type
       }
     },
+    // 管理平台状态: 聚合服务器 和 控制后台 是同一个
+    serverStatus() {
+      // 管理平台地址
+      const addr = this.serverIp && this.serverPort ? `${this.serverIp}:${this.serverPort}` : (this.serverIp || '-')
+      // 管理平台连通性
+      
+      return {
+        value: '管理平台',
+        subtitle: '地址:' + addr,
+        tag: addr,
+        type: this.dhcpStatus.type
+      }
+    },
     serviceCards() {
       const statusMap = {
         'network-status': this.networkingStatus,
-        'admin-backend': this.sharedServiceStatus,
+        'admin-backend': this.serverStatus,
         'dhcp-status': this.sharedServiceStatus,
         'dns-status': this.sharedServiceStatus
       }
 
-      return SERVICE_CARD_META.map(({ key, title }) => this.createStatusCard(key, title, statusMap[key]))
+      return SERVICE_CARD_META.map(({ key, title, accentClass }) => this.createStatusCard(key, title, statusMap[key], accentClass))
     },
     primaryStatusCards() {
       return this.serviceCards
@@ -410,7 +426,7 @@ export default {
         return 'is-accent-red'
       return 'is-accent-amber'
     },
-    createStatusCard(key, title, status) {
+    createStatusCard(key, title, status, accentClass) {
       return {
         key,
         title,
@@ -419,7 +435,7 @@ export default {
         tag: status.tag || '状态',
         type: status.type || 'info',
         percentage: null,
-        accentClass: this.getAccentClassByType(status.type)
+        accentClass: accentClass || this.getAccentClassByType(status.type)
       }
     },
     parseRpcResult(result) {
@@ -710,6 +726,22 @@ export default {
       const now = new Date()
       const pad = value => String(value).padStart(2, '0')
       this.currentTimeText = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+    },
+    fetchServerIP() {
+      this.$oui.call('serverManager', 'getServerIP').then(ip => {
+        if (this.stopped)
+          return
+        if (ip)
+          this.serverIp = ip
+      }).catch(() => {})
+    },
+    fetchServerPort() {
+      this.$oui.call('serverManager', 'getServerPort').then(port => {
+        if (this.stopped)
+          return
+        if (port)
+          this.serverPort = parseInt(port, 10)
+      }).catch(() => {})
     }
   },
   created() {
@@ -721,6 +753,8 @@ export default {
     this.$timer.create('homeGetDhcpSettings', this.fetchDHCPSettings, { repeat: true, immediate: true, time: 5000 })
     this.$timer.create('homeGetDhcpLeases', this.fetchDhcpLeases, { repeat: true, immediate: true, time: 5000 })
     this.$timer.create('homeGetCpuTemperature', this.fetchCpuTemperature, { repeat: true, immediate: true, time: 5000 })
+    this.$timer.create('homeGetServerIP', this.fetchServerIP, { repeat: true, immediate: true, time: 5000 })
+    this.$timer.create('homeGetServerPort', this.fetchServerPort, { repeat: true, immediate: true, time: 5000 })
 
     this.updateCurrentTime()
     this.clockTimer = setInterval(this.updateCurrentTime, 1000)
@@ -768,6 +802,7 @@ export default {
     })
   },
   beforeUnmount() {
+    this.stopped = true
     if (this.clockTimer) {
       clearInterval(this.clockTimer)
       this.clockTimer = null

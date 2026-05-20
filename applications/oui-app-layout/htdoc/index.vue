@@ -38,31 +38,14 @@
     </el-aside>
     <el-container>
       <el-header>
-        <el-icon @click="isCollapse = !isCollapse" class="collapse-icon" :size="25">
-          <component :is="isCollapse ? 'Expand' : 'Fold'"/>
-        </el-icon>
-        <el-space size="large">
-          <el-icon color="#ffd93b" size="24" style="cursor: pointer;" @click="$oui.state.isDark = !$oui.state.isDark">
-            <component :is="$oui.state.isDark ? MoonIcon : SunnySharpIcon"/>
-          </el-icon>
-          <!-- <el-dropdown @command="lang => $oui.setLocale(lang)">
-            <span class="el-dropdown-link"><el-icon><TranslateIcon/></el-icon></span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item v-for="i in localeOptions" :key="i.key" :command="i.key" :class="{selected: i.key === $oui.state.locale}">{{ i.label }}</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown> -->
-          <!-- <el-dropdown @command="handleUserAction">
-            <span class="el-dropdown-link"><el-icon><Avatar/></el-icon></span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="logout" :icon="LogoutIcon">{{ $t('Logout') }}</el-dropdown-item>
-                <el-dropdown-item command="reboot" icon="SwitchButton">{{ $t('Reboot') }}</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown> -->
-        </el-space>
+        <div class="layout-header-title">
+          <div class="layout-header-marquee">
+            <div class="layout-header-marquee-inner">
+              <div class="layout-header-marquee-item">服务器公告: 无</div>
+              <div class="layout-header-marquee-item">服务器公告: 无</div>
+            </div>
+          </div>
+        </div>
       </el-header>
       <el-main>
         <el-scrollbar>
@@ -343,6 +326,48 @@ export default {
 .el-header {
   display: flex;
   justify-content: space-between;
+}
+
+.layout-header-title {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  min-width: 0;
+  flex: 1;
+}
+
+.layout-header-marquee {
+  height: 35px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.layout-header-marquee-inner {
+  display: flex;
+  flex-direction: column;
+  animation: layoutHeaderMarquee 4s ease-in-out infinite;
+}
+
+.layout-header-marquee-item {
+  height: 35px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+@keyframes layoutHeaderMarquee {
+  0% { transform: translateY(0); }
+  60% { transform: translateY(0); }
+  75% { transform: translateY(-35px); }
+  100% { transform: translateY(-35px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layout-header-marquee-inner {
+    animation: none;
+  }
 }
 
 .collapse-icon {

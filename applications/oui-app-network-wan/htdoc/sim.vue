@@ -519,8 +519,6 @@
               <div class="table-cell">{{ cell.rsrq }}</div>
               <div class="table-cell">{{ cell.sinr }}</div>
             </div>
- 
-
             <div class="table-title" v-if="monnc.lte.length">LTE相邻小区</div>
             <div class="table-row header-row" v-if="monnc.lte.length">
               <div class="table-cell">ARFCN</div>
