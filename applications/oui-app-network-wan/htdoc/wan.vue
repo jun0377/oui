@@ -2,7 +2,7 @@
   <div class="wan-page">
     <el-card class="wan-panel">
       <div class="wan-panel-body">
-        <div class="wan-layout wired-config-section" :class="{ 'is-equal-height': settings.proto === 'DHCP' }">
+        <div class="wan-layout wired-config-section is-equal-height">
           <div class="wan-hero">
             <div class="wan-metric-head">
               <div class="wan-metric-main">
@@ -16,7 +16,7 @@
           <template #header>
             <div class="card-header">
               <span class="wan-card-title">{{ $t('Basic Settings') }}</span>
-              <el-tag type="info">{{ $t('配置') }}</el-tag>
+              <!-- <el-tag type="info">{{ $t('配置') }}</el-tag> -->
             </div>
           </template>
           <el-form :model="settings" label-width="120px" class="config-form" label-align="left" label-position="left">
@@ -67,8 +67,8 @@
         <el-card class="config-card compact-card wan-accent-blue">
           <template #header>
             <div class="card-header">
-              <span class="wan-card-title">接口状态</span>
-              <el-tag type="info">{{ $t('实时') }}</el-tag>
+              <span class="wan-card-title">实时状态</span>
+              <!-- <el-tag type="info">{{ $t('实时') }}</el-tag> -->
             </div>
           </template>
           <div class="status-info">
