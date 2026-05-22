@@ -285,6 +285,30 @@ export default {
   box-shadow: 0 10px 22px rgba(99, 102, 241, 0.24);
 }
 
+:deep(.aside-menu .el-sub-menu.is-active > .el-sub-menu__title) {
+  background: linear-gradient(90deg, #7c6cf4 0%, #6366f1 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(99, 102, 241, 0.24);
+}
+
+:deep(.aside-menu .el-sub-menu.is-active > .el-sub-menu__title .el-icon),
+:deep(.aside-menu .el-sub-menu.is-active > .el-sub-menu__title svg) {
+  color: #ffffff;
+  fill: currentColor;
+}
+
+:deep(.aside-menu .el-sub-menu.is-active .el-menu-item.is-active) {
+  background: rgba(99, 102, 241, 0.16);
+  color: #4f46e5;
+  box-shadow: none;
+}
+
+:deep(.aside-menu .el-sub-menu.is-active .el-menu-item.is-active .el-icon),
+:deep(.aside-menu .el-sub-menu.is-active .el-menu-item.is-active svg) {
+  color: #4f46e5;
+  fill: currentColor;
+}
+
 :deep(.aside-menu .el-menu-item.is-active .el-icon),
 :deep(.aside-menu .el-menu-item.is-active svg) {
   color: #ffffff;
@@ -298,6 +322,18 @@ export default {
 :deep(.aside-menu .el-sub-menu.is-opened > .el-sub-menu__title) {
   color: #4f46e5;
   background: rgba(99, 102, 241, 0.08);
+}
+
+:deep(.aside-menu .el-sub-menu.is-opened.is-active > .el-sub-menu__title) {
+  background: linear-gradient(90deg, #7c6cf4 0%, #6366f1 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(99, 102, 241, 0.24);
+}
+
+:deep(.aside-menu .el-sub-menu.is-opened.is-active > .el-sub-menu__title .el-icon),
+:deep(.aside-menu .el-sub-menu.is-opened.is-active > .el-sub-menu__title svg) {
+  color: #ffffff;
+  fill: currentColor;
 }
 
 :deep(.aside-menu .el-icon),
