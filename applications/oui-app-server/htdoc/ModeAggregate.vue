@@ -14,7 +14,7 @@
           <div class="server-settings-card">
             <el-form :model="ServerConfig" :rules="rules" ref="serverForm" label-width="120px" label-position="left" class="config-form">
               <el-form-item :label="$t('服务器IP')" prop="ip">
-                <el-input v-model="ServerConfig.ip" class="server-ip-input" :placeholder="$t('Enter Server IP')" @focus="isEditing = true" @blur="isEditing = false" @input="markUnsavedChanges"/>
+                <el-input v-model="ServerConfig.ip" class="server-ip-input" :placeholder="$t('Enter Server IP')" @focus="isEditing = true" @blur="isEditing = false" @input="handleServerIpInput"/>
               </el-form-item>
               <el-form-item :label="$t('服务器端口')" prop="port">
                 <el-input-number v-model="ServerConfig.port" :min="0" :max="65535" :controls="false" @focus="isEditing = true" @blur="isEditing = false" @input="markUnsavedChanges"/>
@@ -32,12 +32,12 @@
               <el-descriptions :column="1" border>
                 <el-descriptions-item :label="$t('连接状态')">
                   <el-tag :class="{'blink-bg': true}" :type="getStatusTagType()">
-                    {{ serverStatus.connected ? $t('Connected') : $t('Disconnected') }}
+                    {{ getConnectionStatusText() }}
                   </el-tag>
                 </el-descriptions-item>
                 <el-descriptions-item :label="$t('RTT')">
                   <el-tag :type="getRttTagType(serverStatus.rtt)">
-                    {{ serverStatus.rtt }} ms
+                    {{ getRttText() }}
                   </el-tag>
                 </el-descriptions-item>
                 <el-descriptions-item :label="$t('服务器节点')">
@@ -64,19 +64,27 @@
 <script>
 export default {
   name: 'ModeAggregate',
+  emits: ['update:server-ip'],
   props: {
     pageActive: {
       type: Boolean,
       default: false
+    },
+    serverIp: {
+      type: String,
+      default: ''
     }
   },
   data() {
     return {
+      // 服务器地址
       ServerConfig: {
         ip: '',
         port: 0
       },
+      // 服务器状态
       serverStatus: {
+        checked: false,
         connected: false,
         rtt: 0,
         load: 0,
@@ -108,6 +116,13 @@ export default {
         this.startAll()
       else
         this.stopAll()
+    },
+    serverIp(value) {
+      const normalized = this.normalizeServerIp(value)
+      if (this.isEditing || this.hasUnsavedChanges)
+        return
+      if (normalized !== this.ServerConfig.ip)
+        this.ServerConfig.ip = normalized
     }
   },
   mounted() {
@@ -118,6 +133,11 @@ export default {
     this.stopAll()
   },
   methods: {
+    normalizeServerIp(value) {
+      if (Array.isArray(value))
+        return String(value[0] || '').trim()
+      return String(value || '').trim()
+    },
     runAfterFirstFrame(fn) {
       if (typeof requestAnimationFrame === 'function') {
         requestAnimationFrame(() => requestAnimationFrame(() => fn()))
@@ -216,6 +236,7 @@ export default {
     // 设置服务器IP
     setServerIP() {
       const params = { ip: this.ServerConfig.ip }
+      this.serverStatus.checked = false
       this.serverStatus.connected = false
       this.serverStatus.rtt = 0
       this.$oui.call('serverManager', 'setServerIP', params)
@@ -224,6 +245,7 @@ export default {
     // 设置服务器端口
     setServerPort() {
       const params = { port: this.ServerConfig.port }
+      this.serverStatus.checked = false
       this.serverStatus.connected = false
       this.serverStatus.rtt = 0
       this.$oui.call('serverManager', 'setServerPort', params)
@@ -264,9 +286,9 @@ export default {
       this.$oui.call('serverManager', 'getServerIP').then(ip => {
         if (this.stopped)
           return
-        if (ip) {
-          this.ServerConfig.ip = ip
-        }
+        const normalized = this.normalizeServerIp(ip)
+        this.ServerConfig.ip = normalized
+        this.$emit('update:server-ip', normalized)
       })
     },
     // 获取服务器端口
@@ -316,6 +338,7 @@ export default {
         if (this.stopped)
           return
         console.log('host rtt:', state)
+        this.serverStatus.checked = true
         if (!state.reachable) {
           this.serverStatus.connected = false
           this.serverStatus.rtt = 0
@@ -325,6 +348,7 @@ export default {
       }).catch(() => {
         if (this.stopped)
           return
+        this.serverStatus.checked = false
         this.serverStatus.rtt = 0
       })
     },
@@ -333,6 +357,7 @@ export default {
         if (this.stopped)
           return
         console.log('vpn rtt:', state)
+        this.serverStatus.checked = true
         if (!state.reachable) {
           this.serverStatus.connected = false
           return this.fetchServerRTT()
@@ -343,6 +368,7 @@ export default {
       }).catch(() => {
         if (this.stopped)
           return
+        this.serverStatus.checked = false
         this.serverStatus.connected = false
         this.serverStatus.rtt = 0
       })
@@ -361,7 +387,19 @@ export default {
         this.statusInFlight = false
       }
     },
+    getConnectionStatusText() {
+      if (!this.serverStatus.checked)
+        return '检测中'
+      return this.serverStatus.connected ? this.$t('Connected') : this.$t('Disconnected')
+    },
+    getRttText() {
+      if (!this.serverStatus.checked)
+        return '检测中'
+      return `${this.serverStatus.rtt} ms`
+    },
     getRttTagType(rtt) {
+      if (!this.serverStatus.checked)
+        return 'warning'
       if (rtt < 50) {
         return 'success'
       } else if (rtt < 100) {
@@ -373,7 +411,14 @@ export default {
       }
     },
     getStatusTagType() {
+      if (!this.serverStatus.checked)
+        return 'warning'
       return this.serverStatus.connected ? 'success' : 'danger'
+    },
+    handleServerIpInput(value) {
+      this.ServerConfig.ip = this.normalizeServerIp(value)
+      this.markUnsavedChanges()
+      this.$emit('update:server-ip', this.ServerConfig.ip)
     },
     markUnsavedChanges() {
       this.hasUnsavedChanges = true

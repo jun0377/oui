@@ -136,7 +136,7 @@
 const WORK_MODE_META = {
   single: {
     label: '单卡模式',
-    description: '除组网的流量外(经过服务器), 其它流量固定走单条链路(不经过服务器)',
+    description: '组网的流量经过服务器中转, 其它流量固定走单条链路(不经过服务器)',
     themeClass: 'is-mode-single'
   },
   aggregate: {
@@ -146,7 +146,7 @@ const WORK_MODE_META = {
   },
   balance: {
     label: '负载均衡',
-    description: '多链路按权重分流',
+    description: '并发的连接按链路按权重分流',
     themeClass: 'is-mode-balance'
   }
 }
@@ -192,28 +192,39 @@ export default {
       cpuTimes: [],
       sysinfo: null,
       boardinfo: null,
-      wanLinks: [],
       interfaceStates: [],
       interfaceSnapshots: {},
       serial: null,
       version: null,
-      lanIp: null,
-      lanMask: null,
       workMode: '',
+      // 工作模式设置
       workModeSettings: null,
+      // DHCP地址池设置
       dhcpSettings: null,
+      // DHCP租约状态
       dhcpLeases: [],
+      // dns解析状态
+      dnsStatusData: null,
+      // openvpn组网状态
+      openvpnStatus: null,
+      // cpu温度
       cpuTemperature: null,
+      // 当前时间
       currentTimeText: '',
+      // 定时器
       clockTimer: null,
+      // 是否定制刷新
       stopped: false,
+      // 管理平台IP
       serverIp: '',
+      // 管理平台端口
       serverPort: null,
-      rpcTestLoading: false,
-      rpcTestResult: null
+      // 管理平台连接状态
+      serverTrackerStatus: null
     }
   },
   computed: {
+    // CPU使用率
     cpuUsage() {
       if (this.cpuTimes.length < 2)
         return { cpu: 0 }
@@ -224,26 +235,26 @@ export default {
       })
       return values
     },
+    // 内存使用率
     memUsage() {
       if (!this.sysinfo)
         return 0
       const memory = this.sysinfo.memory
       return parseFloat(((memory.total - memory.free) * 100 / memory.total).toFixed(2))
     },
-    lanAddr() {
-      if (this.lanIp && this.lanMask)
-        return `${this.lanIp} / ${this.lanMask}`
-      return this.lanIp || '-'
-    },
+    // 工作模式
     workModeMeta() {
       return WORK_MODE_META[this.workMode] || DEFAULT_WORK_MODE_META
     },
+    // 工作模式
     workModeThemeClass() {
       return this.workModeMeta.themeClass
     },
+    // DHCP租约状态
     dhcpLeaseCount() {
       return Array.isArray(this.dhcpLeases) ? this.dhcpLeases.length : 0
     },
+    // DHCP范围
     dhcpRangeText() {
       if (!this.dhcpSettings)
         return '未获取地址池'
@@ -253,6 +264,7 @@ export default {
         return '未配置地址池'
       return `${start} - ${end}`
     },
+    // DHCP状态
     dhcpStatus() {
       if (!this.dhcpSettings)
         return {
@@ -266,6 +278,7 @@ export default {
         type: 'success'
       }
     },
+    // 网络接口状态
     interfaceCards() {
       if (this.interfaceStates.length) {
         return this.interfaceStates.map(card => ({
@@ -276,31 +289,49 @@ export default {
 
       return []
     },
+    // 组网状态
     networkingStatus() {
-      const onlineCount = this.interfaceCards.filter(card => card.online).length
-      if (onlineCount >= 2) {
+      const status = this.openvpnStatus
+      if (!status) {
         return {
-          label: '聚合组网',
-          subtitle: `已检测到 ${onlineCount} 条上行链路在线`,
+          label: '待检测',
+          subtitle: '正在获取 OpenVPN 组网状态',
+          tag: '检测中',
+          type: 'warning'
+        }
+      }
+
+      const rx_bytes = Number.isFinite(Number(status.rx_bytes)) ? Number(status.rx_bytes) : 0
+      const tx_bytes = Number.isFinite(Number(status.tx_bytes)) ? Number(status.tx_bytes) : 0
+      const totalBytes = rx_bytes + tx_bytes
+      const updated = status.updated ? `更新时间 ${status.updated}` : '未获取到更新时间'
+
+      if (status.connected) {
+        return {
+          label: '组网已连接',
+          subtitle: `上行: ${this.formatBytes(tx_bytes)} | 下行: ${this.formatBytes(rx_bytes)} | 总计: ${this.formatBytes(totalBytes)}`,
           tag: '正常',
           type: 'success'
         }
       }
-      if (onlineCount === 1) {
+      // 运行中, 但是未连接成功
+      if (status.running) {
         return {
-          label: '单链路在线',
-          subtitle: '仅检测到 1 条可用上行链路',
+          label: '运行中,未连接',
+          subtitle: `组网进程运行中, 但是尚未建立连接`,
           tag: '注意',
           type: 'warning'
         }
       }
+
       return {
-        label: '组网未就绪',
-        subtitle: '当前未检测到可用上行链路',
+        label: '组网未启动',
+        subtitle: status.updated ? `${status.msg || '组网进程未运行'} / ${updated}` : (status.msg || '组网进程未运行'),
         tag: '离线',
         type: 'danger'
       }
     },
+    // CPU温度
     cpuTemperatureText() {
       return this.cpuTemperature === null ? '-' : `${this.cpuTemperature}°C`
     },
@@ -309,6 +340,7 @@ export default {
         return 0
       return Math.max(0, Math.min(100, this.cpuTemperature))
     },
+    // 系统资源状态
     resourceUsageItems() {
       return [
         {
@@ -328,6 +360,7 @@ export default {
         }
       ]
     },
+    // 系统信息
     resourceInfoItems() {
       return [
         {
@@ -362,7 +395,7 @@ export default {
         title: '工作模式',
         value: this.workModeMeta.label,
         subtitle: this.workModeMeta.description,
-        detail: this.workModeSettings?.detail || this.workModeSettings?.detail || '等待工作模式配置',
+        detail: this.workModeSettings?.detail || '等待工作模式配置',
         tag: '策略',
         type: 'info',
         accentClass: 'is-accent-amber'
@@ -376,16 +409,75 @@ export default {
         type: this.dhcpStatus.type
       }
     },
+    // DNS 服务器状态
+    dnsServiceStatus() {
+      const status = this.dnsStatusData
+      // 获取DNS状态失败
+      if (!status) {
+        return {
+          value: '检测中',
+          subtitle: '正在获取 DNS 解析状态',
+          tag: '检测中',
+          type: 'warning'
+        }
+      }
+      // 进程未启动, 服务未运行
+      if (!status.running) {
+        return {
+          value: '未启动',
+          subtitle: status.msg || 'DNS 服务未运行',
+          tag: '离线',
+          type: 'danger'
+        }
+      }
+      // 解析正常
+      if (status.resolved) {
+        return {
+          value: '解析正常',
+          subtitle: `正常: ${status.query} -> ${status.answer}`,
+          tag: '正常',
+          type: 'success'
+        }
+      }
+      // 其它异常
+      return {
+        value: '解析异常',
+        subtitle: status.msg || `${status.resolver || 'DNS'} 解析失败`,
+        tag: '异常',
+        type: 'danger'
+      }
+    },
     // 管理平台状态: 聚合服务器 和 控制后台 是同一个
     serverStatus() {
-      // 管理平台地址
       const addr = this.serverIp && this.serverPort ? `${this.serverIp}:${this.serverPort}` : (this.serverIp || '-')
-      // 管理平台连通性
+      const tracker = this.serverTrackerStatus
+      if (!tracker) {
+        return {
+          value: '检测中',
+          subtitle: `地址: ${addr}`,
+          tag: '检测中',
+          type: 'warning'
+        }
+      }
+      // 连接状态: OK/ERROR
+      const status = String(tracker.status || '').trim().toUpperCase()
+      // 异常信息
+      const msg = String(tracker.msg || '').trim()
+      // 连接正常
+      if (status === 'OK') {
+        return {
+          value: '已连接',
+          subtitle: msg || `地址: ${addr}`,
+          tag: '正常',
+          type: 'success'
+        }
+      }
+      // 连接异常
       return {
-        value: '已连接',
-        subtitle: '地址:' + addr,
-        tag: addr,
-        type: this.dhcpStatus.type
+        value: '连接异常',
+        subtitle: msg || `地址: ${addr}`,
+        tag: '异常',
+        type: 'danger'
       }
     },
     serviceCards() {
@@ -393,7 +485,7 @@ export default {
         'network-status': this.networkingStatus,
         'admin-backend': this.serverStatus,
         'dhcp-status': this.sharedServiceStatus,
-        'dns-status': this.sharedServiceStatus
+        'dns-status': this.dnsServiceStatus
       }
 
       return SERVICE_CARD_META.map(({ key, title, accentClass }) => this.createStatusCard(key, title, statusMap[key], accentClass))
@@ -599,7 +691,6 @@ export default {
       this.$oui.call('wan', 'getAvailWan').then((result) => {
         const data = this.parseRpcResult(result)
         const links = Array.isArray(data?.links) ? data.links : []
-        this.wanLinks = links
 
         if (!links.length) {
           this.interfaceStates = []
@@ -617,7 +708,6 @@ export default {
             .map(card => this.attachInterfaceStats(card, card.rxBytes, card.txBytes, now))
         })
       }).catch(() => {
-        this.wanLinks = []
         this.interfaceStates = []
       })
     },
@@ -644,7 +734,7 @@ export default {
     // 负载均衡模式配置
     workModeBalanceSettings() {
       return {
-        detail: '负载均衡模式'
+        detail: '不同链路按权重承担不同比例的连接数,同一连接的所有数据包始终走同一条链路'
       }
     },
     // 聚合模式配置
@@ -699,6 +789,17 @@ export default {
         this.dhcpSettings = null
       })
     },
+    fetchDNSStatus() {
+      this.$oui.call('home', 'getDNSStatus').then((result) => {
+        if (this.stopped)
+          return
+        this.dnsStatusData = result || null
+      }).catch(() => {
+        if (this.stopped)
+          return
+        this.dnsStatusData = null
+      })
+    },
     fetchDhcpLeases() {
       this.$oui.call('network', 'dhcp_leases').then(({ leases }) => {
         this.dhcpLeases = Array.isArray(leases) ? leases : []
@@ -731,7 +832,7 @@ export default {
         if (this.stopped)
           return
         if (ip)
-          this.serverIp = ip
+          this.serverIp = Array.isArray(ip) ? String(ip[0] || '') : String(ip)
       }).catch(() => {})
     },
     fetchServerPort() {
@@ -741,6 +842,29 @@ export default {
         if (port)
           this.serverPort = parseInt(port, 10)
       }).catch(() => {})
+    },
+    fetchOpenVPNStatus() {
+      this.$oui.call('home', 'getOpenVPNStatus').then((result) => {
+        if (this.stopped)
+          return
+        this.openvpnStatus = result || null
+      }).catch(() => {
+        if (this.stopped)
+          return
+        this.openvpnStatus = null
+      })
+    },
+    // 获取服务器状态
+    fetchServerStatus() {
+      this.$oui.call('home', 'getServerStatus').then((result) => {
+        if (this.stopped)
+          return
+        this.serverTrackerStatus = result || null
+      }).catch(() => {
+        if (this.stopped)
+          return
+        this.serverTrackerStatus = null
+      })
     }
   },
   created() {
@@ -750,10 +874,13 @@ export default {
     // 从uci配置文件中获取工作模式配置
     this.fetchWorkMode()
     this.$timer.create('homeGetDhcpSettings', this.fetchDHCPSettings, { repeat: true, immediate: true, time: 5000 })
+    this.$timer.create('homeGetDNSStatus', this.fetchDNSStatus, { repeat: true, immediate: true, time: 5000 })
     this.$timer.create('homeGetDhcpLeases', this.fetchDhcpLeases, { repeat: true, immediate: true, time: 5000 })
     this.$timer.create('homeGetCpuTemperature', this.fetchCpuTemperature, { repeat: true, immediate: true, time: 5000 })
+    this.$timer.create('homeGetOpenVPNStatus', this.fetchOpenVPNStatus, { repeat: true, immediate: true, time: 5000 })
     this.$timer.create('homeGetServerIP', this.fetchServerIP, { repeat: true, immediate: true, time: 5000 })
     this.$timer.create('homeGetServerPort', this.fetchServerPort, { repeat: true, immediate: true, time: 5000 })
+    this.$timer.create('homeGetServerStatus', this.fetchServerStatus, { repeat: true, immediate: true, time: 5000 })
 
     this.updateCurrentTime()
     this.clockTimer = setInterval(this.updateCurrentTime, 1000)
@@ -779,26 +906,6 @@ export default {
     }).catch(() => {
       this.version = '-'
     })
-
-    this.$oui.call('uci', 'get', {
-      config: 'network',
-      section: 'lan',
-      option: 'ipaddr'
-    }).then(lanip => {
-      this.lanIp = lanip || '-'
-    }).catch(() => {
-      this.lanIp = '-'
-    })
-
-    this.$oui.call('uci', 'get', {
-      config: 'network',
-      section: 'lan',
-      option: 'netmask'
-    }).then(lanMask => {
-      this.lanMask = lanMask || '-'
-    }).catch(() => {
-      this.lanMask = '-'
-    })
   },
   beforeUnmount() {
     this.stopped = true
@@ -823,52 +930,6 @@ export default {
   border-radius: 12px;
   border: 0;
   box-shadow: none;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-}
-
-.home-rpc-test-bar {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  border: 1px solid rgba(59, 130, 246, 0.18);
-  border-radius: 12px;
-  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
-}
-
-.home-rpc-test-text {
-  min-width: 0;
-}
-
-.home-rpc-test-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-}
-
-.home-rpc-test-subtitle {
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.mode-panel-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  line-height: 1.2;
-}
-
-.mode-panel-subtitle {
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
 }
 
 .mode-panel-body {
@@ -977,50 +1038,16 @@ export default {
   line-height: 1;
 }
 
-.home-workmode-label {
-  margin-top: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #b45309;
-}
-
-.home-workmode-card.is-mode-single .home-workmode-label,
-.home-workmode-card.is-mode-single .home-workmode-foot-label {
-  color: #1d4ed8;
-}
-
 .home-workmode-card.is-mode-single .home-workmode-foot {
   border-top-color: rgba(59, 130, 246, 0.18);
-}
-
-.home-workmode-card.is-mode-single .home-workmode-foot-label {
-  background: rgba(59, 130, 246, 0.14);
-}
-
-.home-workmode-card.is-mode-aggregate .home-workmode-label,
-.home-workmode-card.is-mode-aggregate .home-workmode-foot-label {
-  color: #6d28d9;
 }
 
 .home-workmode-card.is-mode-aggregate .home-workmode-foot {
   border-top-color: rgba(139, 92, 246, 0.18);
 }
 
-.home-workmode-card.is-mode-aggregate .home-workmode-foot-label {
-  background: rgba(139, 92, 246, 0.14);
-}
-
-.home-workmode-card.is-mode-balance .home-workmode-label,
-.home-workmode-card.is-mode-balance .home-workmode-foot-label {
-  color: #15803d;
-}
-
 .home-workmode-card.is-mode-balance .home-workmode-foot {
   border-top-color: rgba(34, 197, 94, 0.18);
-}
-
-.home-workmode-card.is-mode-balance .home-workmode-foot-label {
-  background: rgba(34, 197, 94, 0.14);
 }
 
 .home-workmode-foot {
@@ -1031,18 +1058,6 @@ export default {
   margin-top: 18px;
   padding-top: 14px;
   border-top: 1px solid rgba(245, 158, 11, 0.18);
-}
-
-.home-workmode-foot-label {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(245, 158, 11, 0.14);
-  color: #b45309;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
 }
 
 .home-workmode-foot-value {
@@ -1136,10 +1151,6 @@ export default {
   background: #ef4444;
 }
 
-.home-metric-card.is-accent-slate::before {
-  background: #64748b;
-}
-
 .home-metric-head {
   display: flex;
   justify-content: space-between;
@@ -1155,7 +1166,6 @@ export default {
   color: var(--el-text-color-primary);
 }
 
-.home-section-subtitle,
 .home-metric-subtitle {
   margin-top: 4px;
   font-size: 13px;
@@ -1308,15 +1318,9 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .card-header,
   .home-metric-head {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .home-rpc-test-bar {
-    width: 100%;
-    justify-content: space-between;
   }
 
   .home-interface-row {

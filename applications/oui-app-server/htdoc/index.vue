@@ -29,7 +29,12 @@
   <!-- 负载均衡模式 -->
   <ModeBalance v-if="workModeReady && workMode === 'balance'" :page-active="pageActive" />
   <!-- 聚合模式 -->
-  <ModeAggregate v-if="workModeReady && workMode === 'aggregate'" :page-active="pageActive" />
+  <ModeAggregate
+    v-if="workModeReady && workMode === 'aggregate'"
+    :page-active="pageActive"
+    :server-ip="platformIp"
+    @update:server-ip="platformIp = normalizePlatformIp($event)"
+  />
 </div>
 
 </template>
