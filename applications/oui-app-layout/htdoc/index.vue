@@ -413,8 +413,15 @@ export default {
 
 .copyright {
   text-align: right;
-  font-size: 1.2em;
+  font-size: 12px;
+  line-height: 30px;
   color: #888;
+}
+
+:deep(.el-footer) {
+  height: 30px;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .el-dropdown-link {

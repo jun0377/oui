@@ -136,7 +136,7 @@
 const WORK_MODE_META = {
   single: {
     label: '单卡模式',
-    description: '固定走单条链路',
+    description: '除组网的流量外(经过服务器), 其它流量固定走单条链路(不经过服务器)',
     themeClass: 'is-mode-single'
   },
   aggregate: {
@@ -381,9 +381,8 @@ export default {
       // 管理平台地址
       const addr = this.serverIp && this.serverPort ? `${this.serverIp}:${this.serverPort}` : (this.serverIp || '-')
       // 管理平台连通性
-      
       return {
-        value: '管理平台',
+        value: '已连接',
         subtitle: '地址:' + addr,
         tag: addr,
         type: this.dhcpStatus.type

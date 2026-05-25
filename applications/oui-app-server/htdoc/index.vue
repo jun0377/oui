@@ -4,6 +4,18 @@
 
   <!-- 工作模式: 单卡模式 / 负载均衡 / 聚合 -->
   <div class="mode">
+    <h2> 管理平台 </h2>
+    <el-card class="mode-card mode-panel">
+      <div class="mode-panel-body">
+        <el-form label-width="120px" label-align="left" label-position="left" class="config-form platform-form">
+          <el-form-item label="管理平台IP">
+            <el-input v-model="platformIp" class="platform-ip-input" :placeholder="$t('Enter Server IP')" clearable />
+            <el-button type="primary" class="platform-save-btn" :loading="platformSaving" @click="savePlatformIp">保存 &amp; 应用</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+    </el-card>
+
     <h2> {{ $t('Mode') }} </h2>
     <el-radio-group v-model="workMode" class="mode-group" :disabled="!workModeReady" @change="handleWorkModeChange">
       <el-radio-button value="single">{{ $t('单卡模式') }}</el-radio-button>
@@ -14,9 +26,9 @@
 
   <!-- 单卡模式 -->
   <ModeSingle v-if="workModeReady && workMode === 'single'" :page-active="pageActive" />
-
+  <!-- 负载均衡模式 -->
   <ModeBalance v-if="workModeReady && workMode === 'balance'" :page-active="pageActive" />
-
+  <!-- 聚合模式 -->
   <ModeAggregate v-if="workModeReady && workMode === 'aggregate'" :page-active="pageActive" />
 </div>
 
@@ -37,6 +49,8 @@ export default {
   },
   data() {
     return {
+      platformIp: '',
+      platformSaving: false,
       workMode: '',
       workModeReady: false,
       pageActive: false,
@@ -78,9 +92,10 @@ export default {
     startAll() {
       this.stopped = false
       this.workModeReady = false
+      this.platformIp = ''
       this.workMode = ''
       this.pageActive = true
-      this.fetchWorkMode().finally(() => {
+      Promise.allSettled([this.fetchPlatformIp(), this.fetchWorkMode()]).finally(() => {
         if (this.stopped)
           return
         this.workModeReady = true
@@ -109,6 +124,55 @@ export default {
         const normalized = this.normalizeWorkMode(mode)
         this.workMode = normalized
       })
+    },
+    normalizePlatformIp(value) {
+      if (Array.isArray(value))
+        return String(value[0] || '').trim()
+      return String(value || '').trim()
+    },
+    fetchPlatformIp() {
+      return this.$oui.call('serverManager', 'getServerIP').then((ip) => {
+        if (this.stopped)
+          return
+        this.platformIp = this.normalizePlatformIp(ip)
+      }).catch(() => {})
+    },
+    async savePlatformIp() {
+      const ip = this.normalizePlatformIp(this.platformIp)
+      this.platformIp = ip
+      if (!/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(ip) || ip.split('.').some(part => {
+        const num = Number(part)
+        return !Number.isInteger(num) || num < 0 || num > 255
+      })) {
+        this.$message({
+          message: 'IP地址格式不正确',
+          type: 'error'
+        })
+        return
+      }
+      this.platformSaving = true
+      try {
+        const result = await this.$oui.call('serverManager', 'setServerIP', { ip })
+        if (result === -1) {
+          this.$message({
+            message: '保存失败',
+            type: 'error'
+          })
+          return
+        }
+        this.$message({
+          message: this.$t('保存成功'),
+          type: 'success'
+        })
+        await this.fetchPlatformIp()
+      } catch {
+        this.$message({
+          message: '保存失败',
+          type: 'error'
+        })
+      } finally {
+        this.platformSaving = false
+      }
     },
     // 设置工作模式
     handleWorkModeChange() {
@@ -578,6 +642,25 @@ export default {
 
 .server-ip-input {
   width: 33.3333%;
+}
+
+.platform-form .el-form-item {
+  margin-bottom: 12px;
+}
+
+.platform-form .el-form-item__content {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.platform-ip-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.platform-save-btn {
+  margin-left: 12px;
 }
 
 .status-info {
