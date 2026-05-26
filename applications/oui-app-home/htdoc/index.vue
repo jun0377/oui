@@ -146,7 +146,7 @@ const WORK_MODE_META = {
   },
   balance: {
     label: '负载均衡',
-    description: '并发的连接按链路按权重分流',
+    description: '并发的连接按链路权重分流',
     themeClass: 'is-mode-balance'
   }
 }
@@ -734,7 +734,7 @@ export default {
     // 负载均衡模式配置
     workModeBalanceSettings() {
       return {
-        detail: '不同链路按权重承担不同比例的连接数,同一连接的所有数据包始终走同一条链路'
+        detail: '不同链路按权重承载不同比例的连接数,同一连接的所有数据包始终走同一条链路'
       }
     },
     // 聚合模式配置

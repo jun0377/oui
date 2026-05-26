@@ -57,9 +57,29 @@
             <el-form-item label="APN">
               <el-input v-model="settings.apn" placeholder="Enter APN"/>
             </el-form-item>
+            <el-form-item :label="$t('Enable')">
+              <el-switch
+                v-model="settings.enable"
+                inline-prompt
+                :active-text="'开'"
+                :inactive-text="'关'"
+                @change="handleEnableChange"
+                class="wan-enable-switch"
+              />
+            </el-form-item>
+          </el-form>
+        </el-card>
 
+        <el-card class="config-card sim-accent-amber sim-advanced-card">
+          <template #header>
+            <div class="card-header">
+              <span class="sim-card-title">高级设置</span>
+              <el-tag type="info">配置</el-tag>
+            </div>
+          </template>
+          <el-form :model="settings" label-width="120px" class="config-form" label-align="left" label-position="left">
             <div class="sim-inline-row">
-              <el-form-item label="锁NR频段" class="sim-inline-form-item">
+              <el-form-item label="锁 NR 频段" class="sim-inline-form-item">
                 <div class="sim-lock-section">
                   <div class="sim-lock-toggle">
                     <el-switch
@@ -91,7 +111,7 @@
             </div>
 
             <div class="sim-inline-row">
-              <el-form-item label="锁LTE频段" class="sim-inline-form-item">
+              <el-form-item label="锁 LTE 频段" class="sim-inline-form-item">
                 <div class="sim-lock-section">
                   <div class="sim-lock-toggle">
                     <el-switch
@@ -122,7 +142,7 @@
               </el-form-item>
             </div>
 
-            <el-form-item label="锁NR PCI小区">
+            <el-form-item label="锁 NR PCI">
               <div class="sim-lock-section">
                 <div class="sim-lock-toggle">
                   <el-switch
@@ -159,7 +179,7 @@
               </div>
             </el-form-item>
 
-            <el-form-item label="锁LTE PCI小区">
+            <el-form-item label="锁 LTE PCI">
               <div class="sim-lock-section">
                 <div class="sim-lock-toggle">
                   <el-switch
@@ -187,33 +207,19 @@
                 </div>
               </div>
             </el-form-item>
-
-            <el-form-item :label="$t('Enable')">
-              <el-switch
-                v-model="settings.enable"
-                inline-prompt
-                :active-text="'开'"
-                :inactive-text="'关'"
-                @change="handleEnableChange"
-                class="wan-enable-switch"
-              />
-            </el-form-item>
           </el-form>
-          <div class="action-buttons card-actions">
-            <el-button @click="saveConfig" type="primary" size="large">
-              {{ $t('Save Configuration') }}
-            </el-button>
-            <el-button @click="testConnection" type="success" size="large" disabled class="btn-disabled-success">
-              {{ $t('Test Connection') }}
-            </el-button>
-            <el-button @click="resetConfig" type="warning" size="large" disabled class="btn-disabled-warning">
-              {{ $t('Reset to Default') }}
-            </el-button>
-            <el-button @click="goBack" type="info" size="large">
-              {{ $t('Back') }}
-            </el-button>
-          </div>
         </el-card>
+        <div class="action-buttons card-actions">
+          <el-button @click="saveConfig" type="primary" size="large">
+            {{ $t('Save Configuration') }}
+          </el-button>
+          <el-button @click="resetConfig" type="warning" size="large" disabled class="btn-disabled-warning">
+            {{ $t('Reset to Default') }}
+          </el-button>
+          <el-button @click="goBack" type="info" size="large">
+            {{ $t('Back') }}
+          </el-button>
+        </div>
       </div>
 
       <div class="right-column">
@@ -946,6 +952,7 @@ export default {
 .left-column {
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
 .right-column {
@@ -1112,6 +1119,16 @@ export default {
   align-items: center;
 }
 
+.sim-advanced-card .config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sim-advanced-card :deep(.config-form .el-form-item) {
+  margin-bottom: 0;
+}
+
 .status-info {
   padding: 10px 0;
 }
@@ -1274,6 +1291,7 @@ export default {
 .sim-inline-row {
   display: flex;
   gap: 10px;
+  width: 100%;
 }
 
 .sim-inline-form-item {
