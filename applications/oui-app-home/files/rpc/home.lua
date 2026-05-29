@@ -178,6 +178,7 @@ end
 
 -- 获取DNS解析状态
 function M.getDNSStatus()
+    local path = '/tmp/tracker-dns/tracker-dns.json'
     local ret = {
         running = false,
         resolved = false,
@@ -188,39 +189,33 @@ function M.getDNSStatus()
         msg = 'DNS service not running'
     }
 
-    -- 检测 unbound 和 dnsmasq 进程是否存在
-    local unbound_pid = exec([[pgrep -x unbound 2>/dev/null | head -n 1]])
-    local dnsmasq_pid = exec([[pgrep -x dnsmasq 2>/dev/null | head -n 1]])
-    if unbound_pid and unbound_pid:match('%S') then
-        ret.running = true
-        ret.resolver = 'unbound'
-    elseif dnsmasq_pid and dnsmasq_pid:match('%S') then
-        ret.running = true
-        ret.resolver = 'dnsmasq'
+    local file = io.open(path, 'r')
+    if not file then
+        log.err('home.getDNSStatus open failed: ', path)
+        return ret
     end
+    
+    local content = file:read('*a')
+    file:close()
 
-    -- 进程不存在, 直接返回
-    if not ret.running then
+    if not content or content == '' then
+        log.err('home.getDNSStatus empty file: ', path)
         return ret
     end
 
-    -- 域名解析测试: 任意一个域名解析成功即视为正常
-    local domains = { 'www.baidu.com', 'www.taobao.com', 'www.qq.com', 'www.aliyun.com', 'www.google.com' }
-    for _, domain in ipairs(domains) do
-        local answer = exec(string.format([[resolveip -t 2 %s 2>/dev/null | head -n 1 | tr -d '\n']], domain))
-        answer = tostring(answer or ''):match('^%s*(.-)%s*$')
-        if answer ~= '' then
-            ret.resolved = true
-            ret.query = domain
-            ret.answer = answer
-            ret.msg = 'DNS resolved successfully'
-            break
-        end
+    local ok, data = pcall(cjson.decode, content)
+    if not ok or type(data) ~= 'table' then
+        log.err('home.getDNSStatus decode failed: ', tostring(data))
+        return ret
     end
 
-    if not ret.resolved then
-        ret.msg = 'DNS resolution failed'
-    end
+    ret.running = data.running == true
+    ret.resolved = data.resolved == true
+    ret.resolver = tostring(data.resolver or '')
+    ret.query = tostring(data.query or ret.query)
+    ret.answer = tostring(data.answer or '')
+    ret.updated = tostring(data.updated or ret.updated)
+    ret.msg = tostring(data.msg or ret.msg)
 
     return ret
 end

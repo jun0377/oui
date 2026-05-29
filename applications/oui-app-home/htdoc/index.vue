@@ -789,6 +789,7 @@ export default {
         this.dhcpSettings = null
       })
     },
+    // 获取DNS解析状态
     fetchDNSStatus() {
       this.$oui.call('home', 'getDNSStatus').then((result) => {
         if (this.stopped)
@@ -800,6 +801,7 @@ export default {
         this.dnsStatusData = null
       })
     },
+    // 获取DHCP租约状态
     fetchDhcpLeases() {
       this.$oui.call('network', 'dhcp_leases').then(({ leases }) => {
         this.dhcpLeases = Array.isArray(leases) ? leases : []

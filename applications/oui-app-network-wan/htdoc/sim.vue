@@ -771,6 +771,7 @@ export default {
         this.$message.error('设置失败')
       })
     },
+    // 当前状态字符串
     getStatusText() {
       return 'NR' + this.NR_5GCore.stat + ' | ' + 'LTE' + this.CS.stat
     },

@@ -311,6 +311,7 @@ function M.getAvailWan()
                 goto continue
             end
 
+            -- sim
             local simn = name:match('^sim(%d+)$')
             if simn then
                 local n = tonumber(simn)
@@ -325,7 +326,8 @@ function M.getAvailWan()
                 end
                 goto continue
             end
-
+            
+            -- wan
             local wann = name:match('^wan(%d+)$')
             if wann or name == 'wan' then
                 local n = tonumber(wann) or 0

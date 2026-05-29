@@ -42,7 +42,7 @@
             </div>
           </div>
 
-          <div class="wan-group">
+          <div class="wan-group" v-if="wanPortEntries.length > 0">
             <div class="wan-table-row wan-table-row-port wan-table-row-header">
               <div class="wan-group-title">有线网</div>
               <div class="subnet-info-wan-port">
@@ -555,6 +555,7 @@ export default {
   },
 
   methods: {
+    // 获取指定索引链路的 RPC 索引（仅对 sim 类型有效）
     getRpcIndex(index) {
       const link = this.wanLinks && this.wanLinks[index]
       if (link && link.kind && link.kind !== 'sim')
@@ -562,6 +563,7 @@ export default {
       const v = link && link.settings && link.settings.index
       return typeof v === 'number' ? v : null
     },
+    // 初始化组件：加载可用 WAN 链路、初始化流量数据、启动所有定时任务
     bootstrap() {
       return this.loadAvailWanLinks().then(() => {
         this.initTrafficSeries()
@@ -579,6 +581,7 @@ export default {
         this.updatePolling()
       })
     },
+    // 通过 RPC 调用 'wan' 模块的 'getAvailWan' 方法，获取可用链路列表，并构建 wanLinks 数组
     loadAvailWanLinks() {
       return this.$oui.call('wan', 'getAvailWan', {}).then((result) => {
         let data = result
@@ -625,6 +628,7 @@ export default {
           }
         }
 
+        // 排序：sim 在前，wan 在后
         if (uiLinks.length) {
           uiLinks.sort((a, b) => {
             const ak = a && a.kind === 'sim' ? 0 : 1
@@ -659,6 +663,7 @@ export default {
           return
         }
 
+        // 降级：创建三个默认 SIM 链路
         this.wanLinks = [createDefaultWanLink(0), createDefaultWanLink(1), createDefaultWanLink(2)]
         this.updateWanPortStatePolling()
       }).catch(() => {
@@ -672,6 +677,7 @@ export default {
       else
         this.stopWanPortStatePolling()
     },
+    // 获取所有 WAN 类型链路的状态（一次性），并记录流量样本
     fetchWanPortStatesOnce() {
       if (this.currentView !== 'main')
         return
@@ -712,6 +718,7 @@ export default {
         }).catch(() => {})
       }
     },
+    // 启动 WAN 端口状态轮询定时器
     startWanPortStatePolling() {
       this.stopWanPortStatePolling()
       this.fetchWanPortStatesOnce()
@@ -719,12 +726,14 @@ export default {
         this.fetchWanPortStatesOnce()
       }, this.traffic.intervalSec * 1000)
     },
+    // 停止 WAN 端口状态轮询定时器
     stopWanPortStatePolling() {
       if (this.wanPortStateTimerId) {
         clearInterval(this.wanPortStateTimerId)
         this.wanPortStateTimerId = null
       }
     },
+    // 强制刷新流量数据：重置流量序列，重新获取接口状态
     refreshTrafficNow() {
       if (this.currentView !== 'main' || !this.trafficEnabled)
         return
@@ -740,6 +749,7 @@ export default {
         this.fetchWanPortStatesOnce()
       }, this.traffic.intervalSec * 1000)
     },
+    // 重置所有链路的流量数据序列（归零）
     resetTrafficSeries() {
       const wanted = this.traffic.dataWanted
       this.wanLinks.forEach((_, index) => {
@@ -748,6 +758,7 @@ export default {
       })
       this.traffic.last = {}
     },
+    // 根据当前视图和选中的链路，启动或停止对应 SIM 卡的数据轮询
     updatePolling() {
       this._pollingToken = (this._pollingToken || 0) + 1
       this.stopAllPolling()
@@ -764,6 +775,7 @@ export default {
         this.startPollingForIndexes([this.selectedWanIndex], { status: true, product: true, modules: true, interface: true })
       }
     },
+    // 为指定的索引列表启动轮询任务
     startPollingForIndexes(indexes, plan) {
       indexes.forEach((index) => {
         if (this.getRpcIndex(index) === null)
@@ -786,6 +798,7 @@ export default {
         }
       })
     },
+    // 停止所有 SIM 相关的轮询定时器
     stopAllPolling() {
       this.wanLinks.forEach((_, index) => {
         this.$timer.stop('sim-product' + index)
@@ -794,6 +807,7 @@ export default {
         this.$timer.stop('interface' + index)
       })
     },
+    // 防止重复调用 RPC 的辅助函数
     withInFlight(key, fn) {
       if (!this._inFlight)
         this._inFlight = {}
@@ -804,6 +818,7 @@ export default {
         this._inFlight[key] = false
       })
     },
+    // 根据状态字符串返回对应的 CSS 类名
     getStatusClass(status) {
       switch (status) {
       case 'connected': return 'status-connected'
@@ -813,6 +828,7 @@ export default {
       default: return ''
       }
     },
+    // 获取 SIM 卡的产品信息（厂家、型号、IMEI、ICCID、IMSI）
     getProductInfo(index) {
       return this.withInFlight('getProductInfo:' + index, () => {
         const token = this._pollingToken
@@ -886,6 +902,7 @@ export default {
         })
       })
     },
+    // 获取 SIM 卡的状态信息（注册状态、信号强度、小区信息等）
     getStatus(index) {
       return this.withInFlight('getStatus:' + index, () => {
         const token = this._pollingToken
@@ -1070,6 +1087,7 @@ export default {
         })
       })
     },
+    // 初始化所有链路的流量数据序列（填充0）
     initTrafficSeries() {
       const wanted = this.traffic.dataWanted
       this.wanLinks.forEach((_, index) => {
@@ -1077,12 +1095,14 @@ export default {
         if (!this.traffic.series.tx[index]) this.traffic.series.tx[index] = Array.from({ length: wanted }, () => 0)
       })
     },
+    // 将传入的值转换为数值，若无效则返回 null
     normalizeBytes(value) {
       if (value === null || value === undefined)
         return null
       const n = Number(value)
       return Number.isFinite(n) ? n : null
     },
+    // 记录一次流量样本（根据前后两次字节数差值计算瞬时速率）
     recordTrafficSample(index, rxBytes, txBytes) {
       if (!this.trafficEnabled || this.currentView !== 'main')
         return
@@ -1114,20 +1134,24 @@ export default {
       const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ec4899', '#f59e0b', '#14b8a6', '#06b6d4', '#84cc16']
       return colors[index % colors.length]
     },
+    // 获取流量图表的线条样式（填充色、透明度、边框等）
     getTrafficLineStyle(index) {
       const color = this.getTrafficColor(index)
       return `fill:${color};fill-opacity:${this.traffic.fillOpacity};stroke:black;stroke-width:0.15;stroke-linejoin:round;stroke-linecap:round`
     },
+    // 判断指定方向（rx/tx）的链路是否已有流量数据序列
     hasTrafficSeries(direction, index) {
       const series = this.traffic.series && this.traffic.series[direction] && this.traffic.series[direction][index]
       return Array.isArray(series) && series.length > 0
     },
+    // 获取流量图中最后一个点的 X 坐标（时间轴位置）
     getTrafficLatestX(direction, index) {
       const series = this.traffic.series && this.traffic.series[direction] && this.traffic.series[direction][index]
       if (!Array.isArray(series) || !series.length)
         return 0
       return (series.length - 1) * this.traffic.step
     },
+    // 获取流量图中最后一个点的 Y 坐标（速率值映射到画布高度）
     getTrafficLatestY(direction, index) {
       const series = this.traffic.series && this.traffic.series[direction] && this.traffic.series[direction][index]
       const h = this.traffic.height
@@ -1140,14 +1164,17 @@ export default {
         return h
       return Math.min(h, Math.max(0, y))
     },
+    // 获取流量图中标记线的样式（用于在图表顶部标识链路）
     getTrafficMarkerLineStyle(index) {
       const color = this.getTrafficColor(index)
       return `stroke:${color};stroke-width:0.25;opacity:0.85`
     },
+    // 获取流量标记点的样式（圆点）
     getTrafficMarkerDotStyle(index) {
       const color = this.getTrafficColor(index)
       return `fill:${color};stroke:#000;stroke-width:0.35`
     },
+    // 将十六进制颜色转换为 rgba 格式
     hexToRgba(hex, alpha) {
       const raw = String(hex || '').replace('#', '')
       const a = Number(alpha)
@@ -1166,16 +1193,19 @@ export default {
       }
       return `rgba(0,0,0,${opacity})`
     },
+    // 获取流量图表的填充颜色（带透明度）
     getTrafficFillColor(index) {
       const color = index === -1 ? '#ff7f00' : this.getTrafficColor(index)
       return this.hexToRgba(color, this.traffic.fillOpacity)
     },
+    // 获取流量图标的背景样式（用于 Legend）
     getTrafficBadgeStyle(index) {
       return {
         backgroundColor: this.getTrafficFillColor(index),
         border: '1px solid rgba(0,0,0,0.15)'
       }
     },
+    // 获取所有链路中指定方向（rx/tx）的最大速率（字节/秒
     getTrafficMax(direction) {
       let max = 0
       this.wanLinks.forEach((_, index) => {
@@ -1222,14 +1252,17 @@ export default {
       const nice = roundNice(kbit)
       return (nice * 1024) / 8
     },
+    // 获取流量图表 Y 轴标签（根据最大速率的一定比例生成）
     getTrafficLabel(direction, ratio) {
       const max = this.getTrafficMax(direction)
       return this.formatTraffic(max * ratio)
     },
+    // 获取流量图表的时间范围描述文本
     getTrafficScaleText() {
       const minutes = Math.round((this.traffic.dataWanted * this.traffic.intervalSec) / 60)
       return `(${minutes}分钟, ${this.traffic.intervalSec}秒采样)`
     },
+    // 对流量序列进行平滑处理（相邻5点平均）
     smoothTrafficSeries(series) {
       const n = series.length
       const out = new Array(n)
@@ -1246,6 +1279,7 @@ export default {
       }
       return out
     },
+    // 获取用于绘制 SVG 多边形（流量填充图）的点字符串
     getTrafficPoints(direction, index) {
       const series = this.traffic.series && this.traffic.series[direction] && this.traffic.series[direction][index]
       if (!Array.isArray(series) || !series.length)
@@ -1265,6 +1299,7 @@ export default {
       points.push(`0,${h}`)
       return points.join(' ')
     },
+    // 获取指定链路指定方向（rx/tx）的流量统计值（当前/峰值/平均）
     getTrafficStat(direction, index, type) {
       const series = this.traffic.series && this.traffic.series[direction] && this.traffic.series[direction][index]
       if (!Array.isArray(series) || !series.length)
@@ -1283,12 +1318,14 @@ export default {
         sum += series[i]
       return sum / series.length
     },
+    // 获取所有链路指定方向的总流量统计值
     getTrafficTotal(direction, type) {
       let total = 0
       for (let i = 0; i < this.wanLinks.length; i += 1)
         total += this.getTrafficStat(direction, i, type)
       return total
     },
+    // 格式化速率（字节/秒）为可读字符串，同时显示 bit/s 和 Byte/s
     formatTraffic(bytesPerSec) {
       const bytes = Math.max(0, Number(bytesPerSec) || 0)
       const bits = bytes * 8
@@ -1327,6 +1364,7 @@ export default {
 
       return `${biValue.toFixed(2)} ${biUnit} (${byValue.toFixed(2)} ${byUnit})`
     },
+    // 计算速率值及其单位（仅返回数值和单位对象）
     calcRate(bytesPerSec) {
       const bytes = Math.max(0, Number(bytesPerSec) || 0)
       const bits = bytes * 8
@@ -1345,6 +1383,7 @@ export default {
     formatRateUnit(bytesPerSec) {
       return this.calcRate(bytesPerSec).unit
     },
+    // 计算百分比（用于流量占比显示）
     formatPercent(value, total) {
       const v = Number(value)
       const t = Number(total)
@@ -1372,6 +1411,7 @@ export default {
       }
       return has ? total : null
     },
+    // 将字节数格式化为带单位的人类可读字符串（B, KB, MB, GB, TB）
     formatBytes(bytes) {
       const n = Number(bytes)
       if (!Number.isFinite(n) || n < 0)
@@ -1408,6 +1448,7 @@ export default {
       const r = this.calcBytes(bytes)
       return r ? r.unit : ''
     },
+    // 获取链路状态文本（组合 NR 和 LTE 注册状态）
     getStstusText(index) {
       let stat = ''
       if (this.wanLinks[index].NR_5GCore.stat !== '')
@@ -1418,6 +1459,7 @@ export default {
 
       return stat
     },
+    // 从UCI配置文件/etc/config/sim中查询配置
     getSimSettings(index) {
       const rpcIndex = this.getRpcIndex(index)
       if (rpcIndex === null)
@@ -1494,6 +1536,7 @@ export default {
 
       return bands.join(' ')
     },
+    // 获取当前链路的 RSRP 值（优先取 NR，若无则取 LTE）
     getRsrpText(index) {
       const link = this.wanLinks[index]
       if (!link || !link.status)
@@ -1531,6 +1574,7 @@ export default {
         }).catch(() => {})
       }
     },
+    // 编辑子网配置（DHCP 或 Wireless）
     editSubNet(lan) {
       if (lan.name === 'DHCP Service') {
         this.currentView = 'dhcp'

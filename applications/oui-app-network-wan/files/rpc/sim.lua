@@ -142,6 +142,96 @@ local Sim = {
             mask = '',                              -- 掩码
             gateway = '',                           -- 网关
         }
+    },
+    [4] = {
+        settings = {
+            usb = '',                               -- USB端口号
+            interface = '',                         -- 接口名称
+            alias = '5G-4',                         -- tag
+            ttyusb = '',                            -- 拨号节点
+            uciSection = 'SIM_5G_4',                -- UCI配置文件section命名规范
+            band = '',                              -- 设置的频段
+            net = '',                               -- 入网方式设置：AUTO/SA/NSA/LTE
+            apn = '',                               -- apn
+            auth = '',                              -- 鉴权
+            user = '',                              -- 用户名
+            passwd = '',                            -- 密码
+            cellLocked = '',                       -- 锁小区
+            pcidlocked = '',                        -- 锁物理小区pci
+            dhcpRangeStart = '',                    -- DHCP地址池起始IP
+            dhcpRanageEnd = '',                     -- DHCP地址池终止IP
+            dhcpRangeMask = '',                     -- DHCP地址池掩码
+            dhcpRangeGateway = '',                  -- DHCP地址池网关
+        },
+        status = {
+            module = '',                            -- 模组名称
+            version = '',                           -- 模组版本
+            imei = '',                              -- 模组的IMEI码
+            mac = '',                               -- mac地址
+            status = '',                            -- 连接状态：离线、nosim(未插卡)、拨号中、在线
+            timestamp = '',                         -- 状态更新时间
+            rtt_ms = 0,                             -- 到服务器的延时
+            net = '',                               -- 当设置为AUTO时，实时的入网方式
+            rsrp_nr = 0,                            -- 5G信号强度RSRP
+            rsrp_lte = 0,                           -- LTE信号强度RSRP
+            sinr_nr = 0,                            -- 5G信噪比
+            sinr_lte = 0,                           -- LTE信噪比
+            operator = '',                          -- 运营商
+            imsi = '',                              -- SIM卡的IMSI
+            band = '',                              -- 实时频段
+            cell_nr = '',                           -- 5G实时小区
+            cell_lte = '',                          -- LTE实时小区
+            pcid_nr = '',                           -- 5G物理小区ID
+            pcid_lte = '',                          -- LTE物理小区ID
+            ip = '',                                -- IP
+            mask = '',                              -- 掩码
+            gateway = '',                           -- 网关
+        }
+    },
+    [5] = {
+        settings = {
+            usb = '',                               -- USB端口号
+            interface = '',                         -- 接口名称
+            alias = '5G-5',                         -- tag
+            ttyusb = '',                            -- 拨号节点
+            uciSection = 'SIM_5G_5',                -- UCI配置文件section命名规范
+            band = '',                              -- 设置的频段
+            net = '',                               -- 入网方式设置：AUTO/SA/NSA/LTE
+            apn = '',                               -- apn
+            auth = '',                              -- 鉴权
+            user = '',                              -- 用户名
+            passwd = '',                            -- 密码
+            cellLocked = '',                       -- 锁小区
+            pcidlocked = '',                        -- 锁物理小区pci
+            dhcpRangeStart = '',                    -- DHCP地址池起始IP
+            dhcpRanageEnd = '',                     -- DHCP地址池终止IP
+            dhcpRangeMask = '',                     -- DHCP地址池掩码
+            dhcpRangeGateway = '',                  -- DHCP地址池网关
+        },
+        status = {
+            module = '',                            -- 模组名称
+            version = '',                           -- 模组版本
+            imei = '',                              -- 模组的IMEI码
+            mac = '',                               -- mac地址
+            status = '',                            -- 连接状态：离线、nosim(未插卡)、拨号中、在线
+            timestamp = '',                         -- 状态更新时间
+            rtt_ms = 0,                             -- 到服务器的延时
+            net = '',                               -- 当设置为AUTO时，实时的入网方式
+            rsrp_nr = 0,                            -- 5G信号强度RSRP
+            rsrp_lte = 0,                           -- LTE信号强度RSRP
+            sinr_nr = 0,                            -- 5G信噪比
+            sinr_lte = 0,                           -- LTE信噪比
+            operator = '',                          -- 运营商
+            imsi = '',                              -- SIM卡的IMSI
+            band = '',                              -- 实时频段
+            cell_nr = '',                           -- 5G实时小区
+            cell_lte = '',                          -- LTE实时小区
+            pcid_nr = '',                           -- 5G物理小区ID
+            pcid_lte = '',                          -- LTE物理小区ID
+            ip = '',                                -- IP
+            mask = '',                              -- 掩码
+            gateway = '',                           -- 网关
+        }
     }
 }
 
