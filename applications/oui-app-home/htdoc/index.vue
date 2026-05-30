@@ -809,6 +809,7 @@ export default {
         this.dhcpLeases = []
       })
     },
+    // 获取CPU温度
     fetchCpuTemperature() {
       this.$oui.ubus('file', 'exec', {
         command: 'sh',
