@@ -31,6 +31,43 @@ local function read_first_line(path)
     return line
 end
 
+local function shell_quote(s)
+    s = s == nil and '' or tostring(s)
+    return "'" .. s:gsub("'", [['"'"']]) .. "'"
+end
+
+local function get_first_entry(path)
+    path = trim(path)
+    if path == '' then
+        return ''
+    end
+
+    return trim(exec(string.format("ls %s 2>/dev/null | head -n 1 | tr -d '\\r\\n'", shell_quote(path))))
+end
+
+local function get_sim_device(c, section, fallback)
+    fallback = trim(fallback)
+    local usb = c:get('sim', section, 'usb')
+    usb = trim(usb)
+    if usb ~= '' then
+        local net_dir = trim(exec(string.format(
+            "find %s -maxdepth 2 -type d -name net 2>/dev/null | head -n 1 | tr -d '\\r\\n'",
+            shell_quote(usb)
+        )))
+
+        local device = get_first_entry(net_dir)
+        if device ~= '' then
+            return device
+        end
+    end
+
+    if fallback:match('^/dev/') then
+        return ''
+    end
+
+    return fallback
+end
+
 local function is_udhcpc_running(iface)
     local out = exec(string.format("ps w 2>/dev/null | grep '[u]dhcpc' | grep ' -i %s' | head -n 1", iface))
     return out and out:match('%S') ~= nil
@@ -316,12 +353,13 @@ function M.getAvailWan()
             if simn then
                 local n = tonumber(simn)
                 if n and n >= 1 then
+                    local device = get_sim_device(c, name, s.device or s.ifname or '')
                     add_link({
                         kind = 'sim',
                         name = name,
                         sim_index = n - 1,
                         proto = proto,
-                        device = s.device or s.ifname or ''
+                        device = device
                     })
                 end
                 goto continue

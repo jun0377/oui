@@ -318,7 +318,7 @@ export default {
       if (status.running) {
         return {
           label: '运行中,未连接',
-          subtitle: `组网进程运行中, 但是尚未建立连接`,
+          subtitle: '组网进程运行中, 但是尚未建立连接',
           tag: '注意',
           type: 'warning'
         }

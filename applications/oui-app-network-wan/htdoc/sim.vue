@@ -335,7 +335,7 @@
               <div class="status-info">
                 <div class="status-item">
                   <span class="status-label">状态:</span>
-                  <span class="status-value">{{ sim.status }}</span>
+                  <span class="status-value">{{ formatSimStatus(sim.status) }}</span>
                 </div>
                 <div class="status-item">
                   <span class="status-label">国家:</span>
@@ -343,7 +343,7 @@
                 </div>
                 <div class="status-item">
                   <span class="status-label">{{ $t('Operator') }}:</span>
-                  <span class="status-value">{{ sim.mcc }}{{ sim.mnc }} {{ sim.operator }}</span>
+                  <span class="status-value">{{ sim.mcc }}{{ sim.mnc }} {{ formatSimOperator(sim.operator) }}</span>
                 </div>
                 <div class="status-item">
                   <span class="status-label">{{ $t('IMSI') }}:</span>
@@ -589,6 +589,7 @@ export default {
         sysmode: '',
         class: []
       },
+      // NR注册状态
       NR_5GCore: {
         stat: '',
         tac: '',
@@ -601,12 +602,14 @@ export default {
         ci: '',
         act: ''
       },
+      // 驻留小区信息
       monsc: {
         rat: '',
         nr: { cell_id: '', arfcn: '', scs: '', pci: '', tac: '', rsrp: '', rsrq: '', sinr: '' },
         lte: { cell_id: '', arfcn: '', pci: '', tac: '', rsrp: '', rsrq: '', rssi: '' },
         wcdma: { arfcn: '', pcs: '', cell_id: '', lac: '', rscp: '', rxlev: '', ecno: '' }
       },
+      // 相邻小区信息
       monnc: {
         gsm: [],
         wcdma: [],
@@ -671,6 +674,53 @@ export default {
       if (n >= 1024)
         return `${(n / 1024).toFixed(2)} KB`
       return `${n} B`
+    },
+    // sim卡状态可读性优化
+    formatSimStatus(status) {
+      const raw = String(status ?? '').trim()
+      if (!raw)
+        return '-'
+      if (/[\u4e00-\u9fa5]/.test(raw))
+        return raw
+
+      const normalized = raw.toLowerCase()
+      const mappings = [
+        { match: ['not inserted', 'sim removed'], text: '未插卡' },
+        { match: ['puk locked'], text: '卡被锁' },
+        { match: ['initializing'], text: '初始化中' },
+        { match: ['network service available'], text: '初始化成功,可接入网络' },
+        { match: ['pbm and sms access'], text: '初始化成功,可拨打电话' }
+      ]
+
+      for (const item of mappings) {
+        if (item.match.some(keyword => normalized.includes(keyword)))
+          return item.text
+      }
+
+      return raw
+    },
+    // 运营商信息高可读性
+    formatSimOperator(operator) {
+      const raw = String(operator ?? '').trim()
+      if (!raw)
+        return '-'
+      if (/[\u4e00-\u9fa5]/.test(raw))
+        return raw
+
+      const normalized = raw.toLowerCase()
+      const mappings = [
+        { match: ['china mobile', 'cmcc'], text: '中国移动' },
+        { match: ['china unicom', 'cucc', 'unicom'], text: '中国联通' },
+        { match: ['china telecom', 'ctcc', 'telecom'], text: '中国电信' },
+        { match: ['broadnet', 'cbn'], text: '中国广电' }
+      ]
+
+      for (const item of mappings) {
+        if (item.match.some(keyword => normalized.includes(keyword)))
+          return item.text
+      }
+
+      return raw
     },
     getFreqLockTypeText(type) {
       const map = { '0': '解锁状态', '1': '锁频点+锁频段', '2': '锁小区+频点+锁频段', '3': '锁频段' }
@@ -775,6 +825,7 @@ export default {
     getStatusText() {
       return 'NR' + this.NR_5GCore.stat + ' | ' + 'LTE' + this.CS.stat
     },
+    // 保存配置
     saveConfig() {
       if (!this.settings.interface) {
         this.$message.error('The network interface must be specified!')

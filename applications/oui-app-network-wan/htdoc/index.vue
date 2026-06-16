@@ -321,6 +321,45 @@ import WanConfig from './wan.vue'
 import DhcpConfig from './dhcp.vue'
 import WirelessConfig from './wireless.vue'
 
+const createEmptyMonsc = () => ({
+  rat: '',
+  nr: {
+    cell_id: '',
+    arfcn: '',
+    scs: '',
+    pci: '',
+    tac: '',
+    rsrp: '',
+    rsrq: '',
+    sinr: ''
+  },
+  lte: {
+    cell_id: '',
+    arfcn: '',
+    pci: '',
+    tac: '',
+    rsrp: '',
+    rsrq: '',
+    rssi: ''
+  },
+  wcdma: {
+    arfcn: '',
+    pcs: '',
+    cell_id: '',
+    lac: '',
+    rscp: '',
+    rxlev: '',
+    ecno: ''
+  }
+})
+
+const createEmptyMonnc = () => ({
+  gsm: [],
+  wcdma: [],
+  lte: [],
+  nr: []
+})
+
 const createDefaultWanLink = (index) => {
 
   return {
@@ -368,43 +407,8 @@ const createDefaultWanLink = (index) => {
       ci: '',
       act: ''
     },
-    monsc: {
-      rat: '',
-      nr:{
-        cell_id:'',
-        arfcn:'',
-        scs:'',
-        pci:'',
-        tac:'',
-        rsrp:'',
-        rsrq:'',
-        sinr:''
-      },
-      lte:{
-        cell_id:'',
-        arfcn:'',
-        pci:'',
-        tac:'',
-        rsrp:'',
-        rsrq:'',
-        rssi:''
-      },
-      wcdma:{
-        arfcn:'',
-        pcs:'',
-        cell_id:'',
-        lac:'',
-        rscp:'',
-        rxlev:'',
-        ecno:''
-      }
-    },
-    monnc: {
-      gsm: [],
-      wcdma: [],
-      lte: [],
-      nr: []
-    },
+    monsc: createEmptyMonsc(),
+    monnc: createEmptyMonnc(),
     // 配置
     realSettings:{
       rat:'',
@@ -601,7 +605,7 @@ export default {
         for (const item of links) {
           if (!item || !item.kind)
             continue
-
+          // sim卡链路
           if (item.kind === 'sim') {
             const n = Number(item.sim_index)
             if (!Number.isFinite(n) || n < 0)
@@ -611,10 +615,11 @@ export default {
             model.uci = item
             model.settings.index = n
             if (item.name) model.settings.interfaceName = item.name
+            model.settings.interface = item.device || ''
             uiLinks.push(model)
             continue
           }
-
+          // 网线
           if (item.kind === 'wan') {
             const model = createDefaultWanLink(0)
             model.kind = 'wan'
@@ -1012,7 +1017,7 @@ export default {
             }
 
             if (isDetail) {
-              const newest = link.monsc
+              const newest = createEmptyMonsc()
               // 驻留小区信息
               if (monsc.rat) newest.rat = monsc.rat
               // NR驻留小区信息
@@ -1046,15 +1051,21 @@ export default {
                 if (monsc.wcdma.rxlev) newest.wcdma.rxlev = monsc.wcdma.rxlev
                 if (monsc.wcdma.ecno) newest.wcdma.ecno = monsc.wcdma.ecno
               }
-              // 更新驻留小区信息
-              if (data.monnc) {
-                const monnc = link.monnc
-                if (data.monnc.gsm) monnc.gsm = data.monnc.gsm
-                if (data.monnc.wcdma) monnc.wcdma = data.monnc.wcdma
-                if (data.monnc.lte) monnc.lte = data.monnc.lte
-                if (data.monnc.nr) monnc.nr = data.monnc.nr
-              }
+              link.monsc = newest
             }
+          } else if (isDetail) {
+            link.monsc = createEmptyMonsc()
+          }
+
+          if (isDetail) {
+            const monnc = createEmptyMonnc()
+            if (data.monnc) {
+              if (Array.isArray(data.monnc.gsm)) monnc.gsm = data.monnc.gsm
+              if (Array.isArray(data.monnc.wcdma)) monnc.wcdma = data.monnc.wcdma
+              if (Array.isArray(data.monnc.lte)) monnc.lte = data.monnc.lte
+              if (Array.isArray(data.monnc.nr)) monnc.nr = data.monnc.nr
+            }
+            link.monnc = monnc
           }
         }).catch(err => {
           console.warn('getStatus failed for index', index, err)
@@ -1473,7 +1484,7 @@ export default {
         if (data.enable) settings.enable = data.enable === '1' || data.enable === 1 || data.enable === true
         if (data.usb) settings.usb = data.usb
         if (data.node) settings.node = data.node
-        if (data.interface) settings.interface = data.interface
+        if (data.interface && !String(data.interface).startsWith('/dev/')) settings.interface = data.interface
         if (data.band) settings.band = data.band
         if (data.pci) settings.pcid = data.pci
         if (data.net) settings.net = data.net
