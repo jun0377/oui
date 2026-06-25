@@ -3,247 +3,40 @@ local log = require 'log'
 local uci = require 'eco.uci'
 
 log.level = 'trace'
-log.usercolor = true
+log.usecolor = true
 log.outfile = '/var/log/sim.log'
-
--- SIM卡状态
-local Sim = {
-    [1] = {
-        settings = {
-            usb = '',                               -- USB端口号
-            interface = '',                         -- 接口名称
-            alias = '5G-1',                         -- tag
-            ttyusb = '',                            -- 拨号节点
-            uciSection = 'sim1',                -- UCI配置文件section命名规范
-            band = '',                              -- 设置的频段
-            net = '',                               -- 入网方式设置：AUTO/SA/NSA/LTE
-            apn = '',                               -- apn
-            auth = '',                              -- 鉴权
-            user = '',                              -- 用户名
-            passwd = '',                            -- 密码
-            cellLocked = '',                        -- 锁小区
-            pcidlocked = '',                        -- 锁物理小区pci
-            dhcpRangeStart = '',                    -- DHCP地址池起始IP
-            dhcpRanageEnd = '',                     -- DHCP地址池终止IP
-            dhcpRangeMask = '',                     -- DHCP地址池掩码
-            dhcpRangeGateway = '',                  -- DHCP地址池网关
-        },
-        status = {
-            module = '',                            -- 模组名称
-            version = '',                           -- 模组版本
-            imei = '',                              -- 模组的IMEI码
-            mac = '',                               -- mac地址
-            status = '',                            -- 连接状态：离线、nosim(未插卡)、拨号中、在线
-            timestamp = '',                         -- 状态更新时间
-            rtt_ms = 0,                             -- 到服务器的延时
-            net = '',                               -- 当设置为AUTO时，实时的入网方式
-            rsrp_nr = 0,                            -- 5G信号强度RSRP
-            rsrp_lte = 0,                           -- LTE信号强度RSRP
-            sinr_nr = 0,                            -- 5G信噪比
-            sinr_lte = 0,                           -- LTE信噪比
-            operator = '',                          -- 运营商
-            imsi = '',                              -- SIM卡的IMSI
-            band = '',                              -- 实时频段
-            cell_nr = '',                           -- 5G实时小区
-            cell_lte = '',                          -- LTE实时小区
-            pcid_nr = '',                           -- 5G物理小区ID
-            pcid_lte = '',                          -- LTE物理小区ID
-            ip = '',                                -- IP
-            mask = '',                              -- 掩码
-            gateway = '',                           -- 网关
-        }
-    },
-    [2] = {
-        settings = {
-            usb = '',                               -- USB端口号
-            interface = '',                         -- 接口名称
-            alias = '5G-2',                         -- tag
-            ttyusb = '',                            -- 拨号节点
-            uciSection = 'sim2',                -- UCI配置文件section命名规范
-            band = '',                              -- 设置的频段
-            net = '',                               -- 入网方式设置：AUTO/SA/NSA/LTE
-            apn = '',                               -- apn
-            auth = '',                              -- 鉴权
-            user = '',                              -- 用户名
-            passwd = '',                            -- 密码
-            cellLocked = '',                        -- 锁小区
-            pcidlocked = '',                        -- 锁物理小区pci
-            dhcpRangeStart = '',                    -- DHCP地址池起始IP
-            dhcpRanageEnd = '',                     -- DHCP地址池终止IP
-            dhcpRangeMask = '',                     -- DHCP地址池掩码
-            dhcpRangeGateway = '',                  -- DHCP地址池网关
-        },
-        status = {
-            module = '',                            -- 模组名称
-            version = '',                           -- 模组版本
-            imei = '',                              -- 模组的IMEI码
-            mac = '',                               -- mac地址
-            status = '',                            -- 连接状态：离线、nosim(未插卡)、拨号中、在线
-            timestamp = '',                         -- 状态更新时间
-            rtt_ms = 0,                             -- 到服务器的延时
-            net = '',                               -- 当设置为AUTO时，实时的入网方式
-            rsrp_nr = 0,                            -- 5G信号强度RSRP
-            rsrp_lte = 0,                           -- LTE信号强度RSRP
-            sinr_nr = 0,                            -- 5G信噪比
-            sinr_lte = 0,                           -- LTE信噪比
-            operator = '',                          -- 运营商
-            imsi = '',                              -- SIM卡的IMSI
-            band = '',                              -- 实时频段
-            cell_nr = '',                           -- 5G实时小区
-            cell_lte = '',                          -- LTE实时小区
-            pcid_nr = '',                           -- 5G物理小区ID
-            pcid_lte = '',                          -- LTE物理小区ID
-            ip = '',                                -- IP
-            mask = '',                              -- 掩码
-            gateway = '',                           -- 网关
-        }
-    },
-    [3] = {
-        settings = {
-            usb = '',                               -- USB端口号
-            interface = '',                         -- 接口名称
-            alias = '5G-3',                         -- tag
-            ttyusb = '',                            -- 拨号节点
-            uciSection = 'sim3',                -- UCI配置文件section命名规范
-            band = '',                              -- 设置的频段
-            net = '',                               -- 入网方式设置：AUTO/SA/NSA/LTE
-            apn = '',                               -- apn
-            auth = '',                              -- 鉴权
-            user = '',                              -- 用户名
-            passwd = '',                            -- 密码
-            cellLocked = '',                       -- 锁小区
-            pcidlocked = '',                        -- 锁物理小区pci
-            dhcpRangeStart = '',                    -- DHCP地址池起始IP
-            dhcpRanageEnd = '',                     -- DHCP地址池终止IP
-            dhcpRangeMask = '',                     -- DHCP地址池掩码
-            dhcpRangeGateway = '',                  -- DHCP地址池网关
-        },
-        status = {
-            module = '',                            -- 模组名称
-            version = '',                           -- 模组版本
-            imei = '',                              -- 模组的IMEI码
-            mac = '',                               -- mac地址
-            status = '',                            -- 连接状态：离线、nosim(未插卡)、拨号中、在线
-            timestamp = '',                         -- 状态更新时间
-            rtt_ms = 0,                             -- 到服务器的延时
-            net = '',                               -- 当设置为AUTO时，实时的入网方式
-            rsrp_nr = 0,                            -- 5G信号强度RSRP
-            rsrp_lte = 0,                           -- LTE信号强度RSRP
-            sinr_nr = 0,                            -- 5G信噪比
-            sinr_lte = 0,                           -- LTE信噪比
-            operator = '',                          -- 运营商
-            imsi = '',                              -- SIM卡的IMSI
-            band = '',                              -- 实时频段
-            cell_nr = '',                           -- 5G实时小区
-            cell_lte = '',                          -- LTE实时小区
-            pcid_nr = '',                           -- 5G物理小区ID
-            pcid_lte = '',                          -- LTE物理小区ID
-            ip = '',                                -- IP
-            mask = '',                              -- 掩码
-            gateway = '',                           -- 网关
-        }
-    },
-    [4] = {
-        settings = {
-            usb = '',                               -- USB端口号
-            interface = '',                         -- 接口名称
-            alias = '5G-4',                         -- tag
-            ttyusb = '',                            -- 拨号节点
-            uciSection = 'sim4',                -- UCI配置文件section命名规范
-            band = '',                              -- 设置的频段
-            net = '',                               -- 入网方式设置：AUTO/SA/NSA/LTE
-            apn = '',                               -- apn
-            auth = '',                              -- 鉴权
-            user = '',                              -- 用户名
-            passwd = '',                            -- 密码
-            cellLocked = '',                       -- 锁小区
-            pcidlocked = '',                        -- 锁物理小区pci
-            dhcpRangeStart = '',                    -- DHCP地址池起始IP
-            dhcpRanageEnd = '',                     -- DHCP地址池终止IP
-            dhcpRangeMask = '',                     -- DHCP地址池掩码
-            dhcpRangeGateway = '',                  -- DHCP地址池网关
-        },
-        status = {
-            module = '',                            -- 模组名称
-            version = '',                           -- 模组版本
-            imei = '',                              -- 模组的IMEI码
-            mac = '',                               -- mac地址
-            status = '',                            -- 连接状态：离线、nosim(未插卡)、拨号中、在线
-            timestamp = '',                         -- 状态更新时间
-            rtt_ms = 0,                             -- 到服务器的延时
-            net = '',                               -- 当设置为AUTO时，实时的入网方式
-            rsrp_nr = 0,                            -- 5G信号强度RSRP
-            rsrp_lte = 0,                           -- LTE信号强度RSRP
-            sinr_nr = 0,                            -- 5G信噪比
-            sinr_lte = 0,                           -- LTE信噪比
-            operator = '',                          -- 运营商
-            imsi = '',                              -- SIM卡的IMSI
-            band = '',                              -- 实时频段
-            cell_nr = '',                           -- 5G实时小区
-            cell_lte = '',                          -- LTE实时小区
-            pcid_nr = '',                           -- 5G物理小区ID
-            pcid_lte = '',                          -- LTE物理小区ID
-            ip = '',                                -- IP
-            mask = '',                              -- 掩码
-            gateway = '',                           -- 网关
-        }
-    },
-    [5] = {
-        settings = {
-            usb = '',                               -- USB端口号
-            interface = '',                         -- 接口名称
-            alias = '5G-5',                         -- tag
-            ttyusb = '',                            -- 拨号节点
-            uciSection = 'sim5',                -- UCI配置文件section命名规范
-            band = '',                              -- 设置的频段
-            net = '',                               -- 入网方式设置：AUTO/SA/NSA/LTE
-            apn = '',                               -- apn
-            auth = '',                              -- 鉴权
-            user = '',                              -- 用户名
-            passwd = '',                            -- 密码
-            cellLocked = '',                       -- 锁小区
-            pcidlocked = '',                        -- 锁物理小区pci
-            dhcpRangeStart = '',                    -- DHCP地址池起始IP
-            dhcpRanageEnd = '',                     -- DHCP地址池终止IP
-            dhcpRangeMask = '',                     -- DHCP地址池掩码
-            dhcpRangeGateway = '',                  -- DHCP地址池网关
-        },
-        status = {
-            module = '',                            -- 模组名称
-            version = '',                           -- 模组版本
-            imei = '',                              -- 模组的IMEI码
-            mac = '',                               -- mac地址
-            status = '',                            -- 连接状态：离线、nosim(未插卡)、拨号中、在线
-            timestamp = '',                         -- 状态更新时间
-            rtt_ms = 0,                             -- 到服务器的延时
-            net = '',                               -- 当设置为AUTO时，实时的入网方式
-            rsrp_nr = 0,                            -- 5G信号强度RSRP
-            rsrp_lte = 0,                           -- LTE信号强度RSRP
-            sinr_nr = 0,                            -- 5G信噪比
-            sinr_lte = 0,                           -- LTE信噪比
-            operator = '',                          -- 运营商
-            imsi = '',                              -- SIM卡的IMSI
-            band = '',                              -- 实时频段
-            cell_nr = '',                           -- 5G实时小区
-            cell_lte = '',                          -- LTE实时小区
-            pcid_nr = '',                           -- 5G物理小区ID
-            pcid_lte = '',                          -- LTE物理小区ID
-            ip = '',                                -- IP
-            mask = '',                              -- 掩码
-            gateway = '',                           -- 网关
-        }
-    }
-}
 
 local function exec(command)
     local pp = io.popen(command)
+    if not pp then
+        return ''
+    end
+
     local data = pp:read("*a")
     pp:close()
     return data
 end
 
+-- 根据逻辑接口名来获取真实物理网口名, 如: wan0 -> eth0
+local function get_interface(ifname)
+    
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+    
+    local cmd = string.format("ubus call network.interface.%s status 2>/dev/null | jsonfilter -e '@.device' | tr -d '\r\n'", ifname)
+    return exec(cmd)
+end
+
 -- 获取指定网口的IP
 function getInterfaceIP(interface)
+    
+    if nil == interface or '' == interface then
+        log.error('ifname is nil!')
+        return false
+    end
+    
     local cmd = string.format("ip addr show %s | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1  | tr -d '\n'", interface)
     -- log.info(cmd)
     return exec(cmd)
@@ -251,6 +44,12 @@ end
 
 -- 获取指定网口的掩码
 function getInterfaceMask(interface)
+    
+    if nil == interface or '' == interface then
+        log.error('ifname is nil!')
+        return false
+    end
+    
     local cmd = string.format("ifconfig %s | grep 'Mask:' | awk -F 'Mask:' '{print $2}' | tr -d '\n'", interface)
     -- log.info(cmd)
     return exec(cmd)
@@ -258,6 +57,12 @@ end
 
 -- 获取指定网口的网关
 function getInterfaceGateway(interface)
+    
+    if nil == interface or '' == interface then
+        log.error('ifname is nil!')
+        return false
+    end
+
     local cmd = string.format("ip route show default | grep %s | awk '{print $3}'", interface)
     -- log.info(cmd)
     return exec(cmd)
@@ -265,6 +70,12 @@ end
 
 -- 获取指定网口的mac地址
 function getInterfaceMAC(interface)
+    
+    if nil == interface or '' == interface then
+        log.error('ifname is nil!')
+        return false
+    end
+    
     local cmd = string.format("cat /sys/class/net/%s/address | tr -d '\r\n'", interface)
     -- log.info(cmd)
     return exec(cmd)
@@ -272,6 +83,12 @@ end
 
 -- 获取网口下行数据量
 function getInterfaceRxBytes(interface)
+
+    if nil == interface or '' == interface then
+        log.error('ifname is nil!')
+        return false
+    end
+
     local cmd = string.format("cat /sys/class/net/%s/statistics/rx_bytes | tr -d '\r\n'", interface)
     -- log.info(cmd)
     return exec(cmd)
@@ -279,128 +96,552 @@ end
 
 -- 获取网口上行数据量
 function getInterfaceTxBytes(interface)
+
+    if nil == interface or '' == interface then
+        log.error('ifname is nil!')
+        return false
+    end
+    
     local cmd = string.format("cat /sys/class/net/%s/statistics/tx_bytes | tr -d '\r\n'", interface)
     -- log.info(cmd)
     return exec(cmd)
 end
 
--- 获取指定USB好对应的网口名,如2-1对应eth2
-function getInterfaceByUsb(usb)
-    local cmd = string.format("ls /sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/%s/%s:2.0/net/ | tr -d '\r\n'", usb, usb)
-    return exec(cmd)
-end
-
 -- 获取模组对应的usb端点号
-local function getSimUsb(index)
-    local section = Sim[index].settings.uciSection
-    local c = uci.cursor()
-    return c:get('sim', section, 'usb')
-end
+local function getSimUsb(ifname)
 
--- 获取模组别名,如5G-1 5G-2 4G-1 4G-2
-local function getSimAlias(index)
-    local section = Sim[index].settings.uciSection
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+    
     local c = uci.cursor()
-    return c:get('sim', section, 'alias')
-end
-
--- 获取模组对应的模组名称
-local function getSimModuleName(index)
-    local section = Sim[index].settings.uciSection
-    local c = uci.cursor()
-    return c:get('sim', section, 'module')
-end
-
--- 获取模组版本
-local function getSimModuleVersion(index)
-    local section = Sim[index].settings.uciSection
-    local c = uci.cursor()
-    return c:get('sim', section, 'moduleVersion')
+    return c:get('sim', ifname, 'usb')
 end
 
 -- 获取模组拨号节点
-local function getSimNode(index)
-    local section = Sim[index].settings.uciSection
-    local c = uci.cursor()
-    return c:get('sim', section, 'node')
-end
+local function getSimNode(ifname)
+    
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
 
--- 获取模组对应的接口
-local function getSimInterface(index)
-    -- local section = Sim[index].settings.uciSection
-    -- local c = uci.cursor()
-    -- return c:get('sim', section, 'interface')
-    local usb = getSimUsb(index)
-    local interface = getInterfaceByUsb(usb)
-    return interface
+    local c = uci.cursor()
+    local ttyUSB = c:get('sim', ifname, 'ttyUSB')
+    if not ttyUSB or ttyUSB == '' then
+        log.error(string.format("%s ttyUSB is not defined! (uci get sim.%s.ttyUSB)", ifname, ifname))
+        return nil
+    end
+
+    local usb = c:get('sim', ifname, 'usb')
+    if not usb or usb == '' then
+        log.error(string.format("%s usb sysfs path is not defined!", ifname))
+        return nil
+    end
+
+    local sysfs_path = string.format("%s/%s", usb, ttyUSB)
+    local cmd = string.format("ls %s 2>/dev/null | grep ttyUSB | head -1 | tr -d '\r\n'", sysfs_path)
+    local tty = exec(cmd)
+    if tty == '' then
+        log.error(string.format("%s can not find ttyUSB in %s", ifname, sysfs_path))
+        return nil
+    end
+
+    return string.format("/dev/%s", tty)
 end
 
 -- 获取模组mac地址
-local function getSimMac(index)
-    return getInterfaceMAC(Sim[index].settings.interface)
+local function getSimMac(ifname)
+    
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local interface = get_interface(ifname)
+    return getInterfaceMAC(interface)
 end
 
 -- 获取模组频段设置
-local function getSimConfBand(index)
-    local section = Sim[index].settings.uciSection
+local function getSimConfBand(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
     local c = uci.cursor()
-    return c:get('sim', section, 'band')
+    return c:get('sim', ifname, 'band')
 end
 
 -- 获取模组入网方式设置
-local function getSimConfNet(index)
-    local section = Sim[index].settings.uciSection
+local function getSimConfNet(ifname)
+    
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
     local c = uci.cursor()
-    return c:get('sim', section, 'net')
+    return c:get('sim', ifname, 'net')
 end
 
 -- 获取模组APN设置
-local function getSimConfAPN(index)
-    local section = Sim[index].settings.uciSection
+local function getSimConfAPN(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
     local c = uci.cursor()
-    return c:get('sim', section, 'apn')
+    return c:get('sim', ifname, 'apn')
 end
 
 -- 获取模组鉴权设置
-local function getSimConfAuth(index)
-    local section = Sim[index].settings.uciSection
+local function getSimConfAuth(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
     local c = uci.cursor()
-    return c:get('sim', section, 'auth')
+    return c:get('sim', ifname, 'auth')
 end
 
 -- 获取模组用户名设置
-local function getSimConfUser(index)
-    local section = Sim[index].settings.uciSection
+local function getSimConfUser(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
     local c = uci.cursor()
-    return c:get('sim', section, 'user')
+    return c:get('sim', ifname, 'user')
 end
 
 -- 获取模组密码设置
-local function getSimConfPasswd(index)
-    local section = Sim[index].settings.uciSection
+local function getSimConfPasswd(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
     local c = uci.cursor()
-    return c:get('sim', section, 'passwd')
+    return c:get('sim', ifname, 'passwd')
 end
 
 -- 获取模组小区设置
-local function getSimConfCell(index)
-    local section = Sim[index].settings.uciSection
+local function getSimConfCell(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
     local c = uci.cursor()
-    return c:get('sim', section, 'cell')
+    return c:get('sim', ifname, 'cell')
 end
 
 -- 获取模组物理小区PCI设置
-local function getSimConfPCI(index)
-    local section = Sim[index].settings.uciSection
+local function getSimConfPCI(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
     local c = uci.cursor()
-    return c:get('sim', section, 'pci')
+    return c:get('sim', ifname, 'pci')
 end
 
+-- 获取状态更新时间戳
+local function getRealTimeStatusTimestamp(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/timestamp", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "") 
+end
+
+-- 获取SIM卡状态
+local function getRealTimeStatusSim(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/sim_status", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "") 
+end
+
+-- 获取SIM卡国家码
+local function getRealTimeStatusCountry(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/country", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "") 
+end
+
+-- 获取SIM卡运营商mcc
+local function getRealTimeStatusMCC(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/mcc", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "") 
+end
+
+-- 获取SIM卡运营商mnc
+local function getRealTimeStatusMNC(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/mnc", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "") 
+end
+
+-- 获取SIM卡运营商字符串描述
+local function getRealTimeStatusOperator(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/operator", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "") 
+end
+
+-- 获取SIM卡工作频率
+local function getRealTimeStatusFreq(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/freq", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "") 
+end
+
+-- 获取SIM卡5G NR注册状态
+local function getRealTimeStatus5GCore(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/C5GCore", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "") 
+end
+
+-- 获取SIM卡LTE注册状态
+local function getRealTimeStatus4GCore(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/LTECore", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "") 
+end
+
+-- 获取SIM卡当前驻留小区信息
+local function getRealTimeStatusMONSC(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/monsc", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "") 
+end
+
+-- 获取SIM卡当前相邻小区信息
+local function getRealTimeStatusMONNC(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/monnc", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "")
+end
+
+-- 查询模组配置,是从模组内部查询到的配置,并不是uci配置, Radio Access Technology无线接入技术
+local function getModuleSettingsRAT(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/rat_setting", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "")
+end
+
+-- 查询模组配置,是从模组内部查询到的配置,并不是uci配置, Packet Data Protocol分组数据协议
+local function getModuleSettingsPDP(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/pdp_setting", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "")
+end
+
+-- 查询模组配置,是从模组内部查询到的配置,并不是uci配置, auth: 鉴权设置,数据业务（PDP/PDN）建立时对 APN 的认证，常见于企业专网卡/物联网卡
+local function getModuleSettingsAUTH(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/auth_setting", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "")
+end
+
+-- 查询模组配置,是从模组内部查询到的配置,并不是uci配置, NR锁频锁小区配置
+local function getModuleSettingsNRLock(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/nrlock_setting", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "")
+end
+
+-- 查询模组配置,是从模组内部查询到的配置,并不是uci配置, LTE锁频锁小区配置
+local function getModuleSettingsLTELock(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/ltelock_setting", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "")
+end
+
+-- 获取模组厂商id
+local function getSimVendor(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/vendor", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "")
+end
+
+-- 获取模组型号
+local function getSimModel(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/model", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "")
+end
+
+-- 获取模组版本
+local function getSimRevision(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/revision", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "")
+end
+
+-- 获取模组imei
+local function getSimIMEI(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/imei", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "")
+end
+
+-- 获取SIM卡imei
+local function getSimIMSI(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/imsi", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "")
+end
+
+-- 获取SIM卡iccid
+local function getSimICCID(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local f = io.open(string.format("/tmp/tracker-sim/%s/iccid", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    return data:gsub("[\r\n]", "")
+end
 
 -- 获取网络接口信息
-function M.getInterfaceStatus(params)
-    local index = tonumber(params.index) + 1
-    local interface = getSimInterface(index)
+function M.getInterfaceStatus(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local interface = get_interface(ifname)
     
     if not interface or interface == "" then
         return { code = -1, msg = "Interface not found" }
@@ -433,56 +674,121 @@ end
 -- "imsi":"460115403693387"
 -- }
 -- 获取模组基本信息
-function M.getProductInfo(params)
-    local index = tonumber(params.index) + 1
-    local node = getSimNode(index)
-    local cmd = string.format("/usr/share/modemdata/product.sh %s", node)
-    log.info(cmd)
-    local ret = exec(cmd);
+function M.getProductInfo(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local vendor = getSimVendor(ifname)
+    local product = getSimModel(ifname)
+    local revision = getSimRevision(ifname)
+    local imei = getSimIMEI(ifname)
+    local iccid = getSimICCID(ifname)
+    local imsi = getSimIMSI(ifname)
+    local ret = string.format(
+        '{"vendor":"%s","product":"%s","revision":"%s","imei":"%s","iccid":"%s","imsi":"%s"}',
+        vendor:gsub('"', '\\"'),
+        product:gsub('"', '\\"'),
+        revision:gsub('"', '\\"'),
+        imei:gsub('"', '\\"'),
+        iccid:gsub('"', '\\"'),
+        imsi:gsub('"', '\\"')
+    )
     -- log.info(ret)
     return ret
 end
 
+-- {
+-- "timestamp": "$(date '+%H:%M:%S')",
+-- "sim": "${CPIN_TEXT}",
+-- "country":"${COUNTRY}",
+-- "mcc":"${MCC}", "mnc":"${MNC}",
+-- "operator_name":"$COPS",
+-- "freqInfo":${HFREQINFO_JSON:-null},
+-- "C5GCore":${C5GREG_JSON:-null},
+-- "C4GCore":${CEREG_JSON:-null},
+-- "monsc":{
+--   "rat":"$RAT",
+--   "nr":{"cell_id":"$NR_CELL_ID","arfcn":"$NR_ARFCN","scs":"$NR_SCS","pci":"$NR_PCI","tac":"$NR_TAC","rsrp":"$NR_RSRP","rsrq":"$NR_RSRQ","sinr":"$NR_SINR"},
+--   "lte":{"cell_id":"$LTE_CELL_ID","arfcn":"$LTE_ARFCN","pci":"$LTE_PCI","tac":"$LTE_TAC","rsrp":"$LTE_RSRP","rsrq":"$LTE_RSRQ","rssi":"$LTE_RSSI"},
+--   "wcdma":{"arfcn":"$WCDMA_ARFCN","pcs":"$WCDMA_PCS","cell_id":"$WCDMA_CELL_ID","lac":"$WCDMA_LAC","rscp":"$WCDMA_RSCP","rxlev":"$WCDMA_RXLEV","ecno":"$WCDMA_ECNO"}
+-- },
+-- "monnc":{"gsm":${NC_GSM_JSON:-[]},"wcdma":${NC_WCDMA_JSON:-[]},"lte":${NC_LTE_JSON:-[]},"nr":${NC_NR_JSON:-[]}},
+-- }
 -- 获取模组实时信息
-function M.getRealtimeStatus(params)
-    local index = tonumber(params.index) + 1
-    local node = getSimNode(index)
-    local cmd = string.format("/usr/share/modemdata/params.sh %s", node)
-    log.info(cmd)
-    local ret = exec(cmd);
-    -- log.info(ret)
+function M.getStatus(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local timestamp = getRealTimeStatusTimestamp(ifname)
+    local sim = getRealTimeStatusSim(ifname)
+    local country = getRealTimeStatusCountry(ifname)
+    local mcc = getRealTimeStatusMCC(ifname)
+    local mnc = getRealTimeStatusMNC(ifname)
+    local operator = getRealTimeStatusOperator(ifname)
+    local freqInfo = getRealTimeStatusFreq(ifname)
+    local C5GCore = getRealTimeStatus5GCore(ifname)
+    local C4GCore = getRealTimeStatus4GCore(ifname)
+    local monsc = getRealTimeStatusMONSC(ifname)
+    local monnc = getRealTimeStatusMONNC(ifname)
+
+    local function esc(s)
+        return s:gsub('\\', '\\\\'):gsub('"', '\\"')
+    end
+
+    local ret = string.format(
+        '{"timestamp":"%s","sim":"%s","country":"%s","mcc":"%s","mnc":"%s","operator_name":"%s","freqInfo":%s,"C5GCore":%s,"C4GCore":%s,"monsc":%s,"monnc":%s}',
+        esc(timestamp),
+        esc(sim),
+        esc(country),
+        esc(mcc),
+        esc(mnc),
+        esc(operator),
+        freqInfo ~= "" and freqInfo or "null",
+        C5GCore ~= "" and C5GCore or "null",
+        C4GCore ~= "" and C4GCore or "null",
+        monsc ~= "" and monsc or "null",
+        monnc ~= "" and monnc or "null"
+    )
+
     return ret
 end
 
--- 获取模组内部配置信息
-function M.getSettings(params)
-    local index = tonumber(params.index) + 1
-    local node = getSimNode(index)
-    local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", node)
-    log.info(cmd)
-    local ret = exec(cmd)
-    -- log.info(ret)
-    return ret
-end
-
--- 获取SIM卡运营商 和 状态
-function M.getStatus(params)
-    local index = tonumber(params.index) + 1
-    local node = getSimNode(index)
-    local cmd = string.format("/usr/share/modemdata/params.sh %s", node)
-    log.info(cmd)
-    local ret = exec(cmd)
-    -- log.info("status:", ret)
-    return ret
-end
-
+-- {
+-- "rat": "${SETTINGS_NET}",
+-- "pdp": ${PDP_JSON:-null},
+-- "auth": ${AUTH_JSON:-null},
+-- "nrfreqlock":${NR_FREQLOCK_JSON:-null},
+-- "ltefreqlock":${LTE_FREQLOCK_JSON:-null}
+-- }
 -- 查询模组配置,是从模组内部查询到的配置,并不是uci配置
-function M.getModuleSettings(params)
-    local index = tonumber(params.index) + 1
-    local node = getSimNode(index)
-    local cmd = string.format("/usr/share/modemdata/query_settings.sh %s", node)
-    log.info(cmd)
-    local ret = exec(cmd)
+function M.getModuleSettings(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local rat = getModuleSettingsRAT(ifname)
+    local pdp = getModuleSettingsPDP(ifname)
+    local auth = getModuleSettingsAUTH(ifname)
+    local nrfreqlock = getModuleSettingsNRLock(ifname)
+    local ltefreqlock = getModuleSettingsLTELock(ifname)
+
+    local ret = string.format(
+        '{"rat":"%s","pdp":%s,"auth":%s,"nrfreqlock":%s,"ltefreqlock":%s}',
+        rat:gsub('\\', '\\\\'):gsub('"', '\\"'),
+        pdp ~= "" and pdp or "null",
+        auth ~= "" and auth or "null",
+        nrfreqlock ~= "" and nrfreqlock or "null",
+        ltefreqlock ~= "" and ltefreqlock or "null"
+    )
+
     -- log.info(ret)
     return ret
 end
@@ -495,10 +801,8 @@ local function dial(interface)
 end
 
 -- 从/etc/config/sim这个配置文件中查询配置
-function M.getSimUciSettings(params)
-    local index = tonumber(params.index) + 1
-    local section = Sim[index].settings.uciSection
-    local cmd = string.format("ubus call uci get '{\"config\":\"sim\",\"section\":\"%s\"}' | jq -c '.values'", section)
+function M.getSimUciSettings(ifname)
+    local cmd = string.format("ubus call uci get '{\"config\":\"sim\",\"section\":\"%s\"}' | jq -c '.values'", ifname)
     log.info(cmd)
     local ret = exec(cmd)
     -- log.info(ret)
@@ -506,7 +810,13 @@ function M.getSimUciSettings(params)
 end
 
 -- 更改入网方式
-local function setSimNet(index, net)
+local function setSimNet(ifname, net)
+    
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+    
     if nil == net or '' == net then
         log.error('net is nil!')
         return false
@@ -518,164 +828,196 @@ local function setSimNet(index, net)
         return false
     end
     
-    local old_net = getSimConfNet(index)
+    local old_net = getSimConfNet(ifname)
     if sim_net == old_net then
-        log.info(Sim[index].settings.alias, "net doesn't changed! net:", sim_net)
+        log.info(ifname, "net doesn't changed! net:", sim_net)
         return true
     end
 
-    log.info(Sim[index].settings.alias, 'set net from', old_net, 'to', sim_net)
-    local section = Sim[index].settings.uciSection
+    log.info(ifname, 'set net from', old_net, 'to', sim_net)
     local c = uci.cursor()
-    c:set("sim", section, 'net', sim_net)
+    c:set("sim", ifname, 'net', sim_net)
     c:commit('sim')
 
-    local interface = c:get('sim', section, 'logicInterface')
+    local interface = c:get('sim', ifname, 'logicInterface')
+    
     dial(interface)
+    
+    return true
 end
 
 -- 更改apn
-local function setSimAPN(index, apn)
+local function setSimAPN(ifname, apn)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
     if nil == apn or '' == apn then
         log.error('apn is nil!')
         return false
     end
 
-    local old_apn = getSimConfAPN(index)
+    local old_apn = getSimConfAPN(ifname)
     if old_apn == apn then
-        log.info(Sim[index].settings.alias, "apn doesn't changed! apn:", apn)
+        log.info(ifname, "apn doesn't changed! apn:", apn)
         return true
     end
 
-    log.info(Sim[index].settings.alias, 'set apn from ', old_apn, 'to', apn)
-    local section = Sim[index].settings.uciSection
+    log.info(ifname, 'set apn from ', old_apn, 'to', apn)
     local c = uci.cursor()
-    c:set("sim", section, 'apn', apn)
+    c:set("sim", ifname, 'apn', apn)
     c:commit('sim')
 
-    local interface = c:get('sim', section, 'logicInterface')
+    local interface = c:get('sim', ifname, 'logicInterface')
     dial(interface)
+
+    return true
 end
 
 -- 更改频段
-local function setSimBand(index, band)
+local function setSimBand(ifname, band)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
     if nil == band or '' == band then
         log.error('band is nil!')
         return false
     end
 
-    local old_band = getSimConfBand(index)
+    local old_band = getSimConfBand(ifname)
     if old_band == band then
-        log.info(Sim[index].settings.alias, "band doesn't changed! band:", band)
+        log.info(ifname, "band doesn't changed! band:", band)
         return true
     end
 
-    log.info(Sim[index].settings.alias, 'set band from ', old_band, 'to', band)
-    local section = Sim[index].settings.uciSection
+    log.info(ifname, 'set band from ', old_band, 'to', band)
     local c = uci.cursor()
-    c:set("sim", section, 'band', band)
+    c:set("sim", ifname, 'band', band)
     c:commit('sim')
 
-    Sim[index].settings.interface = c:get('sim', section, 'interface')
-    local interface = c:get('sim', section, 'logicInterface')
+    local interface = c:get('sim', ifname, 'logicInterface')
     dial(interface)
 end
 
 -- 更改小区
-local function setSimPCID(index, PCID)
+local function setSimPCID(ifname, PCID)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
     if nil == PCID or '' == PCID then
         log.error('PCID is nil!')
         return false
     end
 
-    local old_PCID = getSimConfPCI(index)
+    local old_PCID = getSimConfPCI(ifname)
     if old_PCID == PCID then
-        log.info(Sim[index].settings.alias, "PCID doesn't changed! PCID:", PCID)
+        log.info(ifname, "PCID doesn't changed! PCID:", PCID)
         return true
     end
 
-    log.info(Sim[index].settings.alias, 'set PCID from ', old_PCID, 'to', PCID)
-    local section = Sim[index].settings.uciSection
+    log.info(ifname, 'set PCID from ', old_PCID, 'to', PCID)
     local c = uci.cursor()
-    c:set("sim", section, 'pci', PCID)
+    c:set("sim", ifname, 'pci', PCID)
     c:commit('sim')
 
-    local interface = c:get('sim', section, 'logicInterface')
+    local interface = c:get('sim', ifname, 'logicInterface')
     dial(interface)
 end
 
 -- 锁NR PCI小区
-local function setSimNRPCID(index, PCID)
+local function setSimNRPCID(ifname, PCID)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
 
     if nil == PCID or '' == PCID then
         log.error('PCID is nil!')
         return false
     end
 
-    local section = Sim[index].settings.uciSection
-
     local c = uci.cursor()
     
     if (PCID.enabled) then
-        c:set("sim", section, 'nrPciLock', 'true')
+        c:set("sim", ifname, 'nrPciLock', 'true')
     else
-        c:set("sim", section, 'nrPciLock', 'false')
-        c:set("sim", section, 'nrPciPcid', 'none')
-        c:set("sim", section, 'nrPciBand', 'none')
-        c:set("sim", section, 'nrPciFreq', 'none')
-        c:set("sim", section, 'nrPciScs', 'none')
+        c:set("sim", ifname, 'nrPciLock', 'false')
+        c:set("sim", ifname, 'nrPciPcid', 'none')
+        c:set("sim", ifname, 'nrPciBand', 'none')
+        c:set("sim", ifname, 'nrPciFreq', 'none')
+        c:set("sim", ifname, 'nrPciScs', 'none')
         c:commit('sim')
-        return
+        return true
     end
 
-    c:set("sim", section, 'nrPciPcid', PCID.pcid)
-    c:set("sim", section, 'nrPciBand', PCID.band)
-    c:set("sim", section, 'nrPciFreq', PCID.freq)
-    c:set("sim", section, 'nrPciScs', PCID.scs)
+    c:set("sim", ifname, 'nrPciPcid', PCID.pcid)
+    c:set("sim", ifname, 'nrPciBand', PCID.band)
+    c:set("sim", ifname, 'nrPciFreq', PCID.freq)
+    c:set("sim", ifname, 'nrPciScs', PCID.scs)
 
     c:commit('sim')
 
-    local interface = c:get('sim', section, 'logicInterface')
+    local interface = c:get('sim', ifname, 'logicInterface')
     dial(interface)
+
+    return true
 end
 
 -- 锁LTE PCI小区
-local function setSimLTEPCID(index, PCID)
+local function setSimLTEPCID(ifname, PCID)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
 
     if nil == PCID or '' == PCID then
         log.error('PCID is nil!')
         return false
     end
 
-    local section = Sim[index].settings.uciSection
-
     local c = uci.cursor()
     
     if (PCID.enabled) then
-        c:set("sim", section, 'ltePciLock', 'true')
+        c:set("sim", ifname, 'ltePciLock', 'true')
     else
-        c:set("sim", section, 'ltePciLock', 'false')
-        c:set("sim", section, 'ltePciPcid', 'none')
-        c:set("sim", section, 'ltePciBand', 'none')
-        c:set("sim", section, 'ltePciFreq', 'none')
+        c:set("sim", ifname, 'ltePciLock', 'false')
+        c:set("sim", ifname, 'ltePciPcid', 'none')
+        c:set("sim", ifname, 'ltePciBand', 'none')
+        c:set("sim", ifname, 'ltePciFreq', 'none')
         c:commit('sim')
         return
     end
 
-    c:set("sim", section, 'ltePciPcid', PCID.pcid)
-    c:set("sim", section, 'ltePciBand', PCID.band)
-    c:set("sim", section, 'ltePciFreq', PCID.freq)
+    c:set("sim", ifname, 'ltePciPcid', PCID.pcid)
+    c:set("sim", ifname, 'ltePciBand', PCID.band)
+    c:set("sim", ifname, 'ltePciFreq', PCID.freq)
 
     c:commit('sim')
 
-    local interface = c:get('sim', section, 'logicInterface')
+    local interface = c:get('sim', ifname, 'logicInterface')
     dial(interface)
 end
 
 -- 更改鉴权、用户名、密码
-local function setSimAuth(index, auth, apn, username, password)
+local function setSimAuth(ifname, auth, apn, username, password)
+    
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+    
     if nil == auth or '' == auth then
-        log.error(Sim[index].settings.alias, 'unknown auth')
+        log.error(ifname, 'unknown auth')
         return
     end
 
@@ -691,15 +1033,14 @@ local function setSimAuth(index, auth, apn, username, password)
         password = ''
     end
 
-    local section = Sim[index].settings.uciSection
     local c = uci.cursor()
-    c:set("sim", section, 'auth', auth)
-    c:set("sim", section, 'apn', apn)
-    c:set("sim", section, 'user', username)
-    c:set("sim", section, 'passwd', password)
+    c:set("sim", ifname, 'auth', auth)
+    c:set("sim", ifname, 'apn', apn)
+    c:set("sim", ifname, 'user', username)
+    c:set("sim", ifname, 'passwd', password)
     c:commit('sim')
 
-    local interface = c:get('sim', section, 'logicInterface')
+    local interface = c:get('sim', ifname, 'logicInterface')
     dial(interface)
 
 end
@@ -707,6 +1048,8 @@ end
 -- 更改配置
 function M.changeSimSettings(params)
     
+    local ifname=params.alias
+
     log.info(string.format("index:%s %s net:%s", params.index, params.alias, params.net))
     log.info(string.format("index:%s %s apn:%s auth:%s username:%s passwd:%s", params.index, params.alias, params.apn, params.auth, params.username, params.password))
     log.info(string.format("index:%s %s nrBand:%s", params.index, params.alias, params.nrBand))
@@ -718,29 +1061,32 @@ function M.changeSimSettings(params)
 
     local index = tonumber(params.index) + 1
 
-    setSimNet(index, params.net)
-    setSimAPN(index, params.apn)
+    setSimNet(ifname, params.net)
+    setSimAPN(ifname, params.apn)
     -- setSimBand(index, params.band)
-    setSimNRPCID(index, params.nr_pci)
-    setSimLTEPCID(index, params.lte_pci)
-    setSimAuth(index, params.auth, params.apn, params.username, params.password)
+    setSimNRPCID(ifname, params.nr_pci)
+    setSimLTEPCID(ifname, params.lte_pci)
+    setSimAuth(ifname, params.auth, params.apn, params.username, params.password)
 
     return { code = 0 }
 end
 
 -- 更改链路使能
 function M.changeSimEnable(params)
-    
-    local index = params.index + 1
-    log.info('params.enable', params.enable)
-    log.info(string.format("index:%s enable:%s", tostring(index), tostring(params.enable)))
+
+    local ifname = params.alias
+    log.info(string.format("ifname:%s enable:%s", ifname, tostring(params.enable)))
     
     local c = uci.cursor()
-    local section = Sim[index].settings.uciSection
-    local interface = c:get('sim', section, 'interface')
+    local interface = get_interface(ifname)
+    if interface == nil or interface == '' then
+        log.error(string.format("get_interface(%s) failed", ifname))
+        return -1
+    end
+
     local cmd = ''
     if params.enable then
-        c:set("sim", section, 'enable', '1')
+        c:set("sim", ifname, 'enable', 'true')
         c:commit('sim')
 
         cmd = string.format('ifup %s', interface)
@@ -749,7 +1095,7 @@ function M.changeSimEnable(params)
         -- 触发拨号
         dial(interface)
     else
-        c:set("sim", section, 'enable', '0')
+        c:set("sim", ifname, 'enable', 'false')
         c:commit('sim')
         
         cmd = string.format('ifdown %s', interface)

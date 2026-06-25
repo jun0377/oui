@@ -25,16 +25,18 @@ local function workModeSingleSettings()
     
     local c = uci.cursor()
     local channel = c:get('global', 'single', 'channel')
-   local l3_device = 'N/A'
-   if channel and channel ~= '' then
-   local status = ubus.call(string.format('network.interface.%s', channel), 'status', {})
-       l3_device = status.l3_device or status.device
-   end
+    local l3_device = 'N/A'
+    if channel and channel ~= '' then
+        local status = ubus.call(string.format('network.interface.%s', channel), 'status', {})
+        if status then
+            l3_device = status.l3_device or status.device
+        end
+    end
 
-   return {
-       channel = channel,
-       ifname = l3_device
-   }
+    return {
+        channel = channel,
+        ifname = l3_device
+    }
 
 end
 

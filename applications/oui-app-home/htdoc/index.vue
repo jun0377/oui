@@ -687,6 +687,7 @@ export default {
         }
       }).catch(() => baseCard)
     },
+    // 获取网口状态
     fetchInterfaceStates() {
       this.$oui.call('wan', 'getAvailWan').then((result) => {
         const data = this.parseRpcResult(result)

@@ -810,6 +810,7 @@ export default {
     goBack() {
       this.$emit('go-back')
     },
+    // 链路使能
     handleEnableChange(enabled) {
       this.settings.enable = enabled
       this.$oui.call('sim', 'changeSimEnable', this.settings).then((response) => {
