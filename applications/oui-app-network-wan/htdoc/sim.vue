@@ -244,7 +244,7 @@
               </div>
 
               <div class="status-item">
-                <span class="status-label">{{ $t('Real Network Access') }}:</span>
+                <span class="status-label">{{ $t('网络接入技术') }}:</span>
                 <span class="status-value">{{ status.rat }}</span>
               </div>
 
@@ -451,50 +451,34 @@
           </template>
 
           <div class="status-table">
-            <div class="no-data" v-if="!monsc.nr.arfcn && !monsc.lte.arfcn">
+            <div class="no-data" v-if="!monsc.cell.arfcn">
               {{ $t('暂无数据') }}
             </div>
-            <div class="table-title" v-if="monsc.nr.arfcn">NR 驻留小区</div>
-            <div class="table-row header-row" v-if="monsc.nr.arfcn">
-              <div class="table-cell">ARFCN</div>
-              <div class="table-cell">SCS</div>
-              <div class="table-cell">Cell_ID</div>
-              <div class="table-cell">PCI</div>
-              <div class="table-cell">TAC</div>
-              <div class="table-cell">RSRP/dBm</div>
-              <div class="table-cell">RSRQ/dB</div>
-              <div class="table-cell">SINR/dBm</div>
-            </div>
-            <div class="table-row" v-if="monsc.nr.arfcn">
-              <div class="table-cell">{{ monsc.nr.arfcn }}</div>
-              <div class="table-cell">{{ monsc.nr.scs }}</div>
-              <div class="table-cell">{{ monsc.nr.cell_id }}</div>
-              <div class="table-cell">{{ monsc.nr.pci }}</div>
-              <div class="table-cell">{{ monsc.nr.tac }}</div>
-              <div class="table-cell">{{ monsc.nr.rsrp }}</div>
-              <div class="table-cell">{{ monsc.nr.rsrq }}</div>
-              <div class="table-cell">{{ monsc.nr.sinr }}</div>
-            </div>
-
-            <div class="table-title" v-if="monsc.lte.arfcn">LTE 驻留小区</div>
-            <div class="table-row header-row" v-if="monsc.lte.arfcn">
-              <div class="table-cell">ARFCN</div>
-              <div class="table-cell">Cell_ID</div>
-              <div class="table-cell">PCI</div>
-              <div class="table-cell">TAC</div>
-              <div class="table-cell">RSRP/dBm</div>
-              <div class="table-cell">RSRQ/dB</div>
-              <div class="table-cell">RSSI/dBm</div>
-            </div>
-            <div class="table-row" v-if="monsc.lte.arfcn">
-              <div class="table-cell">{{ monsc.lte.arfcn }}</div>
-              <div class="table-cell">{{ monsc.lte.cell_id }}</div>
-              <div class="table-cell">{{ monsc.lte.pci }}</div>
-              <div class="table-cell">{{ monsc.lte.tac }}</div>
-              <div class="table-cell">{{ monsc.lte.rsrp }}</div>
-              <div class="table-cell">{{ monsc.lte.rsrq }}</div>
-              <div class="table-cell">{{ monsc.lte.rssi }}</div>
-            </div>
+            <template v-if="monsc.cell.arfcn">
+              <div class="table-title">{{ monsc.cell.type === 'nr' ? 'NR 驻留小区' : 'LTE 驻留小区' }}</div>
+              <div class="table-row header-row">
+                <div class="table-cell">ARFCN</div>
+                <div class="table-cell" v-if="monsc.cell.type === 'nr'">SCS</div>
+                <div class="table-cell">Cell_ID</div>
+                <div class="table-cell">PCI</div>
+                <div class="table-cell">TAC</div>
+                <div class="table-cell">RSRP/dBm</div>
+                <div class="table-cell">RSRQ/dB</div>
+                <div class="table-cell" v-if="monsc.cell.type === 'nr'">SINR/dBm</div>
+                <div class="table-cell" v-if="monsc.cell.type === 'lte'">RSSI/dBm</div>
+              </div>
+              <div class="table-row">
+                <div class="table-cell">{{ monsc.cell.arfcn }}</div>
+                <div class="table-cell" v-if="monsc.cell.type === 'nr'">{{ monsc.cell.scs }}</div>
+                <div class="table-cell">{{ monsc.cell.cell_id }}</div>
+                <div class="table-cell">{{ monsc.cell.pci }}</div>
+                <div class="table-cell">{{ monsc.cell.tac }}</div>
+                <div class="table-cell">{{ monsc.cell.rsrp }}</div>
+                <div class="table-cell">{{ monsc.cell.rsrq }}</div>
+                <div class="table-cell" v-if="monsc.cell.type === 'nr'">{{ monsc.cell.sinr }}</div>
+                <div class="table-cell" v-if="monsc.cell.type === 'lte'">{{ monsc.cell.rssi }}</div>
+              </div>
+            </template>
           </div>
         </el-card>
 
@@ -605,9 +589,9 @@ export default {
       // 驻留小区信息
       monsc: {
         rat: '',
-        nr: { cell_id: '', arfcn: '', scs: '', pci: '', tac: '', rsrp: '', rsrq: '', sinr: '' },
-        lte: { cell_id: '', arfcn: '', pci: '', tac: '', rsrp: '', rsrq: '', rssi: '' },
-        wcdma: { arfcn: '', pcs: '', cell_id: '', lac: '', rscp: '', rxlev: '', ecno: '' }
+        mcc: '',
+        mnc: '',
+        cell: { type: '', arfcn: '', scs: '', cell_id: '', pci: '', tac: '', rsrp: '', rsrq: '', sinr: '', rssi: '' }
       },
       // 相邻小区信息
       monnc: {
@@ -659,7 +643,8 @@ export default {
           this.settingsInitialized = false
         this.applyWanData(newVal)
       },
-      immediate: true
+      immediate: true,
+      deep: true
     }
   },
   methods: {
@@ -824,7 +809,15 @@ export default {
     },
     // 当前状态字符串
     getStatusText() {
-      return 'NR' + this.NR_5GCore.stat + ' | ' + 'LTE' + this.CS.stat
+      let stat = ''
+      if (this.NR_5GCore.stat !== '')
+        stat = stat + 'NR' + this.NR_5GCore.stat
+      if (this.CS.stat !== '') {
+        if (stat !== '')
+          stat = stat + ' | '
+        stat = stat + 'LTE' + this.CS.stat
+      }
+      return stat
     },
     // 保存配置
     saveConfig() {
@@ -1103,6 +1096,7 @@ export default {
 
 :deep(.compact-card .el-card__body) {
   padding: 10px 16px 16px;
+  overflow: visible;
 }
 
 .compact-card .status-item {

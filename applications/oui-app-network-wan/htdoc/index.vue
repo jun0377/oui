@@ -31,12 +31,12 @@
               </div>
               <div class="subnet-info-wan">
                 <span>{{ item.wan.settings.alias }}</span>
-                <span>{{ item.wan.sim.mcc }}{{ item.wan.sim.mnc }}</span>
+                <span>{{ item.wan.sim.operator || (item.wan.sim.mcc + item.wan.sim.mnc) }}</span>
                 <span>{{ item.wan.status.rat }}</span>
                 <span>{{ item.wan.settings.apn }}</span>
                 <span>{{ getRealBandTypeText(item.index) }}</span>
                 <span>{{ getRsrpText(item.index) }}</span>
-                <span class="status-marquee"><span class="status-marquee-text">{{ getStstusText(item.index) }}</span></span>
+                <span class="status-marquee"><span class="status-marquee-text">{{ getStatusText(item.index) }}</span></span>
                 <span class="subnet-arrow">›</span>
               </div>
             </div>
@@ -257,51 +257,6 @@
       </div>
 
 
-      <!-- 局域网链路 Section（已注释/停用，保留代码） -->
-      <template v-if="false">
-        <div class="section">
-          <div class="section-header">{{ $t('Lan Area') }}</div>
-          <div class="section-content subnet-section">
-            <div class="subnet-item" v-for="(lan, index) in subnets" :key="index" @click="editSubNet(lan)">
-              <!-- 根据lan口名称显示网口图标或WiFi图标 -->
-              <div v-if="lan.name && (lan.name.toLowerCase().includes('wireless'))">
-                <svg class="subnet-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <!-- WiFi图标 -->
-                  <path d="M12 20h.01M8.5 16.5a7 7 0 0 1 7 0M5 13a12 12 0 0 1 14 0M1.5 9.5a18 18 0 0 1 21 0" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="20" r="1" fill="#000"/>
-                </svg>
-              </div>
-              <div v-else>
-                <!-- 网口图标 -->
-                <svg class="subnet-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <!-- 外框 -->
-                  <rect x="2" y="2" width="20" height="20" rx="4" ry="4" fill="none" stroke="#000" stroke-width="2"/>
-                  <!-- 网口主体 -->
-                  <rect x="6" y="8" width="12" height="8" rx="1" ry="1" fill="#000"/>
-                  <!-- 网口触点 -->
-                  <rect x="7" y="10" width="1" height="4" fill="#fff"/>
-                  <rect x="9" y="10" width="1" height="4" fill="#fff"/>
-                  <rect x="11" y="10" width="1" height="4" fill="#fff"/>
-                  <rect x="13" y="10" width="1" height="4" fill="#fff"/>
-                  <rect x="15" y="10" width="1" height="4" fill="#fff"/>
-                  <rect x="16" y="10" width="1" height="4" fill="#fff"/>
-                </svg>
-              </div>
-              <div class="subnet-info-lan">
-                <span></span>
-                <span>{{ $t(lan.name) }}</span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span class="subnet-arrow">›</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
     </div>
 
     <KeepAlive>
@@ -323,33 +278,19 @@ import WirelessConfig from './wireless.vue'
 
 const createEmptyMonsc = () => ({
   rat: '',
-  nr: {
-    cell_id: '',
+  mcc: '',
+  mnc: '',
+  cell: {
+    type: '',
     arfcn: '',
     scs: '',
-    pci: '',
-    tac: '',
-    rsrp: '',
-    rsrq: '',
-    sinr: ''
-  },
-  lte: {
     cell_id: '',
-    arfcn: '',
     pci: '',
     tac: '',
     rsrp: '',
     rsrq: '',
+    sinr: '',
     rssi: ''
-  },
-  wcdma: {
-    arfcn: '',
-    pcs: '',
-    cell_id: '',
-    lac: '',
-    rscp: '',
-    rxlev: '',
-    ecno: ''
   }
 })
 
@@ -365,6 +306,7 @@ const createDefaultWanLink = (index) => {
   return {
     settings: {
       index: index,
+      ifname: '',
       enable: true,
       alias: '',
       interface: '',
@@ -465,6 +407,7 @@ const createDefaultWanLink = (index) => {
       },
       // 网口interface实时状态
       interface: {
+        up: false,
         proto: '',
         status: '-',
         ip: '-',
@@ -559,13 +502,13 @@ export default {
   },
 
   methods: {
-    // 获取指定索引链路的 RPC 索引（仅对 sim 类型有效）
+    // 获取指定索引链路的 RPC 参数（返回 {ifname: "sim1"} 或 null）
     getRpcIndex(index) {
       const link = this.wanLinks && this.wanLinks[index]
       if (link && link.kind && link.kind !== 'sim')
         return null
-      const v = link && link.settings && link.settings.index
-      return typeof v === 'number' ? v : null
+      const v = link && link.settings && link.settings.ifname
+      return v || null
     },
     // 初始化组件：加载可用 WAN 链路、初始化流量数据、启动所有定时任务
     bootstrap() {
@@ -614,6 +557,7 @@ export default {
             model.kind = 'sim'
             model.uci = item
             model.settings.index = n
+            model.settings.ifname = item.name || ''
             if (item.name) model.settings.interfaceName = item.name
             model.settings.interface = item.device || ''
             uiLinks.push(model)
@@ -840,13 +784,20 @@ export default {
         const rpcIndex = this.getRpcIndex(index)
         if (rpcIndex === null)
           return
-        return this.$oui.call('sim', 'getProductInfo', { index: rpcIndex }).then(result => {
+        return this.$oui.call('sim', 'getProductInfo', { ifname: rpcIndex }).then(result => {
           if (token !== this._pollingToken)
             return
-          if (!(this.currentView === 'sim-config' && this.selectedWanIndex === index))
+          if (!(this.currentView === 'sim-config' || this.currentView === 'main') || this.selectedWanIndex !== index)
             return
 
-          const data = typeof result === 'string' ? JSON.parse(result) : result
+          let data = result
+          if (typeof result === 'string') {
+            try {
+              data = JSON.parse(result)
+            } catch {
+              return
+            }
+          }
           const productInfo = this.wanLinks[index].productInfo
           if (data.vendor) productInfo.vendor = data.vendor
           if (data.product) productInfo.product = data.product
@@ -864,14 +815,20 @@ export default {
         const rpcIndex = this.getRpcIndex(index)
         if (rpcIndex === null)
           return
-        return this.$oui.call('sim', 'getModuleSettings', { index: rpcIndex }).then(result => {
+        return this.$oui.call('sim', 'getModuleSettings', { ifname: rpcIndex }).then(result => {
           if (token !== this._pollingToken)
             return
-          if (!(this.currentView === 'sim-config' && this.selectedWanIndex === index))
+          if (!(this.currentView === 'sim-config' || this.currentView === 'main') || this.selectedWanIndex !== index)
             return
 
-          const data = typeof result === 'string' ? JSON.parse(result) : result
-          // console.log('data>>>>>>>>>>>', data)
+          let data = result
+          if (typeof result === 'string') {
+            try {
+              data = JSON.parse(result)
+            } catch {
+              return
+            }
+          }
           const real = this.wanLinks[index].realSettings
           if (data.rat) real.rat = data.rat
           if (data.pdp) {
@@ -914,9 +871,11 @@ export default {
         const rpcIndex = this.getRpcIndex(index)
         if (rpcIndex === null)
           return
-        return this.$oui.call('sim', 'getStatus', { index: rpcIndex }).then(result => {
+        return this.$oui.call('sim', 'getStatus', { ifname: rpcIndex }).then(result => {
           if (token !== this._pollingToken)
             return
+
+          // console.log('status', result)
 
           let data = result
           if (typeof result === 'string') {
@@ -928,7 +887,6 @@ export default {
           }
 
           const link = this.wanLinks[index]
-          // SIM卡信息
           const sim = link.sim
           if (data.sim) sim.status = data.sim
           if (data.operator_name) sim.operator = data.operator_name
@@ -997,59 +955,43 @@ export default {
           }
 
           // NR/LTE信号强度
+          if (data.timestamp) link.status.timestamp = data.timestamp
           if (data.monsc) {
             const monsc = data.monsc
             const status = link.status
             if (data.monsc.rat) status.rat = data.monsc.rat
-            if (data.timestamp) status.timestamp = data.timestamp
-            if (monsc.nr) {
-              if (monsc.nr.rsrp) status.nr.rsrp = monsc.nr.rsrp
-              if (monsc.nr.rsrq) status.nr.rsrq = monsc.nr.rsrq
-              if (monsc.nr.sinr) status.nr.sinr = monsc.nr.sinr
-              if (monsc.nr.band) status.nr.band = monsc.nr.band
-            }
-            if (monsc.lte) {
-              if (monsc.lte.rsrp) status.lte.rsrp = monsc.lte.rsrp
-              if (monsc.lte.rsrq) status.lte.rsrq = monsc.lte.rsrq
-              if (monsc.lte.sinr) status.lte.sinr = monsc.lte.sinr
-              if (monsc.lte.rssi) status.lte.rssi = monsc.lte.rssi
-              if (monsc.lte.band) status.lte.band = monsc.lte.band
+            const cell = monsc.cell
+            if (cell) {
+              if (cell.type === 'nr') {
+                if (cell.rsrp) status.nr.rsrp = cell.rsrp
+                if (cell.rsrq) status.nr.rsrq = cell.rsrq
+                if (cell.sinr) status.nr.sinr = cell.sinr
+                if (cell.band) status.nr.band = cell.band
+              } else if (cell.type === 'lte') {
+                if (cell.rsrp) status.lte.rsrp = cell.rsrp
+                if (cell.rsrq) status.lte.rsrq = cell.rsrq
+                if (cell.sinr) status.lte.sinr = cell.sinr
+                if (cell.rssi) status.lte.rssi = cell.rssi
+                if (cell.band) status.lte.band = cell.band
+              }
             }
 
             if (isDetail) {
               const newest = createEmptyMonsc()
-              // 驻留小区信息
               if (monsc.rat) newest.rat = monsc.rat
-              // NR驻留小区信息
-              if (monsc.nr) {
-                if (monsc.nr.cell_id) newest.nr.cell_id = monsc.nr.cell_id
-                if (monsc.nr.arfcn) newest.nr.arfcn = monsc.nr.arfcn
-                if (monsc.nr.scs) newest.nr.scs = monsc.nr.scs
-                if (monsc.nr.pci) newest.nr.pci = monsc.nr.pci
-                if (monsc.nr.tac) newest.nr.tac = monsc.nr.tac
-                if (monsc.nr.rsrp) newest.nr.rsrp = monsc.nr.rsrp
-                if (monsc.nr.rsrq) newest.nr.rsrq = monsc.nr.rsrq
-                if (monsc.nr.sinr) newest.nr.sinr = monsc.nr.sinr
-              }
-              // LTE驻留小区信息
-              if (monsc.lte) {
-                if (monsc.lte.cell_id) newest.lte.cell_id = monsc.lte.cell_id
-                if (monsc.lte.arfcn) newest.lte.arfcn = monsc.lte.arfcn
-                if (monsc.lte.pci) newest.lte.pci = monsc.lte.pci
-                if (monsc.lte.tac) newest.lte.tac = monsc.lte.tac
-                if (monsc.lte.rsrp) newest.lte.rsrp = monsc.lte.rsrp
-                if (monsc.lte.rsrq) newest.lte.rsrq = monsc.lte.rsrq
-                if (monsc.lte.rssi) newest.lte.rssi = monsc.lte.rssi
-              }
-              // WCDMA驻留小区信息
-              if (monsc.wcdma) {
-                if (monsc.wcdma.cell_id) newest.wcdma.cell_id = monsc.wcdma.cell_id
-                if (monsc.wcdma.arfcn) newest.wcdma.arfcn = monsc.wcdma.arfcn
-                if (monsc.wcdma.pcs) newest.wcdma.pcs = monsc.wcdma.pcs
-                if (monsc.wcdma.lac) newest.wcdma.lac = monsc.wcdma.lac
-                if (monsc.wcdma.rscp) newest.wcdma.rscp = monsc.wcdma.rscp
-                if (monsc.wcdma.rxlev) newest.wcdma.rxlev = monsc.wcdma.rxlev
-                if (monsc.wcdma.ecno) newest.wcdma.ecno = monsc.wcdma.ecno
+              if (monsc.mcc) newest.mcc = monsc.mcc
+              if (monsc.mnc) newest.mnc = monsc.mnc
+              if (monsc.cell) {
+                if (monsc.cell.type) newest.cell.type = monsc.cell.type
+                if (monsc.cell.arfcn) newest.cell.arfcn = monsc.cell.arfcn
+                if (monsc.cell.scs) newest.cell.scs = monsc.cell.scs
+                if (monsc.cell.cell_id) newest.cell.cell_id = monsc.cell.cell_id
+                if (monsc.cell.pci) newest.cell.pci = monsc.cell.pci
+                if (monsc.cell.tac) newest.cell.tac = monsc.cell.tac
+                if (monsc.cell.rsrp) newest.cell.rsrp = monsc.cell.rsrp
+                if (monsc.cell.rsrq) newest.cell.rsrq = monsc.cell.rsrq
+                if (monsc.cell.sinr) newest.cell.sinr = monsc.cell.sinr
+                if (monsc.cell.rssi) newest.cell.rssi = monsc.cell.rssi
               }
               link.monsc = newest
             }
@@ -1079,14 +1021,22 @@ export default {
         const rpcIndex = this.getRpcIndex(index)
         if (rpcIndex === null)
           return
-        return this.$oui.call('sim', 'getInterfaceStatus', { index: rpcIndex }).then(result => {
+        return this.$oui.call('sim', 'getInterfaceStatus', { ifname: rpcIndex }).then(result => {
           if (token !== this._pollingToken)
             return
           if (!((this.currentView === 'sim-config' && this.selectedWanIndex === index) || (this.currentView === 'main' && this.trafficEnabled)))
             return
 
-          const data = typeof result === 'string' ? JSON.parse(result) : result
+          let data = result
+          if (typeof result === 'string') {
+            try {
+              data = JSON.parse(result)
+            } catch {
+              return
+            }
+          }
           const inter = this.wanLinks[index].status.interface
+          if (data.up !== undefined) inter.up = !!data.up
           if (data.ip) inter.ip = data.ip
           if (data.mask) inter.mask = data.mask
           if (data.gateway) inter.gateway = data.gateway
@@ -1424,18 +1374,8 @@ export default {
     },
     // 将字节数格式化为带单位的人类可读字符串（B, KB, MB, GB, TB）
     formatBytes(bytes) {
-      const n = Number(bytes)
-      if (!Number.isFinite(n) || n < 0)
-        return '-'
-      const units = ['B', 'KB', 'MB', 'GB', 'TB']
-      let v = n
-      let u = 0
-      while (v >= 1024 && u < units.length - 1) {
-        v /= 1024
-        u += 1
-      }
-      const digits = u === 0 ? 0 : 2
-      return `${v.toFixed(digits)} ${units[u]}`
+      const r = this.calcBytes(bytes)
+      return r ? `${r.value} ${r.unit}` : '-'
     },
     calcBytes(bytes) {
       const n = Number(bytes)
@@ -1460,14 +1400,32 @@ export default {
       return r ? r.unit : ''
     },
     // 获取链路状态文本（组合 NR 和 LTE 注册状态）
-    getStstusText(index) {
-      let stat = ''
-      if (this.wanLinks[index].NR_5GCore.stat !== '')
-        stat = stat + 'NR' + this.wanLinks[index].NR_5GCore.stat
+    getStatusText(index) {
+      const link = this.wanLinks[index]
+      if (!link)
+        return ''
 
-      if (this.wanLinks[index].CS.stat !== '')
-        stat = stat + ' | LTE' + this.wanLinks[index].CS.stat
+      // 有 IP 即为在线
+      const ip = link.status && link.status.interface && link.status.interface.ip
+      if (ip && ip !== '-' && ip !== '')
+        return '在线'
 
+      // 无 IP 时检查 SIM 卡状态
+      const simStatus = link.sim && link.sim.status
+      if (simStatus && simStatus !== '' && !simStatus.toLowerCase().includes('not'))
+        return '在线（SIM Ready）'
+
+      // 离线时拼接 NR/LTE 注册状态
+      let stat = '离线: '
+      const nrStat = link.NR_5GCore && link.NR_5GCore.stat
+      const csStat = link.CS && link.CS.stat
+      if (nrStat && nrStat !== '')
+        stat = stat + 'NR' + nrStat
+      if (csStat && csStat !== '') {
+        if (nrStat && nrStat !== '')
+          stat = stat + ' | '
+        stat = stat + 'LTE' + csStat
+      }
       return stat
     },
     // 从UCI配置文件/etc/config/sim中查询配置
@@ -1475,11 +1433,17 @@ export default {
       const rpcIndex = this.getRpcIndex(index)
       if (rpcIndex === null)
         return
-      this.$oui.call('sim', 'getSimUciSettings', { index: rpcIndex }).then(result => {
-        const data = typeof result === 'string' ? JSON.parse(result) : result
+      this.$oui.call('sim', 'getSimUciSettings', { ifname: rpcIndex }).then(result => {
+        let data = result
+        if (typeof result === 'string') {
+          try {
+            data = JSON.parse(result)
+          } catch {
+            return
+          }
+        }
         const settings = this.wanLinks[index].settings
 
-        settings.index = rpcIndex
         if (data.alias) settings.alias = data.alias
         if (data.enable) settings.enable = data.enable === '1' || data.enable === 1 || data.enable === true
         if (data.usb) settings.usb = data.usb
@@ -1607,7 +1571,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .container {
   max-width: 1200px;
   margin: 0 auto;

@@ -1,6 +1,7 @@
 local M = {}
 local log = require 'log'
 local uci = require 'eco.uci'
+local cjson = require 'cjson'
 
 log.level = 'trace'
 log.usecolor = true
@@ -17,7 +18,15 @@ local function exec(command)
     return data
 end
 
--- 根据逻辑接口名来获取真实物理网口名, 如: wan0 -> eth0
+-- 从RPC参数中提取ifname（兼容 table 如 {ifname="sim1"} 和字符串 "sim1"）
+local function getIfname(params)
+    if type(params) == "table" then
+        return params.ifname or params.alias or nil
+    end
+    return params
+end
+
+-- 根据逻辑接口名来获取真实物理网口名, 如: sim1 -> eth1
 local function get_interface(ifname)
     
     if nil == ifname or '' == ifname then
@@ -25,85 +34,19 @@ local function get_interface(ifname)
         return false
     end
     
+    -- 优先从 tracker-sim 的 interface 文件中读取
+    local f = io.open(string.format("/tmp/tracker-sim/%s/interface", ifname), "r")
+    if f then
+        local dev = f:read("*a")
+        f:close()
+        dev = dev:gsub("[\r\n]", "")
+        if dev ~= "" then
+            return dev
+        end
+    end
+
+    -- fallback: 通过 ubus 查询
     local cmd = string.format("ubus call network.interface.%s status 2>/dev/null | jsonfilter -e '@.device' | tr -d '\r\n'", ifname)
-    return exec(cmd)
-end
-
--- 获取指定网口的IP
-function getInterfaceIP(interface)
-    
-    if nil == interface or '' == interface then
-        log.error('ifname is nil!')
-        return false
-    end
-    
-    local cmd = string.format("ip addr show %s | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1  | tr -d '\n'", interface)
-    -- log.info(cmd)
-    return exec(cmd)
-end
-
--- 获取指定网口的掩码
-function getInterfaceMask(interface)
-    
-    if nil == interface or '' == interface then
-        log.error('ifname is nil!')
-        return false
-    end
-    
-    local cmd = string.format("ifconfig %s | grep 'Mask:' | awk -F 'Mask:' '{print $2}' | tr -d '\n'", interface)
-    -- log.info(cmd)
-    return exec(cmd)
-end
-
--- 获取指定网口的网关
-function getInterfaceGateway(interface)
-    
-    if nil == interface or '' == interface then
-        log.error('ifname is nil!')
-        return false
-    end
-
-    local cmd = string.format("ip route show default | grep %s | awk '{print $3}'", interface)
-    -- log.info(cmd)
-    return exec(cmd)
-end
-
--- 获取指定网口的mac地址
-function getInterfaceMAC(interface)
-    
-    if nil == interface or '' == interface then
-        log.error('ifname is nil!')
-        return false
-    end
-    
-    local cmd = string.format("cat /sys/class/net/%s/address | tr -d '\r\n'", interface)
-    -- log.info(cmd)
-    return exec(cmd)
-end
-
--- 获取网口下行数据量
-function getInterfaceRxBytes(interface)
-
-    if nil == interface or '' == interface then
-        log.error('ifname is nil!')
-        return false
-    end
-
-    local cmd = string.format("cat /sys/class/net/%s/statistics/rx_bytes | tr -d '\r\n'", interface)
-    -- log.info(cmd)
-    return exec(cmd)
-end
-
--- 获取网口上行数据量
-function getInterfaceTxBytes(interface)
-
-    if nil == interface or '' == interface then
-        log.error('ifname is nil!')
-        return false
-    end
-    
-    local cmd = string.format("cat /sys/class/net/%s/statistics/tx_bytes | tr -d '\r\n'", interface)
-    -- log.info(cmd)
     return exec(cmd)
 end
 
@@ -149,18 +92,6 @@ local function getSimNode(ifname)
     end
 
     return string.format("/dev/%s", tty)
-end
-
--- 获取模组mac地址
-local function getSimMac(ifname)
-    
-    if nil == ifname or '' == ifname then
-        log.error('ifname is nil!')
-        return false
-    end
-
-    local interface = get_interface(ifname)
-    return getInterfaceMAC(interface)
 end
 
 -- 获取模组频段设置
@@ -293,72 +224,31 @@ local function getRealTimeStatusSim(ifname)
     return data:gsub("[\r\n]", "") 
 end
 
--- 获取SIM卡国家码
-local function getRealTimeStatusCountry(ifname)
-
+-- 读取 plmn JSON 文件，一次获取 country / mcc / mnc / operator
+local function readPlmnInfo(ifname)
     if nil == ifname or '' == ifname then
-        log.error('ifname is nil!')
-        return false
+        return "", "", "", ""
     end
-
-    local f = io.open(string.format("/tmp/tracker-sim/%s/country", ifname), "r")
+    local f = io.open(string.format("/tmp/tracker-sim/%s/plmn", ifname), "r")
     if not f then
-        return ""
+        return "", "", "", ""
     end
     local data = f:read("*a")
     f:close()
-    return data:gsub("[\r\n]", "") 
-end
-
--- 获取SIM卡运营商mcc
-local function getRealTimeStatusMCC(ifname)
-
-    if nil == ifname or '' == ifname then
-        log.error('ifname is nil!')
-        return false
+    local ok, plmn = pcall(cjson.decode, data)
+    if not ok or type(plmn) ~= "table" then
+        return "", "", "", ""
     end
-
-    local f = io.open(string.format("/tmp/tracker-sim/%s/mcc", ifname), "r")
-    if not f then
-        return ""
+    local country = plmn.country or ""
+    local mcc = ""
+    local mnc = ""
+    local p = plmn.plmn
+    if p and type(p) == "string" then
+        if #p >= 3 then mcc = p:sub(1, 3) end
+        if #p >= 5 then mnc = p:sub(4) end
     end
-    local data = f:read("*a")
-    f:close()
-    return data:gsub("[\r\n]", "") 
-end
-
--- 获取SIM卡运营商mnc
-local function getRealTimeStatusMNC(ifname)
-
-    if nil == ifname or '' == ifname then
-        log.error('ifname is nil!')
-        return false
-    end
-
-    local f = io.open(string.format("/tmp/tracker-sim/%s/mnc", ifname), "r")
-    if not f then
-        return ""
-    end
-    local data = f:read("*a")
-    f:close()
-    return data:gsub("[\r\n]", "") 
-end
-
--- 获取SIM卡运营商字符串描述
-local function getRealTimeStatusOperator(ifname)
-
-    if nil == ifname or '' == ifname then
-        log.error('ifname is nil!')
-        return false
-    end
-
-    local f = io.open(string.format("/tmp/tracker-sim/%s/operator", ifname), "r")
-    if not f then
-        return ""
-    end
-    local data = f:read("*a")
-    f:close()
-    return data:gsub("[\r\n]", "") 
+    local operator = plmn.long_name or ""
+    return country, mcc, mnc, operator
 end
 
 -- 获取SIM卡工作频率
@@ -386,7 +276,7 @@ local function getRealTimeStatus5GCore(ifname)
         return false
     end
 
-    local f = io.open(string.format("/tmp/tracker-sim/%s/C5GCore", ifname), "r")
+    local f = io.open(string.format("/tmp/tracker-sim/%s/C5GREG", ifname), "r")
     if not f then
         return ""
     end
@@ -403,7 +293,7 @@ local function getRealTimeStatus4GCore(ifname)
         return false
     end
 
-    local f = io.open(string.format("/tmp/tracker-sim/%s/LTECore", ifname), "r")
+    local f = io.open(string.format("/tmp/tracker-sim/%s/CLTEREG", ifname), "r")
     if not f then
         return ""
     end
@@ -633,38 +523,6 @@ local function getSimICCID(ifname)
     return data:gsub("[\r\n]", "")
 end
 
--- 获取网络接口信息
-function M.getInterfaceStatus(ifname)
-
-    if nil == ifname or '' == ifname then
-        log.error('ifname is nil!')
-        return false
-    end
-
-    local interface = get_interface(ifname)
-    
-    if not interface or interface == "" then
-        return { code = -1, msg = "Interface not found" }
-    end
-
-    local ip = getInterfaceIP(interface)
-    local mask = getInterfaceMask(interface)
-    local gateway = getInterfaceGateway(interface)
-    local mac = getInterfaceMAC(interface)
-    local rxBytes = getInterfaceRxBytes(interface)
-    local txBytes = getInterfaceTxBytes(interface)
-
-    return  {
-            interface = interface,
-            ip = ip,
-            mask = mask,
-            gateway = gateway,
-            mac = mac,
-            rxBytes = rxBytes,
-            txBytes = txBytes,
-            }
-end
-
 -- {
 -- "vendor":"TD Tech Ltd.",
 -- "product":"MT5700M-CN",
@@ -675,6 +533,7 @@ end
 -- }
 -- 获取模组基本信息
 function M.getProductInfo(ifname)
+    ifname = getIfname(ifname)
 
     if nil == ifname or '' == ifname then
         log.error('ifname is nil!')
@@ -689,12 +548,12 @@ function M.getProductInfo(ifname)
     local imsi = getSimIMSI(ifname)
     local ret = string.format(
         '{"vendor":"%s","product":"%s","revision":"%s","imei":"%s","iccid":"%s","imsi":"%s"}',
-        vendor:gsub('"', '\\"'),
-        product:gsub('"', '\\"'),
-        revision:gsub('"', '\\"'),
-        imei:gsub('"', '\\"'),
-        iccid:gsub('"', '\\"'),
-        imsi:gsub('"', '\\"')
+        vendor:gsub('\\', '\\\\'):gsub('"', '\\"'),
+        product:gsub('\\', '\\\\'):gsub('"', '\\"'),
+        revision:gsub('\\', '\\\\'):gsub('"', '\\"'),
+        imei:gsub('\\', '\\\\'):gsub('"', '\\"'),
+        iccid:gsub('\\', '\\\\'):gsub('"', '\\"'),
+        imsi:gsub('\\', '\\\\'):gsub('"', '\\"')
     )
     -- log.info(ret)
     return ret
@@ -719,18 +578,18 @@ end
 -- }
 -- 获取模组实时信息
 function M.getStatus(ifname)
+    ifname = getIfname(ifname)
 
     if nil == ifname or '' == ifname then
         log.error('ifname is nil!')
         return false
     end
 
+    log.info('ifname', ifname)
+
     local timestamp = getRealTimeStatusTimestamp(ifname)
     local sim = getRealTimeStatusSim(ifname)
-    local country = getRealTimeStatusCountry(ifname)
-    local mcc = getRealTimeStatusMCC(ifname)
-    local mnc = getRealTimeStatusMNC(ifname)
-    local operator = getRealTimeStatusOperator(ifname)
+    local country, mcc, mnc, operator = readPlmnInfo(ifname)
     local freqInfo = getRealTimeStatusFreq(ifname)
     local C5GCore = getRealTimeStatus5GCore(ifname)
     local C4GCore = getRealTimeStatus4GCore(ifname)
@@ -741,6 +600,17 @@ function M.getStatus(ifname)
         return s:gsub('\\', '\\\\'):gsub('"', '\\"')
     end
 
+    local function jsonval(s)
+        if s == "" then
+            return "null"
+        end
+        local head = s:match("^%s*(%S)")
+        if head == "{" or head == "[" then
+            return s
+        end
+        return "null"
+    end
+
     local ret = string.format(
         '{"timestamp":"%s","sim":"%s","country":"%s","mcc":"%s","mnc":"%s","operator_name":"%s","freqInfo":%s,"C5GCore":%s,"C4GCore":%s,"monsc":%s,"monnc":%s}',
         esc(timestamp),
@@ -749,12 +619,14 @@ function M.getStatus(ifname)
         esc(mcc),
         esc(mnc),
         esc(operator),
-        freqInfo ~= "" and freqInfo or "null",
-        C5GCore ~= "" and C5GCore or "null",
-        C4GCore ~= "" and C4GCore or "null",
-        monsc ~= "" and monsc or "null",
-        monnc ~= "" and monnc or "null"
+        jsonval(freqInfo),
+        jsonval(C5GCore),
+        jsonval(C4GCore),
+        jsonval(monsc),
+        jsonval(monnc)
     )
+
+    log.info(ret)
 
     return ret
 end
@@ -768,6 +640,7 @@ end
 -- }
 -- 查询模组配置,是从模组内部查询到的配置,并不是uci配置
 function M.getModuleSettings(ifname)
+    ifname = getIfname(ifname)
 
     if nil == ifname or '' == ifname then
         log.error('ifname is nil!')
@@ -793,6 +666,75 @@ function M.getModuleSettings(ifname)
     return ret
 end
 
+-- 获取网口实时信息
+function M.getInterfaceStatus(params)
+    local interface = getIfname(params)
+
+    if nil == interface or '' == interface then
+        log.error('interface is nil!')
+        return cjson.encode({ code = -1, msg = "Invalid interface name" })
+    end
+
+    -- 根据逻辑接口名获取真实物理网口名
+    local dev = get_interface(interface)
+    if dev ~= nil and dev ~= "" and dev ~= false then
+        interface = dev
+    end
+
+    local function readFile(path)
+        local f = io.open(path, "r")
+        if not f then
+            return ""
+        end
+        local data = f:read("*a")
+        f:close()
+        return data:gsub("[\r\n]", "")
+    end
+
+    -- 链路状态: up / down
+    local carrier = readFile(string.format("/sys/class/net/%s/carrier", interface))
+    local operstate = readFile(string.format("/sys/class/net/%s/operstate", interface))
+    local up = (carrier == "1" and operstate == "up")
+
+    -- MAC地址
+    local mac = readFile(string.format("/sys/class/net/%s/address", interface))
+
+    -- 收发字节数
+    local rxBytes = readFile(string.format("/sys/class/net/%s/statistics/rx_bytes", interface))
+    local txBytes = readFile(string.format("/sys/class/net/%s/statistics/tx_bytes", interface))
+
+    -- IP / 掩码 / 网关
+    local ipOut = exec(string.format("ip -o -4 addr show %s 2>/dev/null", interface))
+    local ip, cidrNum = ipOut:match("inet%s+(%d+%.%d+%.%d+%.%d+)/(%d+)")
+    local gateway = exec(string.format("ip -4 route show default dev %s 2>/dev/null | awk '{print $3}'", interface)):gsub("[\r\n]", "")
+
+    -- CIDR 转掩码
+    local mask = ""
+    if ip and cidrNum then
+        local n = tonumber(cidrNum)
+        if n then
+            local parts = { 0, 0, 0, 0 }
+            for i = 1, #parts do
+                local bits = n >= 8 and 8 or (n > 0 and n or 0)
+                parts[i] = (0xff << (8 - bits)) & 0xff
+                n = n - bits
+            end
+            mask = string.format("%d.%d.%d.%d", parts[1], parts[2], parts[3], parts[4])
+        end
+    end
+
+    return cjson.encode({
+        interface = interface,
+        up = up,
+        mac = mac,
+        rxBytes = rxBytes,
+        txBytes = txBytes,
+        ip = ip,
+        mask = mask,
+        gateway = gateway
+    })
+end
+
 -- 触发重新拨号
 local function dial(interface)
     local cmd = string.format("ifup %s", interface)
@@ -802,6 +744,7 @@ end
 
 -- 从/etc/config/sim这个配置文件中查询配置
 function M.getSimUciSettings(ifname)
+    ifname = getIfname(ifname)
     local cmd = string.format("ubus call uci get '{\"config\":\"sim\",\"section\":\"%s\"}' | jq -c '.values'", ifname)
     log.info(cmd)
     local ret = exec(cmd)
@@ -902,6 +845,7 @@ local function setSimBand(ifname, band)
 
     local interface = c:get('sim', ifname, 'logicInterface')
     dial(interface)
+    return true
 end
 
 -- 更改小区
@@ -1042,7 +986,7 @@ local function setSimAuth(ifname, auth, apn, username, password)
 
     local interface = c:get('sim', ifname, 'logicInterface')
     dial(interface)
-
+    return true
 end
 
 -- 更改配置
@@ -1059,11 +1003,8 @@ function M.changeSimSettings(params)
     log.info(string.format("index:%s %s LTE PCI: enable:%s pcid:%s band:%s freq:%s", params.index, params.alias, 
                         params.lte_pci.enabled, params.lte_pci.pcid,params.lte_pci.band,params.lte_pci.freq))
 
-    local index = tonumber(params.index) + 1
-
     setSimNet(ifname, params.net)
     setSimAPN(ifname, params.apn)
-    -- setSimBand(index, params.band)
     setSimNRPCID(ifname, params.nr_pci)
     setSimLTEPCID(ifname, params.lte_pci)
     setSimAuth(ifname, params.auth, params.apn, params.username, params.password)
