@@ -251,6 +251,34 @@ local function readPlmnInfo(ifname)
     return country, mcc, mnc, operator
 end
 
+-- 通过ICCID前6位(IIN)来获取运营商，仅限中国大陆
+local operator_iin_map = {
+    ["898600"] = "中国移动",
+    ["898602"] = "中国移动",
+    ["898604"] = "中国移动",
+    ["898607"] = "中国移动",
+    ["898601"] = "中国联通",
+    ["898606"] = "中国联通",
+    ["898609"] = "中国联通",
+    ["898603"] = "中国电信",
+    ["898611"] = "中国电信",
+    ["898615"] = "中国广电",
+}
+local function getOpenatorFromICCID(iccid)
+    if not iccid or iccid == "" then
+        return "", ""
+    end
+    if #iccid < 6 then
+        return "", ""
+    end
+    local prefix = iccid:sub(1, 6)
+    local operator = operator_iin_map[prefix]
+    if operator then
+        return operator, "CN"
+    end
+    return "", ""
+end
+
 -- 获取SIM卡工作频率
 local function getRealTimeStatusFreq(ifname)
 
@@ -300,6 +328,23 @@ local function getRealTimeStatus4GCore(ifname)
     local data = f:read("*a")
     f:close()
     return data:gsub("[\r\n]", "") 
+end
+
+-- 获取SIM卡实时信号强度
+local function getRealTimeStatusHCSQ(ifname)
+    if nil == ifname or '' == ifname then
+        return ""
+    end
+    local f = io.open(string.format("/tmp/tracker-sim/%s/hcsq", ifname), "r")
+    if not f then
+        return ""
+    end
+    local data = f:read("*a")
+    f:close()
+    if not data then
+        return ""
+    end
+    return data:gsub("[\r\n]", "")
 end
 
 -- 获取SIM卡当前驻留小区信息
@@ -590,11 +635,16 @@ function M.getStatus(ifname)
     local timestamp = getRealTimeStatusTimestamp(ifname)
     local sim = getRealTimeStatusSim(ifname)
     local country, mcc, mnc, operator = readPlmnInfo(ifname)
+    if operator == "" then
+        local iccid = getSimICCID(ifname)
+        operator, country = getOpenatorFromICCID(iccid)
+    end
     local freqInfo = getRealTimeStatusFreq(ifname)
     local C5GCore = getRealTimeStatus5GCore(ifname)
     local C4GCore = getRealTimeStatus4GCore(ifname)
     local monsc = getRealTimeStatusMONSC(ifname)
     local monnc = getRealTimeStatusMONNC(ifname)
+    local hcsq = getRealTimeStatusHCSQ(ifname)
 
     local function esc(s)
         return s:gsub('\\', '\\\\'):gsub('"', '\\"')
@@ -612,7 +662,7 @@ function M.getStatus(ifname)
     end
 
     local ret = string.format(
-        '{"timestamp":"%s","sim":"%s","country":"%s","mcc":"%s","mnc":"%s","operator_name":"%s","freqInfo":%s,"C5GCore":%s,"C4GCore":%s,"monsc":%s,"monnc":%s}',
+        '{"timestamp":"%s","sim":"%s","country":"%s","mcc":"%s","mnc":"%s","operator_name":"%s","freqInfo":%s,"C5GCore":%s,"C4GCore":%s,"monsc":%s,"monnc":%s,"hcsq":%s}',
         esc(timestamp),
         esc(sim),
         esc(country),
@@ -623,7 +673,8 @@ function M.getStatus(ifname)
         jsonval(C5GCore),
         jsonval(C4GCore),
         jsonval(monsc),
-        jsonval(monnc)
+        jsonval(monnc),
+        jsonval(hcsq)
     )
 
     log.info(ret)
@@ -688,6 +739,9 @@ function M.getInterfaceStatus(params)
         end
         local data = f:read("*a")
         f:close()
+        if not data then
+            return ""
+        end
         return data:gsub("[\r\n]", "")
     end
 

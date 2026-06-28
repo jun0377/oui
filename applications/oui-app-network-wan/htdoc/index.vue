@@ -15,7 +15,7 @@
                 <span>{{ $t('Real Network Access') }}</span>
                 <span>APN</span>
                 <span>{{ $t('Frequency Band') }}</span>
-                <span>RSRP</span>
+                <span>RSRP/dBm</span>
                 <span class="status-column">{{ $t('Status') }}</span>
                 <span> </span>
               </div>
@@ -35,7 +35,14 @@
                 <span>{{ item.wan.status.rat }}</span>
                 <span>{{ item.wan.settings.apn }}</span>
                 <span>{{ getRealBandTypeText(item.index) }}</span>
-                <span>{{ getRsrpText(item.index) }}</span>
+                <span class="signal-icon-wrapper">
+                  <svg class="signal-icon" viewBox="0 0 16 12" width="16" height="12">
+                    <rect x="0" y="8" width="3" height="4" rx="0.5" :fill="getRsrpLevel(item.index) >= 1 ? getRsrpLevelColor(item.index) : '#ddd'" />
+                    <rect x="4" y="5" width="3" height="7" rx="0.5" :fill="getRsrpLevel(item.index) >= 2 ? getRsrpLevelColor(item.index) : '#ddd'" />
+                    <rect x="8" y="2" width="3" height="10" rx="0.5" :fill="getRsrpLevel(item.index) >= 3 ? getRsrpLevelColor(item.index) : '#ddd'" />
+                    <rect x="12" y="0" width="3" height="12" rx="0.5" :fill="getRsrpLevel(item.index) >= 4 ? getRsrpLevelColor(item.index) : '#ddd'" />
+                  </svg><span :class="'rsrp-level-' + getRsrpLevel(item.index)">{{ getRsrpText(item.index) }}</span>
+                </span>
                 <span class="status-marquee"><span class="status-marquee-text">{{ getStatusText(item.index) }}</span></span>
                 <span class="subnet-arrow">›</span>
               </div>
@@ -416,6 +423,18 @@ const createDefaultWanLink = (index) => {
         mac: '-',
         rxBytes: '-',
         txBytes: '-'
+      },
+      // HCSQ 信号强度
+      hcsq: {
+        sysmode: '',
+        rsrp: '',
+        rsrp_dbm: '',
+        rsrq: '',
+        rsrq_db: '',
+        sinr: '',
+        sinr_db: '',
+        rssi: '',
+        rssi_dbm: ''
       }
     }
   }
@@ -539,8 +558,6 @@ export default {
             data = null
           }
         }
-
-        console.log(data)
 
         const links = data && Array.isArray(data.links) ? data.links : []
         const uiLinks = []
@@ -716,7 +733,7 @@ export default {
         const indexes = this.wanLinks
           .map((_, index) => index)
           .filter(index => this.getRpcIndex(index) !== null)
-        this.startPollingForIndexes(indexes, { status: true, interface: this.trafficEnabled })
+        this.startPollingForIndexes(indexes, { status: true, product: true, modules: true, interface: this.trafficEnabled })
         return
       }
 
@@ -787,10 +804,14 @@ export default {
         return this.$oui.call('sim', 'getProductInfo', { ifname: rpcIndex }).then(result => {
           if (token !== this._pollingToken)
             return
-          if (!(this.currentView === 'sim-config' || this.currentView === 'main') || this.selectedWanIndex !== index)
+          if (this.currentView === 'sim-config' && this.selectedWanIndex !== index)
+            return
+          if (this.currentView !== 'sim-config' && this.currentView !== 'main')
             return
 
           let data = result
+          console.log(data)
+
           if (typeof result === 'string') {
             try {
               data = JSON.parse(result)
@@ -818,7 +839,9 @@ export default {
         return this.$oui.call('sim', 'getModuleSettings', { ifname: rpcIndex }).then(result => {
           if (token !== this._pollingToken)
             return
-          if (!(this.currentView === 'sim-config' || this.currentView === 'main') || this.selectedWanIndex !== index)
+          if (this.currentView === 'sim-config' && this.selectedWanIndex !== index)
+            return
+          if (this.currentView !== 'sim-config' && this.currentView !== 'main')
             return
 
           let data = result
@@ -951,6 +974,45 @@ export default {
               if (cs.lac) link.CS.lac = cs.lac
               if (cs.ci) link.CS.ci = cs.ci
               if (cs.act) link.CS.act = cs.act
+            }
+          }
+
+          // HCSQ 信号强度（优先于 monsc 中的值）
+          if (data.hcsq) {
+            console.log(data.hcsq)
+            let h = data.hcsq
+            if (typeof h === 'string') {
+              try {
+                h = JSON.parse(h)
+              } catch {
+                h = null
+              }
+            }
+            if (h) {
+              const hcsq = link.status.hcsq
+              if (h.sysmode) hcsq.sysmode = h.sysmode
+              if (h.rsrp) hcsq.rsrp = h.rsrp
+              if (h.rsrp_dbm) hcsq.rsrp_dbm = h.rsrp_dbm
+              if (h.rsrq) hcsq.rsrq = h.rsrq
+              if (h.rsrq_db) hcsq.rsrq_db = h.rsrq_db
+              if (h.sinr) hcsq.sinr = h.sinr
+              if (h.sinr_db) hcsq.sinr_db = h.sinr_db
+              if (h.rssi) hcsq.rssi = h.rssi
+              if (h.rssi_dbm) hcsq.rssi_dbm = h.rssi_dbm
+              // HCSQ 的 sysmode 比 monsc.rat 更准
+              const sysmode = String(h.sysmode).toUpperCase()
+              const status = link.status
+              if (sysmode.indexOf('NR') !== -1) {
+                if (h.rsrp_dbm) status.nr.rsrp = String(h.rsrp_dbm) + 'dBm'
+                if (h.rsrq_db) status.nr.rsrq = String(h.rsrq_db) + 'dB'
+                if (h.sinr_db) status.nr.sinr = String(h.sinr_db) + 'dB'
+              } else if (sysmode.indexOf('LTE') !== -1) {
+                if (h.rsrp_dbm) status.lte.rsrp = String(h.rsrp_dbm) + 'dBm'
+                if (h.rsrq_db) status.lte.rsrq = String(h.rsrq_db) + 'dB'
+                if (h.sinr_db) status.lte.sinr = String(h.sinr_db) + 'dB'
+                if (h.rssi_dbm) status.lte.rssi = String(h.rssi_dbm) + 'dBm'
+              }
+              if (h.sysmode) status.rat = h.sysmode
             }
           }
 
@@ -1405,15 +1467,37 @@ export default {
       if (!link)
         return ''
 
+      // 检查是否使能
+      if (link.settings && !link.settings.enable)
+        return '已禁用'
+
+      // 检查是否插卡（ICCID 为空说明未插卡/未插网线）
+      const iccid = link.productInfo && link.productInfo.iccid
+      if (iccid === '' || iccid === '-')
+        return '未识别SIM卡'
+
+      // 检查信号强度是否无服务
+      if ((link.status && link.status.hcsq && link.status.hcsq.sysmode) === 'NOSERVICE')
+        return '无服务'
+
+      // 检查RSRP信号强度, 将信号强度描述拼接到后面返回的信息中
+      let rsrpLabel = ''
+      const rsrp = this.getRsrpText(index)
+      if (rsrp && rsrp !== '-') {
+        const lvl = this.getRsrpLevel(index)
+        const labels = { 4: '信号极好', 3: '信号良好', 2: '信号一般', 1: '信号差' }
+        rsrpLabel = labels[lvl] || ''
+      }
+
       // 有 IP 即为在线
       const ip = link.status && link.status.interface && link.status.interface.ip
       if (ip && ip !== '-' && ip !== '')
-        return '在线'
+        return rsrpLabel ? '在线 ' + rsrpLabel : '在线'
 
       // 无 IP 时检查 SIM 卡状态
       const simStatus = link.sim && link.sim.status
       if (simStatus && simStatus !== '' && !simStatus.toLowerCase().includes('not'))
-        return '在线（SIM Ready）'
+        return '拨号中...'
 
       // 离线时拼接 NR/LTE 注册状态
       let stat = '离线: '
@@ -1445,7 +1529,7 @@ export default {
         const settings = this.wanLinks[index].settings
 
         if (data.alias) settings.alias = data.alias
-        if (data.enable) settings.enable = data.enable === '1' || data.enable === 1 || data.enable === true
+        if (data.enable) settings.enable = data.enable === '1' || data.enable === 'true' || data.enable === 1 || data.enable === true
         if (data.usb) settings.usb = data.usb
         if (data.node) settings.node = data.node
         if (data.interface && !String(data.interface).startsWith('/dev/')) settings.interface = data.interface
@@ -1467,7 +1551,7 @@ export default {
       const link = this.wanLinks[index]
       const fi = link && link.freqInfo
       if (!fi)
-        return ''
+        return '-'
 
       const sysmode = String(fi.sysmode ?? '').trim().toUpperCase()
       let isNr = false
@@ -1492,7 +1576,7 @@ export default {
       }
 
       if (!isNr && !isLte)
-        return ''
+        return '-'
 
       const list = Array.isArray(fi.class) ? fi.class : []
       const seen = new Set()
@@ -1526,6 +1610,22 @@ export default {
         return nr
 
       return lte !== '' ? lte : '-'
+    },
+    getRsrpLevel(index) {
+      const text = this.getRsrpText(index)
+      if (text === '-' || text === '')
+        return 0
+      const n = parseFloat(text)
+      if (!Number.isFinite(n) || n >= 0)
+        return 0
+      if (n >= -80) return 4
+      if (n >= -90) return 3
+      if (n >= -100) return 2
+      return 1
+    },
+    getRsrpLevelColor(index) {
+      const colors = { 4: '#22c55e', 3: '#84cc16', 2: '#eab308', 1: '#ef4444', 0: '#ccc' }
+      return colors[this.getRsrpLevel(index)] || '#ccc'
     },
     // 切换到WAN配置页面
     editSubWan(wan, index) {
@@ -1936,6 +2036,24 @@ export default {
   color: var(--el-text-color-secondary);
   font-size: 18px;
 }
+
+.signal-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 100%;
+}
+
+.signal-icon {
+  color: var(--el-color-success);
+  flex-shrink: 0;
+}
+
+.rsrp-level-4 { color: #22c55e; font-weight: 600; }
+.rsrp-level-3 { color: #84cc16; font-weight: 600; }
+.rsrp-level-2 { color: #eab308; font-weight: 600; }
+.rsrp-level-1 { color: #ef4444; font-weight: 600; }
 
 .empty-state {
   text-align: center;

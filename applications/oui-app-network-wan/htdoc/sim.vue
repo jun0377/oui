@@ -234,7 +234,7 @@
 
             <div class="status-info">
               <div class="status-item">
-                <span class="status-label">{{ $t('Current Status') }}:</span>
+                <span class="status-label"> 状态 :</span>
                 <span class="status-value">{{ getStatusText() }}</span>
               </div>
 
@@ -255,38 +255,48 @@
 
               <div class="signal-row signal-row-right" v-if="String(status.rat).toUpperCase() !== 'LTE'">
                 <div class="signal-title">NR信号强度:</div>
-                <div class="signal-item">
-                  <span class="status-label">rsrp:</span>
-                  <span class="status-value">{{ status.nr.rsrp }}</span>
-                </div>
-                <div class="signal-item">
-                  <span class="status-label">rsrq:</span>
-                  <span class="status-value">{{ status.nr.rsrq }}</span>
-                </div>
-                <div class="signal-item">
-                  <span class="status-label">sinr:</span>
-                  <span class="status-value">{{ status.nr.sinr }}</span>
-                </div>
+                <template v-if="isNoService">
+                  <span class="status-value">无服务</span>
+                </template>
+                <template v-else>
+                  <div class="signal-item">
+                    <span class="status-label">rsrp:</span>
+                    <span class="signal-badge" :class="getSignalColor(status.nr.rsrp, 'rsrp')">{{ status.nr.rsrp || '-' }}</span>
+                  </div>
+                  <div class="signal-item">
+                    <span class="status-label">rsrq:</span>
+                    <span class="signal-badge" :class="getSignalColor(status.nr.rsrq, 'rsrq')">{{ status.nr.rsrq || '-' }}</span>
+                  </div>
+                  <div class="signal-item">
+                    <span class="status-label">sinr:</span>
+                    <span class="signal-badge" :class="getSignalColor(status.nr.sinr, 'sinr')">{{ status.nr.sinr || '-' }}</span>
+                  </div>
+                </template>
               </div>
 
               <div class="signal-row" v-if="['NSA', 'LTE'].includes(String(status.rat).toUpperCase())">
                 <div class="signal-title">LTE信号:</div>
-                <div class="signal-item">
-                  <span class="status-label">rsrp:</span>
-                  <span class="status-value">{{ status.lte.rsrp }}</span>
-                </div>
-                <div class="signal-item">
-                  <span class="status-label">rsrq:</span>
-                  <span class="status-value">{{ status.lte.rsrq }}</span>
-                </div>
-                <div class="signal-item">
-                  <span class="status-label">rssi:</span>
-                  <span class="status-value">{{ status.lte.rssi }}</span>
-                </div>
-                <div class="signal-item">
-                  <span class="status-label">sinr:</span>
-                  <span class="status-value">{{ status.lte.sinr }}</span>
-                </div>
+                <template v-if="isNoService">
+                  <span class="status-value">无服务</span>
+                </template>
+                <template v-else>
+                  <div class="signal-item">
+                    <span class="status-label">rsrp:</span>
+                    <span class="signal-badge" :class="getSignalColor(status.lte.rsrp, 'rsrp')">{{ status.lte.rsrp || '-' }}</span>
+                  </div>
+                  <div class="signal-item">
+                    <span class="status-label">rsrq:</span>
+                    <span class="signal-badge" :class="getSignalColor(status.lte.rsrq, 'rsrq')">{{ status.lte.rsrq || '-' }}</span>
+                  </div>
+                  <div class="signal-item">
+                    <span class="status-label">rssi:</span>
+                    <span class="signal-badge" :class="getSignalColor(status.lte.rssi, 'rssi')">{{ status.lte.rssi || '-' }}</span>
+                  </div>
+                  <div class="signal-item">
+                    <span class="status-label">sinr:</span>
+                    <span class="signal-badge" :class="getSignalColor(status.lte.sinr, 'sinr')">{{ status.lte.sinr || '-' }}</span>
+                  </div>
+                </template>
               </div>
 
               <div class="signal-row signal-row-right">
@@ -339,7 +349,7 @@
                 </div>
                 <div class="status-item">
                   <span class="status-label">国家:</span>
-                  <span class="status-value">{{ sim.country }}</span>
+                  <span class="status-value">{{ formatCountry(sim.country) }}</span>
                 </div>
                 <div class="status-item">
                   <span class="status-label">{{ $t('Operator') }}:</span>
@@ -451,7 +461,10 @@
           </template>
 
           <div class="status-table">
-            <div class="no-data" v-if="!monsc.cell.arfcn">
+            <div class="no-data" v-if="isNoService">
+              无服务
+            </div>
+            <div class="no-data" v-else-if="!monsc.cell.arfcn">
               {{ $t('暂无数据') }}
             </div>
             <template v-if="monsc.cell.arfcn">
@@ -473,10 +486,10 @@
                 <div class="table-cell">{{ monsc.cell.cell_id }}</div>
                 <div class="table-cell">{{ monsc.cell.pci }}</div>
                 <div class="table-cell">{{ monsc.cell.tac }}</div>
-                <div class="table-cell">{{ monsc.cell.rsrp }}</div>
-                <div class="table-cell">{{ monsc.cell.rsrq }}</div>
-                <div class="table-cell" v-if="monsc.cell.type === 'nr'">{{ monsc.cell.sinr }}</div>
-                <div class="table-cell" v-if="monsc.cell.type === 'lte'">{{ monsc.cell.rssi }}</div>
+                <div class="table-cell"><span class="signal-badge" :class="getSignalColor(monsc.cell.rsrp, 'rsrp')">{{ monsc.cell.rsrp || '-' }}</span></div>
+                <div class="table-cell"><span class="signal-badge" :class="getSignalColor(monsc.cell.rsrq, 'rsrq')">{{ monsc.cell.rsrq || '-' }}</span></div>
+                <div class="table-cell" v-if="monsc.cell.type === 'nr'"><span class="signal-badge" :class="getSignalColor(monsc.cell.sinr, 'sinr')">{{ monsc.cell.sinr || '-' }}</span></div>
+                <div class="table-cell" v-if="monsc.cell.type === 'lte'"><span class="signal-badge" :class="getSignalColor(monsc.cell.rssi, 'rssi')">{{ monsc.cell.rssi || '-' }}</span></div>
               </div>
             </template>
           </div>
@@ -491,7 +504,10 @@
           </template>
 
           <div class="status-table">
-            <div class="no-data" v-if="!monnc.nr.length && !monnc.lte.length">
+            <div class="no-data" v-if="isNoService">
+              无服务
+            </div>
+            <div class="no-data" v-else-if="!monnc.nr.length && !monnc.lte.length">
               {{ $t('暂无数据') }}
             </div>
             <div class="table-title" v-if="monnc.nr.length">NR相邻小区</div>
@@ -502,12 +518,12 @@
               <div class="table-cell">RSRQ/dB</div>
               <div class="table-cell">SINR/dBm</div>
             </div>
-            <div class="table-row" v-for="(cell, index) in monnc.nr" :key="'nr-' + index">
+            <div class="table-row" v-for="(cell, index) in sortedNrCells" :key="'nr-' + index">
               <div class="table-cell">{{ cell.arfcn }}</div>
               <div class="table-cell">{{ cell.pci }}</div>
-              <div class="table-cell">{{ cell.rsrp }}</div>
-              <div class="table-cell">{{ cell.rsrq }}</div>
-              <div class="table-cell">{{ cell.sinr }}</div>
+              <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrp, 'rsrp')">{{ cell.rsrp || '-' }}</span></div>
+              <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrq, 'rsrq')">{{ cell.rsrq || '-' }}</span></div>
+              <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.sinr, 'sinr')">{{ cell.sinr || '-' }}</span></div>
             </div>
             <div class="table-title" v-if="monnc.lte.length">LTE相邻小区</div>
             <div class="table-row header-row" v-if="monnc.lte.length">
@@ -517,12 +533,12 @@
               <div class="table-cell">RSRQ</div>
               <div class="table-cell">RXLEV</div>
             </div>
-            <div class="table-row" v-for="(cell, index) in monnc.lte" :key="'lte-' + index">
+            <div class="table-row" v-for="(cell, index) in sortedLteCells" :key="'lte-' + index">
               <div class="table-cell">{{ cell.arfcn }}</div>
               <div class="table-cell">{{ cell.pci }}</div>
-              <div class="table-cell">{{ cell.rsrp }}</div>
-              <div class="table-cell">{{ cell.rsrq }}</div>
-              <div class="table-cell">{{ cell.rxlev }}</div>
+              <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrp, 'rsrp')">{{ cell.rsrp || '-' }}</span></div>
+              <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrq, 'rsrq')">{{ cell.rsrq || '-' }}</span></div>
+              <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rxlev, 'rssi')">{{ cell.rxlev || '-' }}</span></div>
             </div>
 
           </div>
@@ -647,6 +663,33 @@ export default {
       deep: true
     }
   },
+  computed: {
+    isNoService() {
+      return this.status && this.status.hcsq && this.status.hcsq.sysmode === 'NOSERVICE'
+    },
+    sortedNrCells() {
+      const cells = this.monnc.nr || []
+      return [...cells].sort((a, b) => {
+        const va = parseFloat(a.rsrp)
+        const vb = parseFloat(b.rsrp)
+        if (isNaN(va) && isNaN(vb)) return 0
+        if (isNaN(va)) return 1
+        if (isNaN(vb)) return -1
+        return vb - va
+      })
+    },
+    sortedLteCells() {
+      const cells = this.monnc.lte || []
+      return [...cells].sort((a, b) => {
+        const va = parseFloat(a.rsrp)
+        const vb = parseFloat(b.rsrp)
+        if (isNaN(va) && isNaN(vb)) return 0
+        if (isNaN(va)) return 1
+        if (isNaN(vb)) return -1
+        return vb - va
+      })
+    }
+  },
   methods: {
     formatBytes(bytes) {
       const n = Number(bytes)
@@ -659,6 +702,45 @@ export default {
       if (n >= 1024)
         return `${(n / 1024).toFixed(2)} KB`
       return `${n} B`
+    },
+    // 信号值强度颜色
+    getSignalColor(val, type) {
+      const v = parseFloat(val)
+      if (!Number.isFinite(v)) return 'sig-empty'
+      if (type === 'rsrp') {
+        if (v >= -80) return 'sig-excellent'
+        if (v >= -90) return 'sig-good'
+        if (v >= -100) return 'sig-fair'
+        return 'sig-poor'
+      }
+      if (type === 'rsrq') {
+        if (v >= -10) return 'sig-excellent'
+        if (v >= -15) return 'sig-good'
+        if (v >= -20) return 'sig-fair'
+        return 'sig-poor'
+      }
+      if (type === 'sinr') {
+        if (v >= 20) return 'sig-excellent'
+        if (v >= 13) return 'sig-good'
+        if (v >= 0) return 'sig-fair'
+        return 'sig-poor'
+      }
+      if (type === 'rssi') {
+        if (v >= -65) return 'sig-excellent'
+        if (v >= -75) return 'sig-good'
+        if (v >= -85) return 'sig-fair'
+        return 'sig-poor'
+      }
+      return 'sig-empty'
+    },
+    // 国家代码规范化
+    formatCountry(country) {
+      const code = String(country ?? '').trim().toUpperCase()
+      if (!code || code === '-')
+        return '-'
+      if (code === 'CN' || code === 'CHINA' || code === 'CHN' || code === 'CHINESE')
+        return '中国'
+      return country
     },
     // sim卡状态可读性优化
     formatSimStatus(status) {
@@ -1277,6 +1359,28 @@ export default {
   font-size: 12px;
   padding: 5px 2px;
 }
+
+.signal-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 14px;
+  padding: 0 1px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.signal-badge.sig-excellent { background: #22c55e; }
+.signal-badge.sig-good      { background: #84cc16; }
+.signal-badge.sig-fair      { background: #eab308; color: #333; }
+.signal-badge.sig-poor      { background: #ef4444; }
+.signal-badge.sig-empty     { background: #9ca3af; }
 
 .header-row .table-cell {
   font-weight: 600;
