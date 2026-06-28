@@ -189,7 +189,7 @@
           <el-button @click="saveConfig" type="primary" size="large">
             {{ $t('Save Configuration') }}
           </el-button>
-          <el-button @click="resetConfig" type="warning" size="large" disabled class="btn-disabled-warning">
+          <el-button @click="resetConfig" type="warning" size="large" class="btn-disabled-warning">
             {{ $t('Reset to Default') }}
           </el-button>
           <el-button @click="goBack" type="info" size="large">
@@ -918,8 +918,26 @@ export default {
     },
     resetConfig() {
       this.$confirm(this.$t('Are you sure to reset to default configuration?'), this.$t('Confirm Reset'), { type: 'warning' }).then(() => {
-        this.settings = { ...this.status }
-        this.$message.success(this.$t('Configuration reset successfully'))
+        this.settings.enable = true
+        this.settings.net = 'AUTO'
+        this.settings.auth = 'none'
+        this.settings.username = 'user'
+        this.settings.password = 'passwd'
+        this.settings.apn = 'cmnet'
+        this.settings.nrBand = 'unlocked'
+        this.settings.nrBandUnLock = true
+        this.settings.nrBandLockEnabled = false
+        this.settings.lteBand = 'unlocked'
+        this.settings.lteBandUnLock = true
+        this.settings.lteBandLockEnabled = false
+        this.settings.bandUnLock = true
+        this.settings.nr_pci = { enabled: false, pcid: '', band: '', freq: '', scs: '' }
+        this.settings.lte_pci = { enabled: false, pcid: '', band: '', freq: '' }
+        this.$oui.call('sim', 'changeSimSettings', this.settings).then((response) => {
+          if (response && response.code === 0) {
+            this.$message.success(this.$t('Configuration reset successfully'))
+          }
+        })
       })
     },
     handleNRPciLock(enabled) {

@@ -654,7 +654,7 @@ function M.getStatus(ifname)
         return false
     end
 
-    log.info('ifname', ifname)
+    -- log.info('ifname', ifname)
 
     local timestamp = getRealTimeStatusTimestamp(ifname)
     local sim = getRealTimeStatusSim(ifname)
@@ -1131,7 +1131,7 @@ end
 -- 更改链路使能
 function M.changeSimEnable(params)
 
-    local ifname = params.alias
+    local ifname = getIfname(params)
     log.info(string.format("ifname:%s enable:%s", ifname, tostring(params.enable)))
     
     local c = uci.cursor()
