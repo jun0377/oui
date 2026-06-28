@@ -1038,39 +1038,35 @@ export default {
               }
             }
 
-            if (isDetail) {
-              const newest = createEmptyMonsc()
-              if (monsc.rat) newest.rat = monsc.rat
-              if (monsc.mcc) newest.mcc = monsc.mcc
-              if (monsc.mnc) newest.mnc = monsc.mnc
-              if (monsc.cell) {
-                if (monsc.cell.type) newest.cell.type = monsc.cell.type
-                if (monsc.cell.arfcn) newest.cell.arfcn = monsc.cell.arfcn
-                if (monsc.cell.scs) newest.cell.scs = monsc.cell.scs
-                if (monsc.cell.cell_id) newest.cell.cell_id = monsc.cell.cell_id
-                if (monsc.cell.pci) newest.cell.pci = monsc.cell.pci
-                if (monsc.cell.tac) newest.cell.tac = monsc.cell.tac
-                if (monsc.cell.rsrp) newest.cell.rsrp = monsc.cell.rsrp
-                if (monsc.cell.rsrq) newest.cell.rsrq = monsc.cell.rsrq
-                if (monsc.cell.sinr) newest.cell.sinr = monsc.cell.sinr
-                if (monsc.cell.rssi) newest.cell.rssi = monsc.cell.rssi
-              }
-              link.monsc = newest
+            const newest = createEmptyMonsc()
+            if (monsc.rat) newest.rat = monsc.rat
+            if (monsc.mcc) newest.mcc = monsc.mcc
+            if (monsc.mnc) newest.mnc = monsc.mnc
+            if (monsc.cell) {
+              if (monsc.cell.type) newest.cell.type = monsc.cell.type
+              if (monsc.cell.arfcn) newest.cell.arfcn = monsc.cell.arfcn
+              if (monsc.cell.scs) newest.cell.scs = monsc.cell.scs
+              if (monsc.cell.cell_id) newest.cell.cell_id = monsc.cell.cell_id
+              if (monsc.cell.pci) newest.cell.pci = monsc.cell.pci
+              if (monsc.cell.tac) newest.cell.tac = monsc.cell.tac
+              if (monsc.cell.rsrp) newest.cell.rsrp = monsc.cell.rsrp
+              if (monsc.cell.rsrq) newest.cell.rsrq = monsc.cell.rsrq
+              if (monsc.cell.sinr) newest.cell.sinr = monsc.cell.sinr
+              if (monsc.cell.rssi) newest.cell.rssi = monsc.cell.rssi
             }
-          } else if (isDetail) {
+            link.monsc = newest
+          } else {
             link.monsc = createEmptyMonsc()
           }
 
-          if (isDetail) {
-            const monnc = createEmptyMonnc()
-            if (data.monnc) {
-              if (Array.isArray(data.monnc.gsm)) monnc.gsm = data.monnc.gsm
-              if (Array.isArray(data.monnc.wcdma)) monnc.wcdma = data.monnc.wcdma
-              if (Array.isArray(data.monnc.lte)) monnc.lte = data.monnc.lte
-              if (Array.isArray(data.monnc.nr)) monnc.nr = data.monnc.nr
-            }
-            link.monnc = monnc
+          const monnc = createEmptyMonnc()
+          if (data.monnc) {
+            if (Array.isArray(data.monnc.gsm)) monnc.gsm = data.monnc.gsm
+            if (Array.isArray(data.monnc.wcdma)) monnc.wcdma = data.monnc.wcdma
+            if (Array.isArray(data.monnc.lte)) monnc.lte = data.monnc.lte
+            if (Array.isArray(data.monnc.nr)) monnc.nr = data.monnc.nr
           }
+          link.monnc = monnc
         }).catch(err => {
           console.warn('getStatus failed for index', index, err)
         })

@@ -190,6 +190,30 @@ local function getSimConfPCI(ifname)
     return c:get('sim', ifname, 'pci')
 end
 
+-- 获取 NR 锁频段设置
+local function getSimConfNRBand(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local c = uci.cursor()
+    return c:get('sim', ifname, 'nrBandLock')
+end
+
+-- 获取 LTE 锁频段设置
+local function getSimConfLTEBand(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local c = uci.cursor()
+    return c:get('sim', ifname, 'lteBandLock')
+end
+
 -- 获取状态更新时间戳
 local function getRealTimeStatusTimestamp(ifname)
 
@@ -677,7 +701,7 @@ function M.getStatus(ifname)
         jsonval(hcsq)
     )
 
-    log.info(ret)
+    -- log.info(ret)
 
     return ret
 end
@@ -946,13 +970,13 @@ local function setSimNRPCID(ifname, PCID)
     local c = uci.cursor()
     
     if (PCID.enabled) then
-        c:set("sim", ifname, 'nrPciLock', 'true')
+        c:set("sim", ifname, 'nrPciLockEnable', 'locked')
     else
-        c:set("sim", ifname, 'nrPciLock', 'false')
-        c:set("sim", ifname, 'nrPciPcid', 'none')
-        c:set("sim", ifname, 'nrPciBand', 'none')
-        c:set("sim", ifname, 'nrPciFreq', 'none')
-        c:set("sim", ifname, 'nrPciScs', 'none')
+        c:set("sim", ifname, 'nrPciLockEnable', 'unlocked')
+        c:set("sim", ifname, 'nrPciPcid', 'unlocked')
+        c:set("sim", ifname, 'nrPciBand', 'unlocked')
+        c:set("sim", ifname, 'nrPciFreq', 'unlocked')
+        c:set("sim", ifname, 'nrPciScs', 'unlocked')
         c:commit('sim')
         return true
     end
@@ -986,12 +1010,12 @@ local function setSimLTEPCID(ifname, PCID)
     local c = uci.cursor()
     
     if (PCID.enabled) then
-        c:set("sim", ifname, 'ltePciLock', 'true')
+        c:set("sim", ifname, 'ltePciLockEnable', 'locked')
     else
-        c:set("sim", ifname, 'ltePciLock', 'false')
-        c:set("sim", ifname, 'ltePciPcid', 'none')
-        c:set("sim", ifname, 'ltePciBand', 'none')
-        c:set("sim", ifname, 'ltePciFreq', 'none')
+        c:set("sim", ifname, 'ltePciLockEnable', 'unlocked')
+        c:set("sim", ifname, 'ltePciPcid', 'unlocked')
+        c:set("sim", ifname, 'ltePciBand', 'unlocked')
+        c:set("sim", ifname, 'ltePciFreq', 'unlocked')
         c:commit('sim')
         return
     end
@@ -1043,20 +1067,58 @@ local function setSimAuth(ifname, auth, apn, username, password)
     return true
 end
 
+-- 更改NR锁频段配置
+local function setSimNRBand(ifname, nrBandLock)
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    if nil == nrBandLock or '' == nrBandLock then
+        nrBandLock = 'unlocked'
+    end
+
+    log.info(ifname, 'set nrBandLock from ', getSimConfNRBand(ifname), 'to', nrBandLock)
+    local c = uci.cursor()
+    c:set("sim", ifname, 'nrBandLock', nrBandLock)
+    c:commit('sim')
+    return true
+end
+
+-- 更改LTE锁频段配置
+local function setSimLTEBand(ifname, lteBandLock)
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    if nil == lteBandLock or '' == lteBandLock then
+        lteBandLock = 'unlocked'
+    end
+
+    log.info(ifname, 'set lteBandLock from ', getSimConfLTEBand(ifname), 'to', lteBandLock)
+    local c = uci.cursor()
+    c:set("sim", ifname, 'lteBandLock', lteBandLock)
+    c:commit('sim')
+    return true
+end
+
 -- 更改配置
 function M.changeSimSettings(params)
     
-    local ifname=params.alias
+    local ifname = getIfname(params)
 
     log.info(string.format("index:%s %s net:%s", params.index, params.alias, params.net))
     log.info(string.format("index:%s %s apn:%s auth:%s username:%s passwd:%s", params.index, params.alias, params.apn, params.auth, params.username, params.password))
-    log.info(string.format("index:%s %s nrBand:%s", params.index, params.alias, params.nrBand))
-    log.info(string.format("index:%s %s lteBand:%s", params.index, params.alias, params.lteBand))
-    log.info(string.format("index:%s %s NR PCI: enable:%s pcid:%s band:%s freq:%s scs:%s", params.index, params.alias, 
+    log.info(string.format("index:%s %s nrBandLock:%s", params.index, params.alias, params.nrBand))
+    log.info(string.format("index:%s %s lteBandLock:%s", params.index, params.alias, params.lteBand))
+    log.info(string.format("index:%s %s NR PCI Lock: enable:%s pcid:%s band:%s freq:%s scs:%s", params.index, params.alias, 
                         params.nr_pci.enabled, params.nr_pci.pcid,params.nr_pci.band,params.nr_pci.freq,params.nr_pci.scs))
-    log.info(string.format("index:%s %s LTE PCI: enable:%s pcid:%s band:%s freq:%s", params.index, params.alias, 
+    log.info(string.format("index:%s %s LTE PCI Lock: enable:%s pcid:%s band:%s freq:%s", params.index, params.alias, 
                         params.lte_pci.enabled, params.lte_pci.pcid,params.lte_pci.band,params.lte_pci.freq))
 
+    setSimNRBand(ifname, params.nrBand)
+    setSimLTEBand(ifname, params.lteBand)
     setSimNet(ifname, params.net)
     setSimAPN(ifname, params.apn)
     setSimNRPCID(ifname, params.nr_pci)

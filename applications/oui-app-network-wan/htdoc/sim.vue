@@ -81,17 +81,7 @@
             <div class="sim-inline-row">
               <el-form-item label="锁 NR 频段" class="sim-inline-form-item">
                 <div class="sim-lock-section">
-                  <div class="sim-lock-toggle">
-                    <el-switch
-                      v-model="settings.nrBandLockEnabled"
-                      inline-prompt
-                      :active-text="'开'"
-                      :inactive-text="'关'"
-                      @change="handleNrBandLockEnabledChange"
-                      class="wan-enable-switch"
-                    />
-                  </div>
-                  <div v-if="settings.nrBandLockEnabled">
+                  <div>
                     <div v-if="getNRBandOptions().length" class="band-option-list">
                       <el-tag
                         v-for="opt in getNRBandOptions()"
@@ -113,17 +103,7 @@
             <div class="sim-inline-row">
               <el-form-item label="锁 LTE 频段" class="sim-inline-form-item">
                 <div class="sim-lock-section">
-                  <div class="sim-lock-toggle">
-                    <el-switch
-                      v-model="settings.lteBandLockEnabled"
-                      inline-prompt
-                      :active-text="'开'"
-                      :inactive-text="'关'"
-                      @change="handleLteBandLockEnabledChange"
-                      class="wan-enable-switch"
-                    />
-                  </div>
-                  <div v-if="settings.lteBandLockEnabled">
+                  <div>
                     <div v-if="getLTEBandOptions().length" class="band-option-list">
                       <el-tag
                         v-for="opt in getLTEBandOptions()"
@@ -144,20 +124,18 @@
 
             <el-form-item label="锁 NR PCI">
               <div class="sim-lock-section">
-                <div class="sim-lock-toggle">
-                  <el-switch
-                    v-model="settings.nr_pci.enabled"
-                    inline-prompt
-                    :active-text="'开'"
-                    :inactive-text="'关'"
-                    @change="handleNRPciLock"
-                    class="wan-enable-switch"
-                  />
-                </div>
-                <div v-if="settings.nr_pci.enabled" class="sim-pci-row">
-                  <el-input v-model="settings.nr_pci.pcid" placeholder="PCID" class="sim-pci-input" size="small"/>
-                  <el-input v-model="settings.nr_pci.freq" placeholder="频点" class="sim-pci-input" size="small"/>
-                  <el-select v-model="settings.nr_pci.band" placeholder="频段" class="sim-pci-input" size="small">
+                <div class="sim-pci-row">
+                  <el-tag
+                    class="band-option-tag"
+                    :type="!settings.nr_pci.enabled ? 'primary' : 'info'"
+                    :effect="!settings.nr_pci.enabled ? 'dark' : 'plain'"
+                    @click="handleNRPciUnlock"
+                  >
+                    解锁
+                  </el-tag>
+                  <el-input v-model="settings.nr_pci.pcid" placeholder="PCID" class="sim-pci-input" size="small" @change="handleNRPciInputChange"/>
+                  <el-input v-model="settings.nr_pci.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleNRPciInputChange"/>
+                  <el-select v-model="settings.nr_pci.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleNRPciInputChange">
                     <el-option label="n1" value="1"/>
                     <el-option label="n3" value="3"/>
                     <el-option label="n5" value="5"/>
@@ -167,7 +145,7 @@
                     <el-option label="n78" value="78"/>
                   </el-select>
                   <el-tooltip content="子载波间隔" placement="top">
-                    <el-select v-model="settings.nr_pci.scs" placeholder="子载波间隔" class="sim-pci-input sim-pci-input-wide" size="small">
+                    <el-select v-model="settings.nr_pci.scs" placeholder="子载波间隔" class="sim-pci-input sim-pci-input-wide" size="small" @change="handleNRPciInputChange">
                       <el-option label="15KHz" value="0"/>
                       <el-option label="30KHz" value="1"/>
                       <el-option label="60KHz" value="2"/>
@@ -181,20 +159,18 @@
 
             <el-form-item label="锁 LTE PCI">
               <div class="sim-lock-section">
-                <div class="sim-lock-toggle">
-                  <el-switch
-                    v-model="settings.lte_pci.enabled"
-                    inline-prompt
-                    :active-text="'开'"
-                    :inactive-text="'关'"
-                    @change="handleLtePciLock"
-                    class="wan-enable-switch"
-                  />
-                </div>
-                <div v-if="settings.lte_pci.enabled" class="sim-pci-row">
-                  <el-input v-model="settings.lte_pci.pcid" placeholder="PCID" class="sim-pci-input" size="small"/>
-                  <el-input v-model="settings.lte_pci.freq" placeholder="频点" class="sim-pci-input" size="small"/>
-                  <el-select v-model="settings.lte_pci.band" placeholder="频段" class="sim-pci-input" size="small">
+                <div class="sim-pci-row">
+                  <el-tag
+                    class="band-option-tag"
+                    :type="!settings.lte_pci.enabled ? 'primary' : 'info'"
+                    :effect="!settings.lte_pci.enabled ? 'dark' : 'plain'"
+                    @click="handleLtePciUnlock"
+                  >
+                    解锁
+                  </el-tag>
+                  <el-input v-model="settings.lte_pci.pcid" placeholder="PCID" class="sim-pci-input" size="small" @change="handleLtePciInputChange"/>
+                  <el-input v-model="settings.lte_pci.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleLtePciInputChange"/>
+                  <el-select v-model="settings.lte_pci.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleLtePciInputChange">
                     <el-option label="b1" value="1"/>
                     <el-option label="b3" value="3"/>
                     <el-option label="b5" value="5"/>
@@ -254,7 +230,7 @@
               </div>
 
               <div class="signal-row signal-row-right" v-if="String(status.rat).toUpperCase() !== 'LTE'">
-                <div class="signal-title">NR信号强度:</div>
+                <div class="signal-title">5G信号强度:</div>
                 <template v-if="isNoService">
                   <span class="status-value">无服务</span>
                 </template>
@@ -844,6 +820,7 @@ export default {
       if (!this.settingsInitialized) {
         this.settings.index = data.settings.index
         this.settings.enable = typeof data.settings.enable === 'boolean' ? data.settings.enable : true
+        this.settings.ifname = data.settings.ifname
         this.settings.alias = data.settings.alias
         this.settings.interface = data.settings.interface
         this.settings.net = String(data.settings.net || '').toUpperCase()
@@ -859,14 +836,14 @@ export default {
         const lteRealBand = data.realSettings && data.realSettings.ltefreqlock && Array.isArray(data.realSettings.ltefreqlock.band) ? (data.realSettings.ltefreqlock.band[0] || '') : ''
         this.settings.nrBand = nrRealBand || nrStoredBand
         this.settings.lteBand = lteRealBand || lteStoredBand
-        this.settings.nrBandUnLock = (this.settings.nrBand === 'none' || this.settings.nrBand === '')
-        this.settings.lteBandUnLock = (this.settings.lteBand === 'none' || this.settings.lteBand === '')
+        this.settings.nrBandUnLock = (this.settings.nrBand === 'unlocked' || this.settings.nrBand === 'none' || this.settings.nrBand === '')
+        this.settings.lteBandUnLock = (this.settings.lteBand === 'unlocked' || this.settings.lteBand === 'none' || this.settings.lteBand === '')
         this.settings.nrBandLockEnabled = !this.settings.nrBandUnLock
         this.settings.lteBandLockEnabled = !this.settings.lteBandUnLock
         if (this.settings.nrBandUnLock)
-          this.settings.nrBand = 'none'
+          this.settings.nrBand = 'unlocked'
         if (this.settings.lteBandUnLock)
-          this.settings.lteBand = 'none'
+          this.settings.lteBand = 'unlocked'
         this.settings.bandUnLock = this.settings.nrBandUnLock && this.settings.lteBandUnLock
         this.settings.cell = data.settings.cell || data.settings.settingsCell
         this.settings.pci = data.settings.pcid || data.settings.settingsPCI
@@ -907,11 +884,19 @@ export default {
         this.$message.error('The network interface must be specified!')
         return
       }
+      if (this.settings.nr_pci && this.settings.nr_pci.enabled && !this.settings.nrBandUnLock) {
+        this.$message.error('锁NR频段和锁NR PCI不允许同时设置，请先解锁其中一个')
+        return
+      }
       if (this.settings.nr_pci && this.settings.nr_pci.enabled) {
         if (!this.settings.nr_pci.pcid || !this.settings.nr_pci.band || !this.settings.nr_pci.freq || this.settings.nr_pci.scs === '') {
           this.$message.error('请完整填写NR PCI锁定参数: PCID/频段/频点/子载波间隔')
           return
         }
+      }
+      if (this.settings.lte_pci && this.settings.lte_pci.enabled && !this.settings.lteBandUnLock) {
+        this.$message.error('锁LTE频段和锁LTE PCI不允许同时设置，请先解锁其中一个')
+        return
       }
       if (this.settings.lte_pci && this.settings.lte_pci.enabled) {
         if (!this.settings.lte_pci.pcid || !this.settings.lte_pci.band || !this.settings.lte_pci.freq) {
@@ -945,6 +930,16 @@ export default {
         this.settings.nr_pci.scs = ''
       }
     },
+    handleNRPciUnlock() {
+      this.settings.nr_pci.enabled = false
+      this.settings.nr_pci.pcid = ''
+      this.settings.nr_pci.band = ''
+      this.settings.nr_pci.freq = ''
+      this.settings.nr_pci.scs = ''
+    },
+    handleNRPciInputChange() {
+      this.settings.nr_pci.enabled = true
+    },
     handleLtePciLock(enabled) {
       if (!enabled) {
         this.settings.lte_pci.pcid = ''
@@ -952,33 +947,42 @@ export default {
         this.settings.lte_pci.freq = ''
       }
     },
+    handleLtePciUnlock() {
+      this.settings.lte_pci.enabled = false
+      this.settings.lte_pci.pcid = ''
+      this.settings.lte_pci.band = ''
+      this.settings.lte_pci.freq = ''
+    },
+    handleLtePciInputChange() {
+      this.settings.lte_pci.enabled = true
+    },
     handleNrBandLockEnabledChange(enabled) {
       if (!enabled) {
-        this.settings.nrBand = 'none'
+        this.settings.nrBand = 'unlocked'
         this.settings.nrBandUnLock = true
         return
       }
       this.settings.nrBandUnLock = false
-      if (this.settings.nrBand === 'none' || this.settings.nrBand === '') {
+      if (this.settings.nrBand === 'unlocked' || this.settings.nrBand === 'none' || this.settings.nrBand === '') {
         const next = (this.getNRBandOptions().find(opt => opt !== '解锁') || 'none')
         this.settings.nrBand = next
       }
     },
     handleLteBandLockEnabledChange(enabled) {
       if (!enabled) {
-        this.settings.lteBand = 'none'
+        this.settings.lteBand = 'unlocked'
         this.settings.lteBandUnLock = true
         return
       }
       this.settings.lteBandUnLock = false
-      if (this.settings.lteBand === 'none' || this.settings.lteBand === '') {
+      if (this.settings.lteBand === 'unlocked' || this.settings.lteBand === 'none' || this.settings.lteBand === '') {
         const next = (this.getLTEBandOptions().find(opt => opt !== '解锁') || 'none')
         this.settings.lteBand = next
       }
     },
     selectNRBandOption(value) {
       if (value === '解锁') {
-        this.settings.nrBand = 'none'
+        this.settings.nrBand = 'unlocked'
         this.settings.nrBandUnLock = true
         this.settings.nrBandLockEnabled = false
         return
@@ -989,7 +993,7 @@ export default {
     },
     selectLTEBandOption(value) {
       if (value === '解锁') {
-        this.settings.lteBand = 'none'
+        this.settings.lteBand = 'unlocked'
         this.settings.lteBandUnLock = true
         this.settings.lteBandLockEnabled = false
         return
