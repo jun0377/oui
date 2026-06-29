@@ -727,6 +727,7 @@ export default {
     // 根据当前视图和选中的链路，启动或停止对应 SIM 卡的数据轮询
     updatePolling() {
       this._pollingToken = (this._pollingToken || 0) + 1
+      this._inFlight = {}
       this.stopAllPolling()
 
       if (this.currentView === 'main') {
@@ -1095,10 +1096,10 @@ export default {
           }
           const inter = this.wanLinks[index].status.interface
           if (data.up !== undefined) inter.up = !!data.up
-          if (data.ip) inter.ip = data.ip
-          if (data.mask) inter.mask = data.mask
-          if (data.gateway) inter.gateway = data.gateway
-          if (data.mac) inter.mac = data.mac
+          if (data.ip !== undefined) inter.ip = data.ip || ''
+          if (data.mask !== undefined) inter.mask = data.mask || ''
+          if (data.gateway !== undefined) inter.gateway = data.gateway || ''
+          if (data.mac !== undefined) inter.mac = data.mac || ''
           if (data.rxBytes) inter.rxBytes = data.rxBytes
           if (data.txBytes) inter.txBytes = data.txBytes
 

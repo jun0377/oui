@@ -42,7 +42,7 @@
                 <el-option :label="$t('AUTO')" value="AUTO"/>
                 <el-option label="PAP" value="PAP"/>
                 <el-option label="CHAP" value="CHAP"/>
-                <el-option :label="$t('NONE')" value="NONE"/>
+                <el-option :label="$t('NONE')" value="none"/>
               </el-select>
             </el-form-item>
 
@@ -371,7 +371,7 @@
             <el-card class="config-card compact-card sim-accent-amber">
               <template #header>
                 <div class="card-header">
-                  <span class="sim-card-title">{{ $t('NR锁频锁小区状态') }}</span>
+                  <span class="sim-card-title">{{ $t('5G锁频锁小区状态') }}</span>
                   <el-tag type="info">{{ $t('实时') }}</el-tag>
                 </div>
               </template>
@@ -382,7 +382,7 @@
                 </div>
                 <div class="status-item">
                   <span class="status-label">频段:</span>
-                  <span class="status-value">{{ realSettings.nrfreqlock.band.join(', ') }}</span>
+                  <span class="status-value">{{ realSettings.nrfreqlock.band.map(v => 'n' + v).join(', ') }}</span>
                 </div>
                 <div class="status-item">
                   <span class="status-label">频点:</span>
@@ -857,6 +857,17 @@ export default {
     // 链路使能
     handleEnableChange(enabled) {
       this.settings.enable = enabled
+      if (!enabled) {
+        if (this.status && this.status.interface) {
+          this.status.interface.ip = ''
+          this.status.interface.mask = ''
+          this.status.interface.gateway = ''
+        }
+        this.status.rat = ''
+        if (this.freqInfo) {
+          this.freqInfo.class = []
+        }
+      }
       this.$oui.call('sim', 'changeSimEnable', this.settings).then((response) => {
         if (response === 0)
           this.$message[enabled ? 'success' : 'warning'](enabled ? '已开启' : '已关闭')
@@ -868,6 +879,15 @@ export default {
     },
     // 当前状态字符串
     getStatusText() {
+      if (!this.settings.enable)
+        return '已禁用'
+      if (this.isNoService)
+        return '无服务'
+      // 判断是否有IP,有IP则返回'在线'
+      if (this.status && this.status.interface && this.status.interface.ip)
+        return '在线'
+      if (!this.NR_5GCore.stat && !this.CS.stat)
+        return '离线'
       let stat = ''
       if (this.NR_5GCore.stat !== '')
         stat = stat + 'NR' + this.NR_5GCore.stat
@@ -935,7 +955,11 @@ export default {
         this.settings.lte_pci = { enabled: false, pcid: '', band: '', freq: '' }
         this.$oui.call('sim', 'changeSimSettings', this.settings).then((response) => {
           if (response && response.code === 0) {
-            this.$message.success(this.$t('Configuration reset successfully'))
+            this.$oui.call('sim', 'changeSimEnable', this.settings).then((res) => {
+              if (res === 0) {
+                this.$message.success(this.$t('Configuration reset successfully'))
+              }
+            })
           }
         })
       })

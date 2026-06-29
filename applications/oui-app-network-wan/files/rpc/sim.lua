@@ -470,7 +470,26 @@ local function getModuleSettingsNRLock(ifname)
     end
     local data = f:read("*a")
     f:close()
-    return data:gsub("[\r\n]", "")
+    data = data:gsub("[\r\n]", "")
+
+    -- 清理 AT 指令响应噪声（如 AT^NRFREQLOCK?、OK 等）
+    local ok, parsed = pcall(cjson.decode, data)
+    if ok and parsed and type(parsed) == "table" then
+        if parsed.band and type(parsed.band) == "table" then
+            local clean = {}
+            for _, v in ipairs(parsed.band) do
+                local s = tostring(v)
+                -- 只保留纯数字的频段值
+                if s:match("^%d+$") then
+                    table.insert(clean, s)
+                end
+            end
+            parsed.band = clean
+        end
+        return cjson.encode(parsed)
+    end
+
+    return data
 end
 
 -- 查询模组配置,是从模组内部查询到的配置,并不是uci配置, LTE锁频锁小区配置
@@ -487,7 +506,25 @@ local function getModuleSettingsLTELock(ifname)
     end
     local data = f:read("*a")
     f:close()
-    return data:gsub("[\r\n]", "")
+    data = data:gsub("[\r\n]", "")
+
+    -- 清理 AT 指令响应噪声（如 AT^LTEFREQLOCK?、OK 等）
+    local ok, parsed = pcall(cjson.decode, data)
+    if ok and parsed and type(parsed) == "table" then
+        if parsed.band and type(parsed.band) == "table" then
+            local clean = {}
+            for _, v in ipairs(parsed.band) do
+                local s = tostring(v)
+                if s:match("^%d+$") then
+                    table.insert(clean, s)
+                end
+            end
+            parsed.band = clean
+        end
+        return cjson.encode(parsed)
+    end
+
+    return data
 end
 
 -- 获取模组厂商id
@@ -784,7 +821,8 @@ function M.getInterfaceStatus(params)
     -- IP / 掩码 / 网关
     local ipOut = exec(string.format("ip -o -4 addr show %s 2>/dev/null", interface))
     local ip, cidrNum = ipOut:match("inet%s+(%d+%.%d+%.%d+%.%d+)/(%d+)")
-    local gateway = exec(string.format("ip -4 route show default dev %s 2>/dev/null | awk '{print $3}'", interface)):gsub("[\r\n]", "")
+    local ip = ip or ""
+    local gateway = exec(string.format("ip -4 route show default dev %s 2>/dev/null | awk 'NR==1{print $3}'", interface)):gsub("[\r\n]", "")
 
     -- CIDR 转掩码
     local mask = ""
@@ -814,8 +852,8 @@ function M.getInterfaceStatus(params)
 end
 
 -- 触发重新拨号
-local function dial(interface)
-    local cmd = string.format("ifup %s", interface)
+local function dial(ifname)
+    local cmd = string.format("ifup %s", ifname)
     log.info(cmd)
     exec(cmd)
 end
@@ -862,7 +900,7 @@ local function setSimNet(ifname, net)
 
     local interface = c:get('sim', ifname, 'logicInterface')
     
-    dial(interface)
+    dial(ifname)
     
     return true
 end
@@ -891,8 +929,7 @@ local function setSimAPN(ifname, apn)
     c:set("sim", ifname, 'apn', apn)
     c:commit('sim')
 
-    local interface = c:get('sim', ifname, 'logicInterface')
-    dial(interface)
+    dial(ifname)
 
     return true
 end
@@ -921,8 +958,7 @@ local function setSimBand(ifname, band)
     c:set("sim", ifname, 'band', band)
     c:commit('sim')
 
-    local interface = c:get('sim', ifname, 'logicInterface')
-    dial(interface)
+    dial(ifname)
     return true
 end
 
@@ -950,8 +986,7 @@ local function setSimPCID(ifname, PCID)
     c:set("sim", ifname, 'pci', PCID)
     c:commit('sim')
 
-    local interface = c:get('sim', ifname, 'logicInterface')
-    dial(interface)
+    dial(ifname)
 end
 
 -- 锁NR PCI小区
@@ -988,8 +1023,7 @@ local function setSimNRPCID(ifname, PCID)
 
     c:commit('sim')
 
-    local interface = c:get('sim', ifname, 'logicInterface')
-    dial(interface)
+    dial(ifname)
 
     return true
 end
@@ -1026,8 +1060,7 @@ local function setSimLTEPCID(ifname, PCID)
 
     c:commit('sim')
 
-    local interface = c:get('sim', ifname, 'logicInterface')
-    dial(interface)
+    dial(ifname)
 end
 
 -- 更改鉴权、用户名、密码
@@ -1062,8 +1095,7 @@ local function setSimAuth(ifname, auth, apn, username, password)
     c:set("sim", ifname, 'passwd', password)
     c:commit('sim')
 
-    local interface = c:get('sim', ifname, 'logicInterface')
-    dial(interface)
+    dial(ifname)
     return true
 end
 
@@ -1150,12 +1182,12 @@ function M.changeSimEnable(params)
         exec(cmd)
 
         -- 触发拨号
-        dial(interface)
+        dial(ifname)
     else
         c:set("sim", ifname, 'enable', 'false')
         c:commit('sim')
         
-        cmd = string.format('ifdown %s', interface)
+        cmd = string.format('ifdown %s', ifname)
         exec(cmd)
     end
 
