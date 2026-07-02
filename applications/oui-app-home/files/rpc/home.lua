@@ -96,7 +96,7 @@ function M.getServerStatus()
 
     local file = io.open(path, 'r')
     if not file then
-        log.err('home.getServerStatus open failed: ', path)
+        log.error('home.getServerStatus open failed: ', path)
         return ret
     end
 
