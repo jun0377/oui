@@ -32,7 +32,7 @@
               <div class="subnet-info-wan">
                 <span>{{ item.wan.settings.alias }}</span>
                 <span>{{ item.wan.sim.operator || (item.wan.sim.mcc + item.wan.sim.mnc) }}</span>
-                <span>{{ item.wan.status.rat }}</span>
+                <span>{{ item.wan.status.rat === 'NOSERVICE' ? '无服务' : item.wan.status.rat }}</span>
                 <span>{{ item.wan.settings.apn }}</span>
                 <span>{{ getRealBandTypeText(item.index) }}</span>
                 <span class="signal-icon-wrapper">

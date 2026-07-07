@@ -221,7 +221,7 @@
 
               <div class="status-item">
                 <span class="status-label">{{ $t('网络接入技术') }}:</span>
-                <span class="status-value">{{ status.rat }}</span>
+                <span class="status-value">{{ status.rat === 'NOSERVICE' ? '无服务' : status.rat }}</span>
               </div>
 
               <div class="status-item">
