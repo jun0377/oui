@@ -29,7 +29,22 @@ local function workModeSingleSettings()
     if channel and channel ~= '' then
         local status = ubus.call(string.format('network.interface.%s', channel), 'status', {})
         if status then
-            l3_device = status.l3_device or status.device
+            l3_device = status.l3_device or status.device or l3_device
+        end
+    end
+
+    -- 兜底: 从 tracker-sim 文件中获取接口名
+    if channel and channel ~= '' and l3_device == 'N/A' then
+        local f = io.open(string.format('/tmp/tracker-sim/%s/interface', channel), 'r')
+        if f then
+            local dev = f:read('*a')
+            f:close()
+            if dev then
+                dev = dev:gsub('[\r\n]', '')
+                if dev ~= '' then
+                    l3_device = dev
+                end
+            end
         end
     end
 
