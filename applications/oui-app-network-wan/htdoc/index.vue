@@ -517,10 +517,77 @@ export default {
     },
     selectedWanIndex() {
       this.updatePolling()
+    },
+    '$route.query': {
+      handler(q) {
+        const sub = q.sub
+        const idx = q.idx !== undefined ? parseInt(q.idx, 10) : undefined
+        if (!sub) {
+          if (this.currentView !== 'main') this.goBackToMain()
+          return
+        }
+        if ((sub === 'sim' || sub === 'wan') && idx !== undefined && Number.isFinite(idx)) {
+          const view = sub === 'sim' ? 'sim-config' : 'wan-config'
+          const link = this.wanLinks && this.wanLinks[idx]
+          if (link) {
+            this.selectedWan = link
+            this.selectedWanIndex = idx
+            this.currentView = view
+          }
+        } else if (sub === 'dhcp') {
+          this.currentView = 'dhcp'
+        } else if (sub === 'wireless') {
+          this.currentView = 'wireless'
+        }
+      }
     }
   },
 
   methods: {
+    // 从 URL query 解析当前视图
+    parseQuery() {
+      const sub = this.$route.query.sub
+      const idx = this.$route.query.idx !== undefined ? parseInt(this.$route.query.idx, 10) : undefined
+      if (sub === 'sim' && idx !== undefined && Number.isFinite(idx))
+        return { view: 'sim-config', index: idx }
+      if (sub === 'wan' && idx !== undefined && Number.isFinite(idx))
+        return { view: 'wan-config', index: idx }
+      if (sub === 'dhcp') return { view: 'dhcp' }
+      if (sub === 'wireless') return { view: 'wireless' }
+      return { view: 'main' }
+    },
+    // 同步当前视图到 URL query
+    writeQuery(view, index) {
+      const query = {}
+      if (view === 'sim-config') {
+        query.sub = 'sim'
+        query.idx = String(index)
+      } else if (view === 'wan-config') {
+        query.sub = 'wan'
+        query.idx = String(index)
+      } else if (view === 'dhcp') {
+        query.sub = 'dhcp'
+      } else if (view === 'wireless') {
+        query.sub = 'wireless'
+      }
+      // main view: empty query
+      this.$router.replace({ query }).catch(() => {})
+    },
+    // 页面初始化后从 query 恢复视图
+    restoreFromQuery() {
+      const { view, index } = this.parseQuery()
+      if (view === 'main') return
+      if ((view === 'sim-config' || view === 'wan-config') && index !== null) {
+        const link = this.wanLinks && this.wanLinks[index]
+        if (link) {
+          this.selectedWan = link
+          this.selectedWanIndex = index
+          this.currentView = view
+        }
+      } else if (view === 'dhcp' || view === 'wireless') {
+        this.currentView = view
+      }
+    },
     // 获取指定索引链路的 RPC 参数（返回 {ifname: "sim1"} 或 null）
     getRpcIndex(index) {
       const link = this.wanLinks && this.wanLinks[index]
@@ -533,7 +600,7 @@ export default {
     bootstrap() {
       return this.loadAvailWanLinks().then(() => {
         this.initTrafficSeries()
-        this.wanLinks.forEach((_, index) => this.getSimSettings(index))
+        const initPromises = this.wanLinks.map((_, index) => this.getSimSettings(index).catch(() => {}))
 
         this.wanLinks.forEach((_, index) => {
           if (this.getRpcIndex(index) === null)
@@ -545,6 +612,7 @@ export default {
         })
 
         this.updatePolling()
+        return Promise.all(initPromises)
       })
     },
     // 通过 RPC 调用 'wan' 模块的 'getAvailWan' 方法，获取可用链路列表，并构建 wanLinks 数组
@@ -1513,8 +1581,8 @@ export default {
     getSimSettings(index) {
       const rpcIndex = this.getRpcIndex(index)
       if (rpcIndex === null)
-        return
-      this.$oui.call('sim', 'getSimUciSettings', { ifname: rpcIndex }).then(result => {
+        return Promise.resolve()
+      return this.$oui.call('sim', 'getSimUciSettings', { ifname: rpcIndex }).then(result => {
         let data = result
         if (typeof result === 'string') {
           try {
@@ -1629,6 +1697,7 @@ export default {
       this.selectedWan = wan
       this.selectedWanIndex = index
       this.currentView = wan && wan.kind === 'sim' ? 'sim-config' : 'wan-config'
+      this.writeQuery(this.currentView, index)
       this.updateWanPortStatePolling()
     },
     // 返回主页面
@@ -1636,6 +1705,7 @@ export default {
       this.currentView = 'main'
       this.selectedWan = null
       this.selectedWanIndex = null
+      this.writeQuery('main')
       this.updateWanPortStatePolling()
       if (payload && payload.refresh) {
         this.loadAvailWanLinks().then(() => {
@@ -1650,9 +1720,11 @@ export default {
     editSubNet(lan) {
       if (lan.name === 'DHCP Service') {
         this.currentView = 'dhcp'
+        this.writeQuery('dhcp')
         this.updateWanPortStatePolling()
       } else if (lan.name === 'Wireless Lan') {
         this.currentView = 'wireless'
+        this.writeQuery('wireless')
         this.updateWanPortStatePolling()
       } else {
         alert('修改LAN设置: ' + lan.name)
@@ -1660,7 +1732,9 @@ export default {
     }
   },
   created() {
-    this.bootstrap()
+    this.bootstrap().then(() => {
+      this.restoreFromQuery()
+    })
   },
   beforeUnmount() {
     this.stopWanPortStatePolling()

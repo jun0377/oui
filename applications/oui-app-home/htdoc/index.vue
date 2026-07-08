@@ -467,7 +467,7 @@ export default {
       if (status === 'OK') {
         return {
           value: '已连接',
-          subtitle: msg || `地址: ${addr}`,
+          subtitle: `地址: ${addr}`,
           tag: '正常',
           type: 'success'
         }
