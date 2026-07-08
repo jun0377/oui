@@ -823,6 +823,10 @@ function M.getInterfaceStatus(params)
     local ip, cidrNum = ipOut:match("inet%s+(%d+%.%d+%.%d+%.%d+)/(%d+)")
     local ip = ip or ""
     local gateway = exec(string.format("ip -4 route show default dev %s 2>/dev/null | awk 'NR==1{print $3}'", interface)):gsub("[\r\n]", "")
+    -- 兜底: 主路由表查不到时查所有路由表
+    if gateway == "" then
+        gateway = exec(string.format("ip -4 route show table all 2>/dev/null | grep 'default via' | grep 'dev %s' | head -1 | awk '{print $3}'", interface)):gsub("[\r\n]", "")
+    end
 
     -- CIDR 转掩码
     local mask = ""

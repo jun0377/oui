@@ -129,31 +129,44 @@
                     class="band-option-tag"
                     :type="!settings.nr_pci.enabled ? 'primary' : 'info'"
                     :effect="!settings.nr_pci.enabled ? 'dark' : 'plain'"
-                    @click="handleNRPciUnlock"
+                    @click="handleNRPciToggle"
                   >
-                    解锁
+                    {{ settings.nr_pci.enabled ? '解锁' : '未锁定,点击进行设置' }}
                   </el-tag>
-                  <el-input v-model="settings.nr_pci.pcid" placeholder="PCID" class="sim-pci-input" size="small" @change="handleNRPciInputChange"/>
-                  <el-input v-model="settings.nr_pci.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleNRPciInputChange"/>
-                  <el-select v-model="settings.nr_pci.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleNRPciInputChange">
-                    <el-option label="n1" value="1"/>
-                    <el-option label="n3" value="3"/>
-                    <el-option label="n5" value="5"/>
-                    <el-option label="n8" value="8"/>
-                    <el-option label="n28" value="28"/>
-                    <el-option label="n41" value="41"/>
-                    <el-option label="n78" value="78"/>
-                  </el-select>
-                  <el-tooltip content="子载波间隔" placement="top">
-                    <el-select v-model="settings.nr_pci.scs" placeholder="子载波间隔" class="sim-pci-input sim-pci-input-wide" size="small" @change="handleNRPciInputChange">
-                      <el-option label="15KHz" value="0"/>
-                      <el-option label="30KHz" value="1"/>
-                      <el-option label="60KHz" value="2"/>
-                      <el-option label="120KHz" value="3"/>
-                      <el-option label="240KHz" value="4"/>
-                    </el-select>
-                  </el-tooltip>
                 </div>
+                <template v-if="settings.nr_pci.enabled">
+                  <div class="sim-pci-row">
+                    <el-tooltip :content="'成功附网后,是否允许重选切换小区; 当前状态: ' + (settings.nr_pci.reSelEnabled ? '允许' : '不允许')" placement="top">
+                      <el-button size="small" :type="settings.nr_pci.reSelEnabled ? 'primary' : 'default'" @click="handleRescan">允许重选切换</el-button>
+                    </el-tooltip>
+                  </div>
+                  <div v-for="(entry, idx) in settings.nr_pci.items" :key="idx" class="sim-pci-row">
+                    <el-input v-model="entry.pcid" placeholder="PCID" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
+                    <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
+                    <el-select v-model="entry.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)">
+                      <el-option label="n1" value="1"/>
+                      <el-option label="n3" value="3"/>
+                      <el-option label="n5" value="5"/>
+                      <el-option label="n8" value="8"/>
+                      <el-option label="n28" value="28"/>
+                      <el-option label="n41" value="41"/>
+                      <el-option label="n78" value="78"/>
+                    </el-select>
+                    <el-tooltip content="子载波间隔" placement="top">
+                      <el-select v-model="entry.scs" placeholder="子载波间隔" class="sim-pci-input sim-pci-input-wide" size="small" @change="handleNRPciInputChange(idx)">
+                        <el-option label="15KHz" value="0"/>
+                        <el-option label="30KHz" value="1"/>
+                        <el-option label="60KHz" value="2"/>
+                        <el-option label="120KHz" value="3"/>
+                        <el-option label="240KHz" value="4"/>
+                      </el-select>
+                    </el-tooltip>
+                    <el-button size="small" type="warning" @click="removeNRPciEntry(idx)">删除条目</el-button>
+                  </div>
+                  <div class="sim-pci-row">
+                    <el-button size="small" type="success" @click="addNRPciEntry">添加条目</el-button>
+                  </div>
+                </template>
               </div>
             </el-form-item>
 
@@ -164,23 +177,31 @@
                     class="band-option-tag"
                     :type="!settings.lte_pci.enabled ? 'primary' : 'info'"
                     :effect="!settings.lte_pci.enabled ? 'dark' : 'plain'"
-                    @click="handleLtePciUnlock"
+                    @click="handleLtePciToggle"
                   >
-                    解锁
+                    {{ settings.lte_pci.enabled ? '解锁' : '未锁定,点击进行设置' }}
                   </el-tag>
-                  <el-input v-model="settings.lte_pci.pcid" placeholder="PCID" class="sim-pci-input" size="small" @change="handleLtePciInputChange"/>
-                  <el-input v-model="settings.lte_pci.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleLtePciInputChange"/>
-                  <el-select v-model="settings.lte_pci.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleLtePciInputChange">
-                    <el-option label="b1" value="1"/>
-                    <el-option label="b3" value="3"/>
-                    <el-option label="b5" value="5"/>
-                    <el-option label="b8" value="8"/>
-                    <el-option label="b34" value="34"/>
-                    <el-option label="b39" value="39"/>
-                    <el-option label="b40" value="40"/>
-                    <el-option label="b41" value="40"/>
-                  </el-select>
                 </div>
+                <template v-if="settings.lte_pci.enabled">
+                  <div v-for="(entry, idx) in settings.lte_pci.items" :key="idx" class="sim-pci-row">
+                    <el-input v-model="entry.pcid" placeholder="PCID" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)"/>
+                    <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)"/>
+                    <el-select v-model="entry.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)">
+                      <el-option label="b1" value="1"/>
+                      <el-option label="b3" value="3"/>
+                      <el-option label="b5" value="5"/>
+                      <el-option label="b8" value="8"/>
+                      <el-option label="b34" value="34"/>
+                      <el-option label="b39" value="39"/>
+                      <el-option label="b40" value="40"/>
+                      <el-option label="b41" value="40"/>
+                    </el-select>
+                    <el-button size="small" type="warning" @click="removeLtePciEntry(idx)">删除条目</el-button>
+                  </div>
+                  <div class="sim-pci-row">
+                    <el-button size="small" type="success" @click="addLtePciEntry">添加条目</el-button>
+                  </div>
+                </template>
               </div>
             </el-form-item>
           </el-form>
@@ -399,7 +420,7 @@
               </div>
             </el-card>
 
-            <el-card class="config-card compact-card sim-accent-amber">
+            <el-card class="config-card compact-card sim-accent-blue">
               <template #header>
                 <div class="card-header">
                   <span class="sim-card-title">{{ $t('LTE锁频锁小区状态') }}</span>
@@ -613,8 +634,8 @@ export default {
         lteBand: '',
         lteBandLockEnabled: false,
         lteBandUnLock: true,
-        nr_pci: { enabled: false, pcid: '', band: '', freq: '', scs: '' },
-        lte_pci: { enabled: false, pcid: '', band: '', freq: '' },
+        nr_pci: { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '', scs: '' }] },
+        lte_pci: { enabled: false, items: [{ enabled: false, pcid: '', band: '', freq: '' }] },
         auth: '',
         username: '',
         password: ''
@@ -854,6 +875,27 @@ export default {
     goBack() {
       this.$emit('go-back')
     },
+    handleRescan() {
+      this.settings.nr_pci.reSelEnabled = !this.settings.nr_pci.reSelEnabled
+      // TODO: 调用 RPC 同步重选切换状态
+    },
+    addNRPciEntry() {
+      if (this.settings.nr_pci.items.length >= 20) {
+        this.$message.warning('最多允许20个条目')
+        return
+      }
+      this.settings.nr_pci.items.push({ enabled: false, pcid: '', band: '', freq: '', scs: '' })
+    },
+    removeNRPciEntry(idx) {
+      if (this.settings.nr_pci.items.length > 1) {
+        this.settings.nr_pci.items.splice(idx, 1)
+      } else {
+        this.$message.warning('无法删除唯一的条目')
+      }
+    },
+    handleSwitch() {
+      // TODO: 调用 RPC 切换网络
+    },
     // 链路使能
     handleEnableChange(enabled) {
       this.settings.enable = enabled
@@ -908,8 +950,9 @@ export default {
         this.$message.error('锁NR频段和锁NR PCI不允许同时设置，请先解锁其中一个')
         return
       }
-      if (this.settings.nr_pci && this.settings.nr_pci.enabled) {
-        if (!this.settings.nr_pci.pcid || !this.settings.nr_pci.band || !this.settings.nr_pci.freq || this.settings.nr_pci.scs === '') {
+      const nrPciEntries = this.settings.nr_pci.items.filter(e => e.enabled)
+      for (const e of nrPciEntries) {
+        if (!e.pcid || !e.band || !e.freq || e.scs === '') {
           this.$message.error('请完整填写NR PCI锁定参数: PCID/频段/频点/子载波间隔')
           return
         }
@@ -918,8 +961,9 @@ export default {
         this.$message.error('锁LTE频段和锁LTE PCI不允许同时设置，请先解锁其中一个')
         return
       }
-      if (this.settings.lte_pci && this.settings.lte_pci.enabled) {
-        if (!this.settings.lte_pci.pcid || !this.settings.lte_pci.band || !this.settings.lte_pci.freq) {
+      const ltePciEntries = this.settings.lte_pci.items.filter(e => e.enabled)
+      for (const e of ltePciEntries) {
+        if (!e.pcid || !e.band || !e.freq) {
           this.$message.error('请完整填写LTE PCI锁定参数: PCID/频段/频点')
           return
         }
@@ -951,8 +995,8 @@ export default {
         this.settings.lteBandUnLock = true
         this.settings.lteBandLockEnabled = false
         this.settings.bandUnLock = true
-        this.settings.nr_pci = { enabled: false, pcid: '', band: '', freq: '', scs: '' }
-        this.settings.lte_pci = { enabled: false, pcid: '', band: '', freq: '' }
+        this.settings.nr_pci = { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '', scs: '' }] }
+        this.settings.lte_pci = { enabled: false, items: [{ enabled: false, pcid: '', band: '', freq: '' }] }
         this.$oui.call('sim', 'changeSimSettings', this.settings).then((response) => {
           if (response && response.code === 0) {
             this.$oui.call('sim', 'changeSimEnable', this.settings).then((res) => {
@@ -964,39 +1008,79 @@ export default {
         })
       })
     },
+    handleNRPciToggle() {
+      if (this.settings.nr_pci.enabled) {
+        this.handleNRPciUnlock()
+      } else {
+        this.settings.nr_pci.enabled = true
+      }
+    },
     handleNRPciLock(enabled) {
       if (!enabled) {
-        this.settings.nr_pci.pcid = ''
-        this.settings.nr_pci.band = ''
-        this.settings.nr_pci.freq = ''
-        this.settings.nr_pci.scs = ''
+        this.settings.nr_pci.items.forEach(e => {
+          e.pcid = ''
+          e.band = ''
+          e.freq = ''
+          e.scs = ''
+        })
       }
     },
     handleNRPciUnlock() {
       this.settings.nr_pci.enabled = false
-      this.settings.nr_pci.pcid = ''
-      this.settings.nr_pci.band = ''
-      this.settings.nr_pci.freq = ''
-      this.settings.nr_pci.scs = ''
+      this.settings.nr_pci.items.forEach(e => {
+        e.enabled = false
+        e.pcid = ''
+        e.band = ''
+        e.freq = ''
+        e.scs = ''
+      })
     },
-    handleNRPciInputChange() {
+    handleNRPciInputChange(idx) {
       this.settings.nr_pci.enabled = true
+      this.settings.nr_pci.items[idx].enabled = true
+    },
+    handleLtePciToggle() {
+      if (this.settings.lte_pci.enabled) {
+        this.handleLtePciUnlock()
+      } else {
+        this.settings.lte_pci.enabled = true
+      }
     },
     handleLtePciLock(enabled) {
       if (!enabled) {
-        this.settings.lte_pci.pcid = ''
-        this.settings.lte_pci.band = ''
-        this.settings.lte_pci.freq = ''
+        this.settings.lte_pci.items.forEach(e => {
+          e.pcid = ''
+          e.band = ''
+          e.freq = ''
+        })
       }
     },
     handleLtePciUnlock() {
       this.settings.lte_pci.enabled = false
-      this.settings.lte_pci.pcid = ''
-      this.settings.lte_pci.band = ''
-      this.settings.lte_pci.freq = ''
+      this.settings.lte_pci.items.forEach(e => {
+        e.enabled = false
+        e.pcid = ''
+        e.band = ''
+        e.freq = ''
+      })
     },
-    handleLtePciInputChange() {
+    handleLtePciInputChange(idx) {
       this.settings.lte_pci.enabled = true
+      this.settings.lte_pci.items[idx].enabled = true
+    },
+    addLtePciEntry() {
+      if (this.settings.lte_pci.items.length >= 20) {
+        this.$message.warning('最多允许20个条目')
+        return
+      }
+      this.settings.lte_pci.items.push({ enabled: false, pcid: '', band: '', freq: '' })
+    },
+    removeLtePciEntry(idx) {
+      if (this.settings.lte_pci.items.length > 1) {
+        this.settings.lte_pci.items.splice(idx, 1)
+      } else {
+        this.$message.warning('无法删除唯一的条目')
+      }
     },
     handleNrBandLockEnabledChange(enabled) {
       if (!enabled) {
