@@ -118,8 +118,11 @@
                       <span v-else class="home-interface-value">{{ card[field.key] }}</span>
                     </div>
                   </div>
-                  <el-tag :type="card.online ? 'success' : 'danger'">
-                    {{ card.online ? '在线' : '离线' }}
+                  <el-tag
+                    class="home-interface-status-tag"
+                    :type="card.statusTagType || (card.online ? 'success' : 'danger')"
+                  >
+                    {{ card.statusText || (card.online ? '在线' : '离线') }}
                   </el-tag>
                 </div>
               </div>
@@ -283,7 +286,7 @@ export default {
       if (this.interfaceStates.length) {
         return this.interfaceStates.map(card => ({
           ...card,
-          statusClass: card.online ? 'is-online' : 'is-offline'
+          statusClass: card.statusTagType ? 'is-status-' + card.statusTagType : (card.online ? 'is-online' : 'is-offline')
         }))
       }
 
@@ -557,6 +560,40 @@ export default {
       const prefix = this.maskToPrefix(mask)
       return prefix ? `${ip}/${prefix}` : ip
     },
+    getRsrpFromStatus(simStatus) {
+      if (!simStatus || !simStatus.hcsq)
+        return '-'
+      let h = simStatus.hcsq
+      if (typeof h === 'string') {
+        try {
+          h = JSON.parse(h)
+        } catch {
+          return '-'
+        }
+      }
+      const sysmode = String(h.sysmode || '').toUpperCase()
+      if (sysmode.indexOf('NR') !== -1 || sysmode.indexOf('LTE') !== -1) {
+        if (h.rsrp_dbm)
+          return String(h.rsrp_dbm)
+      }
+      // fallback to monsc cell rsrp
+      if (simStatus.monsc && simStatus.monsc.cell && simStatus.monsc.cell.rsrp) {
+        const m = String(simStatus.monsc.cell.rsrp).match(/-?\d+/)
+        return m ? m[0] : '-'
+      }
+      return '-'
+    },
+    getRsrpLevel(rsrp) {
+      if (rsrp === '-' || rsrp === '')
+        return 0
+      const n = parseFloat(rsrp)
+      if (!Number.isFinite(n) || n >= 0)
+        return 0
+      if (n >= -80) return 4
+      if (n >= -90) return 3
+      if (n >= -100) return 2
+      return 1
+    },
     parseByteValue(value) {
       const parsed = Number.parseInt(value, 10)
       return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
@@ -662,28 +699,76 @@ export default {
     },
     // sim卡 网络接口状态
     buildSimInterfaceCard(link, index) {
-      const rpcIndex = Number(link?.sim_index)
+      const ifname = link?.name || link?.device || ''
       const baseCard = this.buildDefaultInterfaceCard(link, index)
-      if (!Number.isFinite(rpcIndex) || rpcIndex < 0)
+      if (!ifname)
         return Promise.resolve(baseCard)
 
       return Promise.all([
-        this.$oui.call('sim', 'getSimUciSettings', { index: rpcIndex }),
-        this.$oui.call('sim', 'getInterfaceStatus', { index: rpcIndex })
-      ]).then(([settingsResult, statusResult]) => {
+        this.$oui.call('sim', 'getSimUciSettings', { ifname }),
+        this.$oui.call('sim', 'getInterfaceStatus', { ifname }),
+        this.$oui.call('sim', 'getStatus', { ifname }),
+        this.$oui.call('sim', 'getProductInfo', { ifname })
+      ]).then(([settingsResult, statusResult, simStatusResult, productResult]) => {
         const settings = this.parseRpcResult(settingsResult) || {}
         const status = this.parseRpcResult(statusResult) || {}
+        const simStatus = this.parseRpcResult(simStatusResult) || {}
+        const productInfo = this.parseRpcResult(productResult) || {}
         const iface = settings.interface || status.interface || link?.device || link?.name || ''
-        const ifname = settings.ifname || status.ifname || '-'
+        const ifname = settings.ifname || status.interface || '-'
+        const ip = status.ip || ''
+
+        // 解析 hcsq（RPC 返回的可能是 JSON 字符串）
+        let hcsq = simStatus.hcsq || null
+        if (typeof hcsq === 'string') {
+          try {
+            hcsq = JSON.parse(hcsq)
+          } catch {
+            hcsq = null
+          }
+        }
+
+        // 构建状态文本（与 network-wan 的 getStatusText 逻辑一致）
+        let statusText = '离线'
+        let statusTagType = 'danger'
+        if (settings.enable === '0') {
+          statusText = '已禁用'
+          statusTagType = 'info'
+        } else {
+          const iccid = productInfo.iccid || ''
+          if (iccid === '' || iccid === '-') {
+            statusText = '未识别SIM卡'
+            statusTagType = 'danger'
+          } else if (hcsq && hcsq.sysmode === 'NOSERVICE') {
+            statusText = '无服务'
+            statusTagType = 'warning'
+          } else if (ip && ip !== '-') {
+            // 计算信号强度描述
+            const rsrp = this.getRsrpFromStatus(simStatus)
+            const rsrpLevel = this.getRsrpLevel(rsrp)
+            const labels = { 4: '信号极好', 3: '信号良好', 2: '信号一般', 1: '信号差' }
+            const signalLabel = labels[rsrpLevel] || ''
+            statusText = signalLabel ? '在线 ' + signalLabel : '在线'
+            statusTagType = 'success'
+          } else {
+            // 无 IP 时检查 SIM 卡状态
+            const simState = (simStatus.sim || '').toUpperCase()
+            if (simState && !simState.includes('NOT'))
+              statusText = '拨号中...'
+          }
+        }
+
         return {
-          key: link?.name || iface || `sim${rpcIndex}`,
-          name: settings.alias || link?.name || iface || `sim${rpcIndex}`,
+          key: link?.name || iface || `sim${index}`,
+          name: settings.alias || link?.name || iface || `sim${index}`,
           ifname,
-          ipv4: this.formatAddressWithMask(status.ip, status.mask),
+          ipv4: this.formatAddressWithMask(ip, status.mask),
           gateway: status.gateway || '-',
           rxBytes: status.rxBytes,
           txBytes: status.txBytes,
-          online: Boolean(status.ip && status.ip !== '-' && status.ip !== '-')
+          online: Boolean(ip && ip !== '-'),
+          statusText,
+          statusTagType
         }
       }).catch(() => baseCard)
     },
@@ -1168,6 +1253,7 @@ export default {
   font-size: 15px;
   font-weight: 600;
   color: var(--el-text-color-primary);
+  text-align: center;
 }
 
 .home-metric-subtitle {
@@ -1180,6 +1266,7 @@ export default {
   margin-top: 2px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+  text-align: center;
 }
 
 .home-metric-value {
@@ -1198,23 +1285,40 @@ export default {
 }
 
 .home-interface-head-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 88px;
   align-items: center;
-  gap: 10px;
-  padding: 0 16px 2px;
+  column-gap: 8px;
+  padding: 0 14px 2px;
 }
 
-.home-interface-summary-head,
+.home-interface-summary-head {
+  flex: 0 0 72px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.home-interface-inline-fields-head {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  flex: 1 1 auto;
+}
+
 .home-interface-inline-field-head,
 .home-interface-status-head {
   font-size: 12px;
   font-weight: 600;
   color: #6b7280;
   white-space: nowrap;
+  text-align: center;
 }
 
 .home-interface-status-head {
-  flex: 0 0 auto;
+  width: 100%;
 }
 
 .home-interface-card {
@@ -1225,27 +1329,43 @@ export default {
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-.home-interface-card.is-online {
+.home-interface-card.is-online,
+.home-interface-card.is-status-success {
   border-color: rgba(34, 197, 94, 0.26);
   background: linear-gradient(180deg, #f0fdf4 0%, #f8fafc 100%);
   box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.08);
 }
 
-.home-interface-card.is-offline {
+.home-interface-card.is-offline,
+.home-interface-card.is-status-danger {
   border-color: rgba(239, 68, 68, 0.26);
   background: linear-gradient(180deg, #fef2f2 0%, #fff7f7 100%);
   box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.06);
 }
 
+.home-interface-card.is-status-warning {
+  border-color: rgba(245, 158, 11, 0.26);
+  background: linear-gradient(180deg, #fffbeb 0%, #f8fafc 100%);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.08);
+}
+
+.home-interface-card.is-status-info {
+  border-color: rgba(107, 114, 128, 0.22);
+  background: linear-gradient(180deg, #f3f4f6 0%, #f8fafc 100%);
+  box-shadow: inset 0 0 0 1px rgba(107, 114, 128, 0.06);
+}
+
 .home-interface-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 88px;
   align-items: center;
-  gap: 8px;
+  column-gap: 8px;
 }
 
 .home-interface-summary {
   flex: 0 0 72px;
   min-width: 0;
+  text-align: center;
 }
 
 .home-interface-inline-fields {
@@ -1259,39 +1379,46 @@ export default {
 .home-interface-inline-field {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
   min-width: 0;
   white-space: nowrap;
+}
+
+.home-interface-inline-field > .home-interface-value {
+  width: 100%;
+  text-align: center;
 }
 
 .home-interface-inline-field.is-grouped {
-  display: block;
-}
-
-.home-interface-value-pair + .home-interface-value-pair {
-  margin-top: 2px;
+  display: grid;
+  grid-template-columns: 14px auto;
+  justify-content: center;
+  justify-items: start;
+  align-content: center;
+  row-gap: 2px;
 }
 
 .home-interface-value-pair {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  white-space: nowrap;
+  display: contents;
 }
 
 .home-interface-subvalue-label {
-  margin-right: 6px;
+  width: 14px;
+  margin-right: 4px;
   font-size: 12px;
   color: #6b7280;
   flex: 0 0 auto;
+  text-align: center;
 }
 
 .home-interface-value-pair .home-interface-value {
-  flex: 1 1 auto;
   min-width: 0;
   white-space: nowrap;
   word-break: normal;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: left;
 }
 
 .home-interface-value {
@@ -1300,10 +1427,15 @@ export default {
   font-weight: 600;
   color: #111827;
   line-height: 1.25;
+  text-align: center;
   white-space: nowrap;
   word-break: normal;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.home-interface-status-tag {
+  justify-self: center;
 }
 
 @media (max-width: 1024px) {
@@ -1330,6 +1462,8 @@ export default {
   .home-interface-row {
     flex-direction: column;
     align-items: flex-start;
+    grid-template-columns: 1fr;
+    row-gap: 8px;
   }
 
   .home-interface-summary {

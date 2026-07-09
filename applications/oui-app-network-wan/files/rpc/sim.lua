@@ -866,7 +866,7 @@ end
 function M.getSimUciSettings(ifname)
     ifname = getIfname(ifname)
     local cmd = string.format("ubus call uci get '{\"config\":\"sim\",\"section\":\"%s\"}' | jq -c '.values'", ifname)
-    log.info(cmd)
+    -- log.info(cmd)
     local ret = exec(cmd)
     -- log.info(ret)
     return ret
