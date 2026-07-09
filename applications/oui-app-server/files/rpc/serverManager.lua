@@ -283,7 +283,10 @@ function M.getHostRtt()
     log.info('getHostRtt...')
 
     local server = M.getServerIP()
-    return ping(nil, server[1])
+    if not server then
+        return nil
+    end
+    return ping(nil, server)
 end
 
 -- 获取VPN隧道的连通性，比较耗时，需要在vue中异步获取
