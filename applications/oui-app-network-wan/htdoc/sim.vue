@@ -873,7 +873,7 @@ export default {
       }
     },
     goBack() {
-      this.$emit('go-back')
+      this.$emit('go-back', { refresh: true })
     },
     handleRescan() {
       this.settings.nr_pci.reSelEnabled = !this.settings.nr_pci.reSelEnabled
@@ -910,6 +910,9 @@ export default {
           this.freqInfo.class = []
         }
       }
+
+      // console.log('handleEnableChange called, enabled:', enabled, 'settings:', JSON.stringify(this.settings))
+
       this.$oui.call('sim', 'changeSimEnable', this.settings).then((response) => {
         if (response === 0)
           this.$message[enabled ? 'success' : 'warning'](enabled ? '已开启' : '已关闭')

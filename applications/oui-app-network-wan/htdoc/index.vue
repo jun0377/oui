@@ -2,6 +2,11 @@
   <div>
     <!-- 主页面 -->
     <div v-if="currentView === 'main'" class="container">
+      <div v-if="loading" class="loading-overlay">
+        <span class="loading-spinner" />
+        <p class="loading-text">加载中...</p>
+      </div>
+      <template v-else>
       <!-- 广域网链路 Section -->
       <div class="section">
         <div class="section-header">{{ $t('Wan Area') }}</div>
@@ -263,7 +268,7 @@
         </div>
       </div>
 
-
+      </template>
     </div>
 
     <KeepAlive>
@@ -485,6 +490,7 @@ export default {
       selectedWan: null,
       selectedWanIndex: null,
       wanLinks: [],
+      loading: false,
       wanPortStateTimerId: null,
       subnets: [
         {
@@ -1707,13 +1713,22 @@ export default {
       this.selectedWanIndex = null
       this.writeQuery('main')
       this.updateWanPortStatePolling()
+      this.$nextTick(() => {
+        if (this.$el) {
+          this.$el.scrollIntoView({ block: 'start', behavior: 'instant' })
+        }
+      })
       if (payload && payload.refresh) {
+        this.loading = true
         this.loadAvailWanLinks().then(() => {
           this.initTrafficSeries()
-          this.wanLinks.forEach((_, index) => this.getSimSettings(index))
+          const simPromises = this.wanLinks.map((_, index) => this.getSimSettings(index).catch(() => {}))
+          Promise.all(simPromises).then(() => {
+            this.loading = false
+          })
           this.fetchWanPortStatesOnce()
           this.updatePolling()
-        }).catch(() => {})
+        }).catch(() => { this.loading = false })
       }
     },
     // 编辑子网配置（DHCP 或 Wireless）
@@ -2190,6 +2205,36 @@ export default {
   100% {
     opacity: 0.3;
   }
+}
+
+.loading-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 60px 0;
+  color: var(--el-text-color-secondary);
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--el-border-color);
+  border-top-color: var(--el-color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loading-text {
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 </style>

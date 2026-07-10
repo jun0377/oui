@@ -1167,8 +1167,18 @@ end
 -- 更改链路使能
 function M.changeSimEnable(params)
 
+    if not params then
+        log.error('changeSimEnable: params is nil')
+        return -1
+    end
+
     local ifname = getIfname(params)
     log.info(string.format("ifname:%s enable:%s", ifname, tostring(params.enable)))
+
+    if not ifname then
+        log.error('changeSimEnable: ifname is nil')
+        return -1
+    end
     
     local c = uci.cursor()
     local interface = get_interface(ifname)
