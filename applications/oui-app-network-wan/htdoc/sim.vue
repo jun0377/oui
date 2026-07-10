@@ -81,21 +81,33 @@
             <div class="sim-inline-row">
               <el-form-item label="锁 NR 频段" class="sim-inline-form-item">
                 <div class="sim-lock-section">
-                  <div>
-                    <div v-if="getNRBandOptions().length" class="band-option-list">
-                      <el-tag
-                        v-for="opt in getNRBandOptions()"
-                        :key="opt"
-                        class="band-option-tag"
-                        :type="isNRBandOptionActive(opt) ? 'primary' : 'info'"
-                        :effect="isNRBandOptionActive(opt) ? 'dark' : 'plain'"
-                        @click="selectNRBandOption(opt)"
-                      >
-                        {{ opt }}
-                      </el-tag>
-                    </div>
-                    <div v-else class="band-option-empty">暂无可选频段</div>
+                  <div class="sim-pci-row">
+                    <el-tag
+                      class="band-option-tag"
+                      :type="!settings.nrBandLockEnabled ? 'primary' : 'info'"
+                      :effect="!settings.nrBandLockEnabled ? 'dark' : 'plain'"
+                      @click="handleNRBandToggle"
+                    >
+                      {{ settings.nrBandLockEnabled ? '解锁' : '未锁定,点击进行设置' }}
+                    </el-tag>
                   </div>
+                  <template v-if="settings.nrBandLockEnabled">
+                    <div>
+                      <div v-if="getNRBandOptions().filter(o => o !== '解锁').length" class="band-option-list">
+                        <el-tag
+                          v-for="opt in getNRBandOptions().filter(o => o !== '解锁')"
+                          :key="opt"
+                          class="band-option-tag"
+                          :type="isNRBandOptionActive(opt) ? 'primary' : 'info'"
+                          :effect="isNRBandOptionActive(opt) ? 'dark' : 'plain'"
+                          @click="selectNRBandOption(opt)"
+                        >
+                          {{ opt }}
+                        </el-tag>
+                      </div>
+                      <div v-else class="band-option-empty">暂无可选频段</div>
+                    </div>
+                  </template>
                 </div>
               </el-form-item>
             </div>
@@ -103,21 +115,33 @@
             <div class="sim-inline-row">
               <el-form-item label="锁 LTE 频段" class="sim-inline-form-item">
                 <div class="sim-lock-section">
-                  <div>
-                    <div v-if="getLTEBandOptions().length" class="band-option-list">
-                      <el-tag
-                        v-for="opt in getLTEBandOptions()"
-                        :key="opt"
-                        class="band-option-tag"
-                        :type="isLTEBandOptionActive(opt) ? 'primary' : 'info'"
-                        :effect="isLTEBandOptionActive(opt) ? 'dark' : 'plain'"
-                        @click="selectLTEBandOption(opt)"
-                      >
-                        {{ opt }}
-                      </el-tag>
-                    </div>
-                    <div v-else class="band-option-empty">暂无可选频段</div>
+                  <div class="sim-pci-row">
+                    <el-tag
+                      class="band-option-tag"
+                      :type="!settings.lteBandLockEnabled ? 'primary' : 'info'"
+                      :effect="!settings.lteBandLockEnabled ? 'dark' : 'plain'"
+                      @click="handleLTEBandToggle"
+                    >
+                      {{ settings.lteBandLockEnabled ? '解锁' : '未锁定,点击进行设置' }}
+                    </el-tag>
                   </div>
+                  <template v-if="settings.lteBandLockEnabled">
+                    <div>
+                      <div v-if="getLTEBandOptions().filter(o => o !== '解锁').length" class="band-option-list">
+                        <el-tag
+                          v-for="opt in getLTEBandOptions().filter(o => o !== '解锁')"
+                          :key="opt"
+                          class="band-option-tag"
+                          :type="isLTEBandOptionActive(opt) ? 'primary' : 'info'"
+                          :effect="isLTEBandOptionActive(opt) ? 'dark' : 'plain'"
+                          @click="selectLTEBandOption(opt)"
+                        >
+                          {{ opt }}
+                        </el-tag>
+                      </div>
+                      <div v-else class="band-option-empty">暂无可选频段</div>
+                    </div>
+                  </template>
                 </div>
               </el-form-item>
             </div>
@@ -1016,6 +1040,20 @@ export default {
         this.handleNRPciUnlock()
       } else {
         this.settings.nr_pci.enabled = true
+      }
+    },
+    handleNRBandToggle() {
+      if (this.settings.nrBandLockEnabled) {
+        this.selectNRBandOption('解锁')
+      } else {
+        this.settings.nrBandLockEnabled = true
+      }
+    },
+    handleLTEBandToggle() {
+      if (this.settings.lteBandLockEnabled) {
+        this.selectLTEBandOption('解锁')
+      } else {
+        this.settings.lteBandLockEnabled = true
       }
     },
     handleNRPciLock(enabled) {

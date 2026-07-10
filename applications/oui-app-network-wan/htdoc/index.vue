@@ -1728,7 +1728,9 @@ export default {
           })
           this.fetchWanPortStatesOnce()
           this.updatePolling()
-        }).catch(() => { this.loading = false })
+        }).catch(() => {
+          this.loading = false
+        })
       }
     },
     // 编辑子网配置（DHCP 或 Wireless）
