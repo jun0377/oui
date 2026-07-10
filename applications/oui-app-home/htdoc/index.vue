@@ -731,9 +731,9 @@ export default {
         // 构建状态文本（与 network-wan 的 getStatusText 逻辑一致）
         let statusText = '离线'
         let statusTagType = 'danger'
-        if (settings.enable === '0') {
+        if (settings.enable === '0' || settings.enable === 'false') {
           statusText = '已禁用'
-          statusTagType = 'info'
+          statusTagType = 'danger'
         } else {
           const iccid = productInfo.iccid || ''
           if (iccid === '' || iccid === '-') {
