@@ -228,6 +228,16 @@
                 </template>
               </div>
             </el-form-item>
+
+            <el-form-item label="AT指令日志">
+              <el-switch
+                v-model="atLogEnabled"
+                inline-prompt
+                :active-text="'开'"
+                :inactive-text="'关'"
+                class="wan-enable-switch"
+              />
+            </el-form-item>
           </el-form>
         </el-card>
         <div class="action-buttons card-actions">
@@ -241,6 +251,33 @@
             {{ $t('Back') }}
           </el-button>
         </div>
+
+        <!-- AT指令日志终端 -->
+        <el-card v-if="atLogEnabled" class="config-card compact-card at-log-card">
+          <template #header>
+            <div class="card-header">
+              <span class="sim-card-title">AT指令日志</span>
+              <el-tag type="info">实时</el-tag>
+            </div>
+          </template>
+          <div class="at-log-terminal" ref="atLogTerminal" @scroll="handleAtLogScroll">
+            <div v-if="atLogs.length === 0" class="at-log-empty">暂无AT指令日志</div>
+            <div
+              v-for="(entry, idx) in atLogs"
+              :key="entry.seq || `gap-${idx}`"
+              class="at-log-entry"
+              :class="{ 'is-gap': entry.kind === 'gap' }"
+            >
+              <template v-if="entry.kind === 'gap'">
+                <div class="at-log-gap">{{ entry.message }}</div>
+              </template>
+              <template v-else>
+                <div class="at-log-entry-head">#{{ entry.seq }} {{ entry.ts || '-' }} {{ entry.tty || '-' }} : {{ entry.cmd }}</div>
+                <pre class="at-log-line at-log-res" :class="getAtLogResultClass(cleanAtLogRes(entry))">{{ cleanAtLogRes(entry) }}</pre>
+              </template>
+            </div>
+          </div>
+        </el-card>
       </div>
 
       <div class="right-column">
@@ -664,14 +701,51 @@ export default {
         username: '',
         password: ''
       },
-      settingsInitialized: false
+      settingsInitialized: false,
+      atLogs: [],
+      pendingAtLogs: [],
+      atLogEnabled: false,
+      atLogSeq: 0,
+      maxLogEntries: 200,
+      atLogLoading: false,
+      atLogAutoFollow: true,
+      atLogDrainTimer: null
     }
   },
   created() {
     if (this.wanData)
       this.applyWanData(this.wanData)
+    this.$timer.create('sim-at-logs', () => this.fetchAtLogs(), { time: 1000, repeat: true, autostart: false })
+  },
+  beforeUnmount() {
+    this.$timer.stop('sim-at-logs')
+    if (this.atLogDrainTimer) {
+      clearTimeout(this.atLogDrainTimer)
+      this.atLogDrainTimer = null
+    }
   },
   watch: {
+    atLogEnabled(val) {
+      if (val) {
+        this.atLogSeq = 0
+        this.atLogs = []
+        this.pendingAtLogs = []
+        this.atLogAutoFollow = true
+        this.$timer.start('sim-at-logs')
+        this.fetchAtLogs()
+      } else {
+        this.$timer.stop('sim-at-logs')
+        this.atLogs = []
+        this.pendingAtLogs = []
+        this.atLogSeq = 0
+        this.atLogLoading = false
+        this.atLogAutoFollow = true
+        if (this.atLogDrainTimer) {
+          clearTimeout(this.atLogDrainTimer)
+          this.atLogDrainTimer = null
+        }
+      }
+    },
     wanData: {
       handler(newVal, oldVal) {
         if (!newVal)
@@ -898,6 +972,138 @@ export default {
     },
     goBack() {
       this.$emit('go-back', { refresh: true })
+    },
+    isAtLogNearBottom() {
+      const el = this.$refs.atLogTerminal
+      if (!el)
+        return true
+      const threshold = 24
+      return el.scrollTop + el.clientHeight >= el.scrollHeight - threshold
+    },
+    scrollAtLogToBottom() {
+      this.$nextTick(() => {
+        requestAnimationFrame(() => {
+          const el = this.$refs.atLogTerminal
+          if (el)
+            el.scrollTop = el.scrollHeight
+        })
+      })
+    },
+    handleAtLogScroll() {
+      this.atLogAutoFollow = this.isAtLogNearBottom()
+    },
+    normalizeAtLogResponse(result) {
+      if (!result)
+        return null
+      if (typeof result === 'string') {
+        try {
+          return JSON.parse(result)
+        } catch {
+          return null
+        }
+      }
+      return result
+    },
+    cleanAtLogRes(entry) {
+      if (!entry || !entry.res) return ''
+      const cmd = String(entry.cmd || '')
+      const lines = String(entry.res).split('\n')
+      // 跳过首行如果它等于 AT 指令（回显）
+      const start = lines[0] && lines[0].trim() === cmd.trim() ? 1 : 0
+      return lines.slice(start).filter(l => l !== '').join('\n')
+    },
+    getAtLogDrainDelay() {
+      const pending = this.pendingAtLogs.length
+      if (this.atLogs.length === 0)
+        return 12
+      if (pending > 40)
+        return 12
+      if (pending > 20)
+        return 20
+      if (pending > 8)
+        return 35
+      return 70
+    },
+    scheduleAtLogDrain() {
+      if (!this.atLogEnabled || this.atLogDrainTimer || this.pendingAtLogs.length === 0)
+        return
+      this.atLogDrainTimer = setTimeout(() => {
+        this.atLogDrainTimer = null
+        this.drainAtLogEntry()
+      }, this.getAtLogDrainDelay())
+    },
+    drainAtLogEntry() {
+      if (!this.atLogEnabled || this.pendingAtLogs.length === 0)
+        return
+      const shouldFollow = this.atLogAutoFollow || this.isAtLogNearBottom() || this.atLogs.length === 0
+      const nextEntry = this.pendingAtLogs.shift()
+      this.atLogs.push(nextEntry)
+      this.trimAtLogs()
+      if (shouldFollow)
+        this.scrollAtLogToBottom()
+      if (this.pendingAtLogs.length > 0)
+        this.scheduleAtLogDrain()
+    },
+    enqueueAtLogs(entries) {
+      if (!Array.isArray(entries) || entries.length === 0)
+        return
+      this.pendingAtLogs.push(...entries)
+      this.scheduleAtLogDrain()
+    },
+    getAtLogResultClass(res) {
+      const text = String(res ?? '')
+      if (text.includes('+CME ERROR:') || /(^|\n)ERROR(\n|$)/.test(text))
+        return 'is-err'
+      if (/(^|\n)OK(\n|$)/.test(text))
+        return 'is-ok'
+      return ''
+    },
+    appendAtLogGapNotice(earliestSeq) {
+      const message = earliestSeq > 0
+        ? `日志存在缺口，当前仅保留 seq >= ${earliestSeq} 的 AT 指令记录`
+        : '日志存在缺口，部分较早的 AT 指令记录已不可用'
+      const last = this.pendingAtLogs[this.pendingAtLogs.length - 1] || this.atLogs[this.atLogs.length - 1]
+      if (last && last.kind === 'gap' && last.message === message)
+        return
+      this.enqueueAtLogs([{
+        kind: 'gap',
+        seq: `gap-${Date.now()}-${earliestSeq}`,
+        message
+      }])
+    },
+    trimAtLogs() {
+      if (this.atLogs.length > this.maxLogEntries)
+        this.atLogs.splice(0, this.atLogs.length - this.maxLogEntries)
+    },
+    fetchAtLogs() {
+      if (!this.atLogEnabled || this.atLogLoading) return
+      const ifname = this.settings.ifname || this.settings.alias
+      if (!ifname) return
+      this.atLogLoading = true
+      const afterSeq = this.atLogSeq
+      const limit = afterSeq > 0 ? 80 : this.maxLogEntries
+      let shouldContinue = false
+      this.$oui.call('sim', 'getAtLogs', { ifname, after_seq: afterSeq, limit }).then(raw => {
+        const result = this.normalizeAtLogResponse(raw)
+        if (!result)
+          return
+
+        if (result.gap && afterSeq > 0)
+          this.appendAtLogGapNotice(Number(result.earliest_seq) || 0)
+
+        const entries = Array.isArray(result.entries) ? result.entries : []
+        if (entries.length > 0) {
+          this.atLogSeq = Number(result.next_seq) || this.atLogSeq
+          this.enqueueAtLogs(entries)
+        }
+
+        shouldContinue = Boolean(result.has_more) && this.atLogEnabled
+      }).catch(() => {
+      }).finally(() => {
+        this.atLogLoading = false
+        if (shouldContinue)
+          this.fetchAtLogs()
+      })
     },
     handleRescan() {
       this.settings.nr_pci.reSelEnabled = !this.settings.nr_pci.reSelEnabled
@@ -1703,6 +1909,93 @@ export default {
   .action-buttons .el-button {
     width: 200px;
   }
+}
+
+.at-log-card {
+  border-color: #374151;
+}
+
+.at-log-terminal {
+  background: #1e1e1e;
+  border-radius: 8px;
+  padding: 10px 14px;
+  height: 320px;
+  overflow-y: auto;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.at-log-empty {
+  color: #6b7280;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.at-log-entry {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.at-log-entry:last-child {
+  border-bottom: none;
+}
+
+.at-log-entry-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.at-log-seq {
+  color: #fbbf24;
+}
+
+.at-log-ts {
+  color: #cbd5e1;
+}
+
+.at-log-tty {
+  color: #a78bfa;
+}
+
+.at-log-line {
+  color: #9ca3af;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.at-log-cmd {
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+.at-log-res {
+  margin: 0;
+  font: inherit;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.at-log-res.is-ok {
+  color: #34d399;
+}
+
+.at-log-res.is-err {
+  color: #f87171;
+}
+
+.at-log-gap {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.18);
+  border-radius: 6px;
+  padding: 8px 10px;
 }
 </style>
 

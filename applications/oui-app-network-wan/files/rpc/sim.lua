@@ -1208,6 +1208,101 @@ function M.changeSimEnable(params)
     return 0
 end
 
+local function readAtLogEntries(path, entries)
+    local f = io.open(path, "r")
+    if not f then
+        return
+    end
+
+    for line in f:lines() do
+        if line ~= "" then
+            local ok, item = pcall(cjson.decode, line)
+            if ok and type(item) == "table" and tonumber(item.seq) then
+                item.seq = tonumber(item.seq)
+                item.ts = item.ts or ""
+                item.tty = item.tty or ""
+                item.cmd = item.cmd or ""
+                item.res = item.res or ""
+                table.insert(entries, item)
+            end
+        end
+    end
+
+    f:close()
+end
+
+-- 获取 AT 指令日志（按 seq 增量传输）
+function M.getAtLogs(params)
+    local ifname = getIfname(params)
+    if not ifname then
+        return cjson.encode({ entries = {}, next_seq = 0, has_more = false, gap = false })
+    end
+
+    local after_seq = 0
+    local limit = 80
+    if type(params) == "table" then
+        after_seq = tonumber(params.after_seq) or 0
+        limit = tonumber(params.limit) or 80
+    end
+    if limit < 1 then
+        limit = 1
+    elseif limit > 200 then
+        limit = 200
+    end
+
+    local log_dir = string.format("/tmp/tracker-sim/%s", ifname)
+    local entries = {}
+    readAtLogEntries(string.format("%s/at_log.jsonl.1", log_dir), entries)
+    readAtLogEntries(string.format("%s/at_log.jsonl", log_dir), entries)
+
+    if #entries == 0 then
+        return cjson.encode({ entries = {}, next_seq = after_seq, has_more = false, gap = false })
+    end
+
+    table.sort(entries, function(a, b)
+        return (a.seq or 0) < (b.seq or 0)
+    end)
+
+    local earliest_seq = entries[1].seq or 0
+    local gap = (after_seq > 0 and earliest_seq > (after_seq + 1))
+    local result = {}
+    local has_more = false
+
+    if after_seq <= 0 then
+        local start_index = math.max(1, #entries - limit + 1)
+        for i = start_index, #entries do
+            result[#result + 1] = entries[i]
+        end
+        has_more = false
+    else
+        for _, entry in ipairs(entries) do
+            if entry.seq > after_seq then
+                result[#result + 1] = entry
+                if #result >= limit then
+                    break
+                end
+            end
+        end
+
+        local last_sent_seq = result[#result] and result[#result].seq or after_seq
+        for _, entry in ipairs(entries) do
+            if entry.seq > last_sent_seq then
+                has_more = true
+                break
+            end
+        end
+    end
+
+    local next_seq = result[#result] and result[#result].seq or after_seq
+    return cjson.encode({
+        entries = result,
+        next_seq = next_seq,
+        has_more = has_more,
+        gap = gap,
+        earliest_seq = earliest_seq
+    })
+end
+
 
 
 return M
