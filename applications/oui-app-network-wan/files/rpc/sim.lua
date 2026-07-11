@@ -1001,29 +1001,58 @@ local function setSimNRPCID(ifname, PCID)
         return false
     end
 
-    if nil == PCID or '' == PCID then
+    if nil == PCID then
         log.error('PCID is nil!')
         return false
     end
 
     local c = uci.cursor()
-    
-    if (PCID.enabled) then
-        c:set("sim", ifname, 'nrPciLockEnable', 'locked')
-    else
+
+    -- 清除旧的列表值
+    c:delete("sim", ifname, 'nrPciPcid')
+    c:delete("sim", ifname, 'nrPciBand')
+    c:delete("sim", ifname, 'nrPciFreq')
+    c:delete("sim", ifname, 'nrPciScs')
+    c:delete("sim", ifname, 'nrPciForbidFlag')
+
+    if not PCID.enabled then
         c:set("sim", ifname, 'nrPciLockEnable', 'unlocked')
-        c:set("sim", ifname, 'nrPciPcid', 'unlocked')
-        c:set("sim", ifname, 'nrPciBand', 'unlocked')
-        c:set("sim", ifname, 'nrPciFreq', 'unlocked')
-        c:set("sim", ifname, 'nrPciScs', 'unlocked')
         c:commit('sim')
         return true
     end
 
-    c:set("sim", ifname, 'nrPciPcid', PCID.pcid)
-    c:set("sim", ifname, 'nrPciBand', PCID.band)
-    c:set("sim", ifname, 'nrPciFreq', PCID.freq)
-    c:set("sim", ifname, 'nrPciScs', PCID.scs)
+    c:set("sim", ifname, 'nrPciLockEnable', 'locked')
+
+    -- 重选切换: reSelEnabled=true 允许重选 → forbidFlag=0; reSelEnabled=false 禁止重选 → forbidFlag=1
+    local forbidFlag = PCID.reSelEnabled ~= false and '0' or '1'
+    c:set("sim", ifname, 'nrPciForbidFlag', forbidFlag)
+
+    local items = PCID.items
+    if not items or #items == 0 then
+        c:commit('sim')
+        return true
+    end
+
+    local pcid_list = {}
+    local band_list = {}
+    local freq_list = {}
+    local scs_list = {}
+
+    for _, item in ipairs(items) do
+        if item and item.pcid and item.pcid ~= '' then
+            table.insert(pcid_list, tostring(item.pcid))
+            table.insert(band_list, tostring(item.band or ''))
+            table.insert(freq_list, tostring(item.freq or ''))
+            table.insert(scs_list, tostring(item.scs or ''))
+        end
+    end
+
+    if #pcid_list > 0 then
+        c:set("sim", ifname, 'nrPciPcid', pcid_list)
+        c:set("sim", ifname, 'nrPciBand', band_list)
+        c:set("sim", ifname, 'nrPciFreq', freq_list)
+        c:set("sim", ifname, 'nrPciScs', scs_list)
+    end
 
     c:commit('sim')
 
@@ -1148,8 +1177,8 @@ function M.changeSimSettings(params)
     log.info(string.format("index:%s %s apn:%s auth:%s username:%s passwd:%s", params.index, params.alias, params.apn, params.auth, params.username, params.password))
     log.info(string.format("index:%s %s nrBandLock:%s", params.index, params.alias, params.nrBand))
     log.info(string.format("index:%s %s lteBandLock:%s", params.index, params.alias, params.lteBand))
-    log.info(string.format("index:%s %s NR PCI Lock: enable:%s pcid:%s band:%s freq:%s scs:%s", params.index, params.alias, 
-                        params.nr_pci.enabled, params.nr_pci.pcid,params.nr_pci.band,params.nr_pci.freq,params.nr_pci.scs))
+    log.info(string.format("index:%s %s NR PCI Lock: enable:%s items:%s", params.index, params.alias,
+                        tostring(params.nr_pci and params.nr_pci.enabled), tostring(#((params.nr_pci and params.nr_pci.items) or {}))))
     log.info(string.format("index:%s %s LTE PCI Lock: enable:%s pcid:%s band:%s freq:%s", params.index, params.alias, 
                         params.lte_pci.enabled, params.lte_pci.pcid,params.lte_pci.band,params.lte_pci.freq))
 

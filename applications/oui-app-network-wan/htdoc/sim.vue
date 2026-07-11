@@ -160,12 +160,14 @@
                 </div>
                 <template v-if="settings.nr_pci.enabled">
                   <div class="sim-pci-row">
-                    <el-tooltip :content="'成功附网后,是否允许重选切换小区; 当前状态: ' + (settings.nr_pci.reSelEnabled ? '允许' : '不允许')" placement="top">
-                      <el-button size="small" :type="settings.nr_pci.reSelEnabled ? 'primary' : 'default'" @click="handleRescan">允许重选切换</el-button>
+                    <el-tooltip :content="'是否允许重选切换小区; 当前状态: ' + (settings.nr_pci.reSelEnabled ? '允许' : '不允许')" placement="top">
+                      <el-button size="small" :type="settings.nr_pci.reSelEnabled ? 'primary' : 'default'" @click="settings.nr_pci.reSelEnabled = !settings.nr_pci.reSelEnabled">允许重选切换</el-button>
                     </el-tooltip>
                   </div>
                   <div v-for="(entry, idx) in settings.nr_pci.items" :key="idx" class="sim-pci-row">
-                    <el-input v-model="entry.pcid" placeholder="PCID" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
+                    <el-tooltip content="请输入十进制的PCID" placement="top">
+                      <el-input v-model="entry.pcid" placeholder="PCID(十进制)" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
+                    </el-tooltip>
                     <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
                     <el-select v-model="entry.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)">
                       <el-option label="n1" value="1"/>
@@ -257,6 +259,9 @@
           <template #header>
             <div class="card-header">
               <span class="sim-card-title">AT指令日志</span>
+              <el-button size="small" :type="atLogErrorOnly ? 'danger' : 'default'" @click="atLogErrorOnly = !atLogErrorOnly">
+                {{ atLogErrorOnly ? '显示全部' : '只看错误' }}
+              </el-button>
               <el-tag type="info">实时</el-tag>
             </div>
           </template>
@@ -265,6 +270,7 @@
             <div
               v-for="(entry, idx) in atLogs"
               :key="entry.seq || `gap-${idx}`"
+              v-show="!atLogErrorOnly || (entry.kind !== 'gap' && cleanAtLogRes(entry).indexOf('OK') === -1)"
               class="at-log-entry"
               :class="{ 'is-gap': entry.kind === 'gap' }"
             >
@@ -571,7 +577,8 @@
             <div class="table-title" v-if="monnc.nr.length">NR相邻小区</div>
             <div class="table-row header-row" v-if="monnc.nr.length">
               <div class="table-cell">ARFCN</div>
-              <div class="table-cell">PCI</div>
+              <div class="table-cell">PCI(十六进制)</div>
+              <div class="table-cell">PCI(十进制)</div>
               <div class="table-cell">RSRP/dBm</div>
               <div class="table-cell">RSRQ/dB</div>
               <div class="table-cell">SINR/dBm</div>
@@ -579,6 +586,7 @@
             <div class="table-row" v-for="(cell, index) in sortedNrCells" :key="'nr-' + index">
               <div class="table-cell">{{ cell.arfcn }}</div>
               <div class="table-cell">{{ cell.pci }}</div>
+              <div class="table-cell">{{ parseInt(cell.pci, 16) || '-' }}</div>
               <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrp, 'rsrp')">{{ cell.rsrp || '-' }}</span></div>
               <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrq, 'rsrq')">{{ cell.rsrq || '-' }}</span></div>
               <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.sinr, 'sinr')">{{ cell.sinr || '-' }}</span></div>
@@ -586,7 +594,8 @@
             <div class="table-title" v-if="monnc.lte.length">LTE相邻小区</div>
             <div class="table-row header-row" v-if="monnc.lte.length">
               <div class="table-cell">ARFCN</div>
-              <div class="table-cell">PCI</div>
+              <div class="table-cell">PCI(十六进制)</div>
+              <div class="table-cell">PCI(十进制)</div>
               <div class="table-cell">RSRP</div>
               <div class="table-cell">RSRQ</div>
               <div class="table-cell">RXLEV</div>
@@ -594,6 +603,7 @@
             <div class="table-row" v-for="(cell, index) in sortedLteCells" :key="'lte-' + index">
               <div class="table-cell">{{ cell.arfcn }}</div>
               <div class="table-cell">{{ cell.pci }}</div>
+              <div class="table-cell">{{ parseInt(cell.pci, 16) || '-' }}</div>
               <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrp, 'rsrp')">{{ cell.rsrp || '-' }}</span></div>
               <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrq, 'rsrq')">{{ cell.rsrq || '-' }}</span></div>
               <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rxlev, 'rssi')">{{ cell.rxlev || '-' }}</span></div>
@@ -705,6 +715,7 @@ export default {
       atLogs: [],
       pendingAtLogs: [],
       atLogEnabled: false,
+      atLogErrorOnly: false,
       atLogSeq: 0,
       maxLogEntries: 200,
       atLogLoading: false,
@@ -740,6 +751,7 @@ export default {
         this.atLogSeq = 0
         this.atLogLoading = false
         this.atLogAutoFollow = true
+        this.atLogErrorOnly = false
         if (this.atLogDrainTimer) {
           clearTimeout(this.atLogDrainTimer)
           this.atLogDrainTimer = null
@@ -967,6 +979,9 @@ export default {
         this.settings.cell = data.settings.cell || data.settings.settingsCell
         this.settings.pci = data.settings.pcid || data.settings.settingsPCI
         this.settings.pciUnlock = (this.settings.pci === 'none' || this.settings.pci === '')
+        if (data.settings.nr_pci) {
+          this.settings.nr_pci = data.settings.nr_pci
+        }
         this.settingsInitialized = true
       }
     },
@@ -1036,8 +1051,13 @@ export default {
       if (!this.atLogEnabled || this.pendingAtLogs.length === 0)
         return
       const shouldFollow = this.atLogAutoFollow || this.isAtLogNearBottom() || this.atLogs.length === 0
-      const nextEntry = this.pendingAtLogs.shift()
-      this.atLogs.push(nextEntry)
+      // cold start: dump all pending at once to jump to end
+      if (this.atLogs.length === 0 && this.pendingAtLogs.length > 10) {
+        this.atLogs.push(...this.pendingAtLogs.splice(0))
+      } else {
+        const nextEntry = this.pendingAtLogs.shift()
+        this.atLogs.push(nextEntry)
+      }
       this.trimAtLogs()
       if (shouldFollow)
         this.scrollAtLogToBottom()
@@ -1104,10 +1124,6 @@ export default {
         if (shouldContinue)
           this.fetchAtLogs()
       })
-    },
-    handleRescan() {
-      this.settings.nr_pci.reSelEnabled = !this.settings.nr_pci.reSelEnabled
-      // TODO: 调用 RPC 同步重选切换状态
     },
     addNRPciEntry() {
       if (this.settings.nr_pci.items.length >= 20) {
@@ -1205,7 +1221,29 @@ export default {
         this.$message.error('请设置小区PCID 或 解锁小区!')
         return
       }
-      this.$oui.call('sim', 'changeSimSettings', this.settings).then((response) => {
+      const payload = {
+        ...this.settings,
+        nr_pci: {
+          ...this.settings.nr_pci,
+          items: nrPciEntries.map(e => ({
+            enabled: true,
+            pcid: String(e.pcid),
+            band: String(e.band),
+            freq: String(e.freq),
+            scs: String(e.scs)
+          }))
+        },
+        lte_pci: {
+          ...this.settings.lte_pci,
+          items: ltePciEntries.map(e => ({
+            enabled: true,
+            pcid: String(e.pcid),
+            band: String(e.band),
+            freq: String(e.freq)
+          }))
+        }
+      }
+      this.$oui.call('sim', 'changeSimSettings', payload).then((response) => {
         if (response && response.code === 0)
           this.$message.success('设置成功')
       })

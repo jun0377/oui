@@ -1606,6 +1606,25 @@ export default {
         if (data.interface && !String(data.interface).startsWith('/dev/')) settings.interface = data.interface
         if (data.band) settings.band = data.band
         if (data.pci) settings.pcid = data.pci
+        if (data.nrPciLockEnable) settings.nrPciLockEnable = data.nrPciLockEnable
+        // 从UCI列表重建 nr_pci.items
+        const nrPciPcidList = Array.isArray(data.nrPciPcid) ? data.nrPciPcid : (data.nrPciPcid ? [data.nrPciPcid] : [])
+        const nrPciBandList = Array.isArray(data.nrPciBand) ? data.nrPciBand : (data.nrPciBand ? [data.nrPciBand] : [])
+        const nrPciFreqList = Array.isArray(data.nrPciFreq) ? data.nrPciFreq : (data.nrPciFreq ? [data.nrPciFreq] : [])
+        const nrPciScsList = Array.isArray(data.nrPciScs) ? data.nrPciScs : (data.nrPciScs ? [data.nrPciScs] : [])
+        if (nrPciPcidList.length) {
+          settings.nr_pci = {
+            enabled: data.nrPciLockEnable === 'locked',
+            reSelEnabled: true,
+            items: nrPciPcidList.map((pcid, i) => ({
+              enabled: true,
+              pcid: pcid || '',
+              band: nrPciBandList[i] || '',
+              freq: nrPciFreqList[i] || '',
+              scs: nrPciScsList[i] || ''
+            }))
+          }
+        }
         if (data.net) settings.net = data.net
         if (data.apn) settings.apn = data.apn
         if (data.auth) settings.auth = data.auth
@@ -1728,9 +1747,7 @@ export default {
           })
           this.fetchWanPortStatesOnce()
           this.updatePolling()
-        }).catch(() => {
-          this.loading = false
-        })
+        }).catch(() => this.loading = false)
       }
     },
     // 编辑子网配置（DHCP 或 Wireless）
