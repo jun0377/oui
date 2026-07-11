@@ -30,8 +30,19 @@
             <div class="home-resource-usage-list">
               <div v-for="item in resourceUsageItems" :key="item.title" class="home-resource-usage-item">
                 <div class="home-resource-usage-label">{{ item.title }}</div>
-                <div class="home-resource-usage-progress">
-                  <el-progress :percentage="item.percentage" :stroke-width="16" :show-text="false" />
+                <div class="home-resource-usage-sparkline">
+                  <svg viewBox="0 0 96 30" preserveAspectRatio="none" aria-hidden="true">
+                    <rect x="0" y="0" width="96" height="30" rx="4" fill="#f8fafc"/>
+                    <line x1="0" y1="26" x2="96" y2="26" class="home-resource-axis-line"/>
+                    <polyline
+                      :points="getUsageSparklinePoints(item.title)"
+                      fill="none"
+                      class="home-resource-curve-line"
+                      vector-effect="non-scaling-stroke"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
                 </div>
                 <div class="home-resource-usage-value">{{ item.value }}</div>
               </div>
@@ -218,6 +229,8 @@ export default {
       clockTimer: null,
       // 是否定制刷新
       stopped: false,
+      // 资源使用历史数据（用于sparkline曲线）
+      usageHistory: { 'CPU温度': [], 'CPU使用率': [], '内存使用率': [] },
       // 管理平台IP
       serverIp: '',
       // 管理平台端口
@@ -954,11 +967,61 @@ export default {
           return
         this.serverTrackerStatus = null
       })
-    }
+    },
+    // 采集资源使用历史数据（用于sparkline曲线）
+    collectUsageHistory() {
+      const items = this.resourceUsageItems
+      const samples = this.usageHistory
+      items.forEach(item => {
+        if (!samples[item.title])
+          samples[item.title] = []
+        const arr = samples[item.title]
+        arr.push(item.percentage)
+        if (arr.length > 50)
+          arr.shift()
+      })
+    },
+    getUsageMaxSamples() {
+      return 50
+    },
+    // 生成资源使用sparkline曲线点坐标
+    getUsageSparklinePoints(title) {
+      const arr = this.usageHistory[title]
+      if (!arr || arr.length < 2)
+        return ''
+      const range = this.getUsageSparklineRange(title)
+      const startX = 0
+      const endX = 96
+      const topY = 4
+      const bottomY = 26
+      const width = endX - startX
+      const height = bottomY - topY
+      const maxSamples = this.getUsageMaxSamples()
+      const stepX = width / Math.max(1, maxSamples - 1)
+      const offset = maxSamples - arr.length
+      return arr.map((v, i) => {
+        const x = startX + (offset + i) * stepX
+        const y = bottomY - ((v - range.min) / (range.range || 1)) * height
+        return `${x.toFixed(1)},${y.toFixed(1)}`
+      }).join(' ')
+    },
+    // 获取sparkline范围（用于坐标轴标注）
+    getUsageSparklineRange(title) {
+      const arr = this.usageHistory[title]
+      if (!arr || arr.length === 0)
+        return { min: 0, max: 100, range: 100 }
+      const rawMin = Math.min(...arr)
+      const rawMax = Math.max(...arr)
+      const padding = Math.max(2, (rawMax - rawMin) * 0.2)
+      const min = Math.max(0, rawMin - padding)
+      const max = Math.min(100, rawMax + padding)
+      return { min, max, range: max - min || 1 }
+    },
   },
   created() {
     this.$timer.create('homeGetCpuTimes', this.getCpuTimes, { repeat: true, immediate: true, time: 3000 })
     this.$timer.create('homeGetSysinfo', this.getSysinfo, { repeat: true, immediate: true, time: 3000 })
+    this.$timer.create('homeCollectUsageHistory', this.collectUsageHistory, { repeat: true, immediate: true, time: 3000 })
     this.$timer.create('homeGetInterfaceStates', this.fetchInterfaceStates, { repeat: true, immediate: true, time: 1000 })
     // 从uci配置文件中获取工作模式配置
     this.fetchWorkMode()
@@ -1176,8 +1239,31 @@ export default {
   color: var(--el-text-color-primary);
 }
 
-.home-resource-usage-progress {
+.home-resource-usage-sparkline {
   min-width: 0;
+  padding: 1px 0;
+}
+
+.home-resource-usage-sparkline svg {
+  display: block;
+  width: 100%;
+  height: 30px;
+}
+
+.home-resource-axis-line {
+  stroke: rgba(148, 163, 184, 0.7);
+  stroke-width: 0.8;
+}
+
+.home-resource-grid-line {
+  stroke: rgba(191, 219, 254, 0.95);
+  stroke-width: 0.65;
+}
+
+.home-resource-curve-line {
+  stroke: #3b82f6;
+  stroke-width: 1.35;
+  filter: drop-shadow(0 1px 1px rgba(59, 130, 246, 0.16));
 }
 
 .home-resource-usage-value {
@@ -1185,6 +1271,7 @@ export default {
   font-size: 13px;
   font-weight: 700;
   color: var(--el-text-color-primary);
+  font-variant-numeric: tabular-nums;
 }
 
 .home-resource-info-list {
