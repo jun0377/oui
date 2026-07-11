@@ -77,11 +77,11 @@
               <el-tag type="info">配置</el-tag>
             </div>
           </template>
-          <el-form :model="settings" label-width="120px" class="config-form" label-align="left" label-position="left">
+          <el-form :model="settings" label-width="120px" class="config-form sim-advanced-form" label-align="left" label-position="left">
             <div class="sim-inline-row">
               <el-form-item label="锁 NR 频段" class="sim-inline-form-item">
                 <div class="sim-lock-section">
-                  <div class="sim-pci-row">
+                  <div class="sim-pci-row sim-lock-toolbar">
                     <el-tag
                       class="band-option-tag"
                       :type="!settings.nrBandLockEnabled ? 'primary' : 'info'"
@@ -92,7 +92,7 @@
                     </el-tag>
                   </div>
                   <template v-if="settings.nrBandLockEnabled">
-                    <div>
+                    <div class="sim-band-panel">
                       <div v-if="getNRBandOptions().filter(o => o !== '解锁').length" class="band-option-list">
                         <el-tag
                           v-for="opt in getNRBandOptions().filter(o => o !== '解锁')"
@@ -115,7 +115,7 @@
             <div class="sim-inline-row">
               <el-form-item label="锁 LTE 频段" class="sim-inline-form-item">
                 <div class="sim-lock-section">
-                  <div class="sim-pci-row">
+                  <div class="sim-pci-row sim-lock-toolbar">
                     <el-tag
                       class="band-option-tag"
                       :type="!settings.lteBandLockEnabled ? 'primary' : 'info'"
@@ -126,7 +126,7 @@
                     </el-tag>
                   </div>
                   <template v-if="settings.lteBandLockEnabled">
-                    <div>
+                    <div class="sim-band-panel">
                       <div v-if="getLTEBandOptions().filter(o => o !== '解锁').length" class="band-option-list">
                         <el-tag
                           v-for="opt in getLTEBandOptions().filter(o => o !== '解锁')"
@@ -146,9 +146,9 @@
               </el-form-item>
             </div>
 
-            <el-form-item label="锁 NR PCI">
+            <el-form-item label="锁 NR PCI" class="sim-lock-form-item">
               <div class="sim-lock-section">
-                <div class="sim-pci-row">
+                <div class="sim-pci-row sim-lock-toolbar">
                   <el-tag
                     class="band-option-tag"
                     :type="!settings.nr_pci.enabled ? 'primary' : 'info'"
@@ -159,46 +159,54 @@
                   </el-tag>
                 </div>
                 <template v-if="settings.nr_pci.enabled">
-                  <div class="sim-pci-row">
-                    <el-tooltip :content="'是否允许重选切换小区; 当前状态: ' + (settings.nr_pci.reSelEnabled ? '允许' : '不允许')" placement="top">
-                      <el-button size="small" :type="settings.nr_pci.reSelEnabled ? 'primary' : 'default'" @click="settings.nr_pci.reSelEnabled = !settings.nr_pci.reSelEnabled">允许重选切换</el-button>
-                    </el-tooltip>
-                  </div>
-                  <div v-for="(entry, idx) in settings.nr_pci.items" :key="idx" class="sim-pci-row">
-                    <el-tooltip content="请输入十进制的PCID" placement="top">
-                      <el-input v-model="entry.pcid" placeholder="PCID(十进制)" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
-                    </el-tooltip>
-                    <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
-                    <el-select v-model="entry.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)">
-                      <el-option label="n1" value="1"/>
-                      <el-option label="n3" value="3"/>
-                      <el-option label="n5" value="5"/>
-                      <el-option label="n8" value="8"/>
-                      <el-option label="n28" value="28"/>
-                      <el-option label="n41" value="41"/>
-                      <el-option label="n78" value="78"/>
-                    </el-select>
-                    <el-tooltip content="子载波间隔" placement="top">
-                      <el-select v-model="entry.scs" placeholder="子载波间隔" class="sim-pci-input sim-pci-input-wide" size="small" @change="handleNRPciInputChange(idx)">
-                        <el-option label="15KHz" value="0"/>
-                        <el-option label="30KHz" value="1"/>
-                        <el-option label="60KHz" value="2"/>
-                        <el-option label="120KHz" value="3"/>
-                        <el-option label="240KHz" value="4"/>
+                  <div v-for="(entry, idx) in settings.nr_pci.items" :key="idx" class="sim-pci-row sim-pci-entry-row">
+                    <div class="sim-pci-field">
+                      <el-tooltip content="请输入十进制的PCID" placement="top">
+                        <el-input v-model="entry.pcid" placeholder="PCID(十进制)" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
+                      </el-tooltip>
+                    </div>
+                    <div class="sim-pci-field">
+                      <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
+                    </div>
+                    <div class="sim-pci-field">
+                      <el-select v-model="entry.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)">
+                        <el-option label="n1" value="1"/>
+                        <el-option label="n3" value="3"/>
+                        <el-option label="n5" value="5"/>
+                        <el-option label="n8" value="8"/>
+                        <el-option label="n28" value="28"/>
+                        <el-option label="n41" value="41"/>
+                        <el-option label="n78" value="78"/>
                       </el-select>
-                    </el-tooltip>
-                    <el-button size="small" type="warning" @click="removeNRPciEntry(idx)">删除条目</el-button>
+                    </div>
+                    <div class="sim-pci-field sim-pci-field-wide">
+                      <el-tooltip content="子载波间隔" placement="top">
+                        <el-select v-model="entry.scs" placeholder="子载波间隔" class="sim-pci-input sim-pci-input-wide" size="small" @change="handleNRPciInputChange(idx)">
+                          <el-option label="15KHz" value="0"/>
+                          <el-option label="30KHz" value="1"/>
+                          <el-option label="60KHz" value="2"/>
+                          <el-option label="120KHz" value="3"/>
+                          <el-option label="240KHz" value="4"/>
+                        </el-select>
+                      </el-tooltip>
+                    </div>
+                    <el-button size="small" type="warning" class="sim-pci-remove-btn" @click="removeNRPciEntry(idx)">删除条目</el-button>
                   </div>
-                  <div class="sim-pci-row">
-                    <el-button size="small" type="success" @click="addNRPciEntry">添加条目</el-button>
+                  <div class="sim-pci-row sim-pci-actions">
+                    <el-tooltip :content="'是否允许重选切换小区; 当前状态: ' + (settings.nr_pci.reSelEnabled ? '允许' : '不允许')" placement="top">
+                      <el-button size="small" :type="settings.nr_pci.reSelEnabled ? 'primary' : 'default'" class="sim-pci-mode-btn" @click="settings.nr_pci.reSelEnabled = !settings.nr_pci.reSelEnabled">
+                        {{ settings.nr_pci.reSelEnabled ? '允许重选切换' : '禁止重选切换' }}
+                      </el-button>
+                    </el-tooltip>
+                    <el-button size="small" type="success" class="sim-pci-add-btn" @click="addNRPciEntry">添加条目</el-button>
                   </div>
                 </template>
               </div>
             </el-form-item>
 
-            <el-form-item label="锁 LTE PCI">
+            <el-form-item label="锁 LTE PCI" class="sim-lock-form-item">
               <div class="sim-lock-section">
-                <div class="sim-pci-row">
+                <div class="sim-pci-row sim-lock-toolbar">
                   <el-tag
                     class="band-option-tag"
                     :type="!settings.lte_pci.enabled ? 'primary' : 'info'"
@@ -209,29 +217,35 @@
                   </el-tag>
                 </div>
                 <template v-if="settings.lte_pci.enabled">
-                  <div v-for="(entry, idx) in settings.lte_pci.items" :key="idx" class="sim-pci-row">
-                    <el-input v-model="entry.pcid" placeholder="PCID" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)"/>
-                    <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)"/>
-                    <el-select v-model="entry.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)">
-                      <el-option label="b1" value="1"/>
-                      <el-option label="b3" value="3"/>
-                      <el-option label="b5" value="5"/>
-                      <el-option label="b8" value="8"/>
-                      <el-option label="b34" value="34"/>
-                      <el-option label="b39" value="39"/>
-                      <el-option label="b40" value="40"/>
-                      <el-option label="b41" value="40"/>
-                    </el-select>
-                    <el-button size="small" type="warning" @click="removeLtePciEntry(idx)">删除条目</el-button>
+                  <div v-for="(entry, idx) in settings.lte_pci.items" :key="idx" class="sim-pci-row sim-pci-entry-row">
+                    <div class="sim-pci-field">
+                      <el-input v-model="entry.pcid" placeholder="PCID" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)"/>
+                    </div>
+                    <div class="sim-pci-field">
+                      <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)"/>
+                    </div>
+                    <div class="sim-pci-field">
+                      <el-select v-model="entry.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)">
+                        <el-option label="b1" value="1"/>
+                        <el-option label="b3" value="3"/>
+                        <el-option label="b5" value="5"/>
+                        <el-option label="b8" value="8"/>
+                        <el-option label="b34" value="34"/>
+                        <el-option label="b39" value="39"/>
+                        <el-option label="b40" value="40"/>
+                        <el-option label="b41" value="40"/>
+                      </el-select>
+                    </div>
+                    <el-button size="small" type="warning" class="sim-pci-remove-btn" @click="removeLtePciEntry(idx)">删除条目</el-button>
                   </div>
-                  <div class="sim-pci-row">
+                  <div class="sim-pci-row sim-pci-actions">
                     <el-button size="small" type="success" @click="addLtePciEntry">添加条目</el-button>
                   </div>
                 </template>
               </div>
             </el-form-item>
 
-            <el-form-item label="AT指令日志">
+            <el-form-item label="AT指令日志" class="sim-switch-form-item">
               <el-switch
                 v-model="atLogEnabled"
                 inline-prompt
@@ -1666,11 +1680,34 @@ export default {
 .sim-advanced-card .config-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .sim-advanced-card :deep(.config-form .el-form-item) {
   margin-bottom: 0;
+}
+
+.sim-advanced-card :deep(.config-form .el-form-item__label) {
+  color: #475569;
+  font-weight: 600;
+}
+
+.sim-advanced-form {
+  position: relative;
+}
+
+.sim-advanced-form::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+
+.sim-advanced-form > * {
+  position: relative;
+  z-index: 1;
 }
 
 .status-info {
@@ -1856,7 +1893,7 @@ export default {
 
 .sim-inline-row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
 }
 
@@ -1864,11 +1901,29 @@ export default {
   flex: 1;
 }
 
+.sim-inline-form-item,
+.sim-lock-form-item,
+.sim-switch-form-item {
+  width: 100%;
+}
+
+.sim-inline-form-item :deep(.el-form-item__content),
+.sim-lock-form-item :deep(.el-form-item__content),
+.sim-switch-form-item :deep(.el-form-item__content) {
+  width: 100%;
+}
+
 .sim-lock-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
+  box-sizing: border-box;
+  padding: 14px;
+  border: 1px solid rgba(245, 158, 11, 0.18);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 251, 235, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .sim-lock-toggle {
@@ -1884,14 +1939,108 @@ export default {
   width: 100%;
 }
 
+.sim-lock-toolbar {
+  justify-content: flex-start;
+  padding-bottom: 2px;
+}
+
+.sim-band-panel {
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px dashed rgba(245, 158, 11, 0.24);
+}
+
+.sim-pci-toolbar {
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.sim-pci-entry-row {
+  flex-wrap: nowrap;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.sim-pci-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sim-pci-meta-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.sim-pci-meta-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.sim-pci-mode-btn {
+  min-width: 112px;
+}
+
+.sim-pci-add-btn {
+  flex: 0 0 auto;
+}
+
+.sim-pci-actions {
+  justify-content: flex-start;
+  padding-top: 2px;
+}
+
+.sim-switch-form-item {
+  padding-top: 2px;
+}
+
 .sim-pci-input {
   flex: 0.9;
+  min-width: 132px;
+  max-width: 100%;
+}
+
+.sim-pci-field {
+  flex: 1 1 0;
   min-width: 0;
+}
+
+.sim-pci-field-wide {
+  flex: 1.15 1 0;
+}
+
+.sim-pci-field :deep(.el-input),
+.sim-pci-field :deep(.el-select) {
+  width: 100%;
 }
 
 .sim-pci-input-wide {
   flex: 1.3;
   min-width: 120px;
+}
+
+.sim-pci-remove-btn {
+  flex: 0 0 auto;
 }
 
 .band-option-list {
@@ -1904,11 +2053,22 @@ export default {
 
 .band-option-tag {
   cursor: pointer;
+  min-height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.band-option-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(148, 163, 184, 0.16);
 }
 
 .band-option-empty {
   color: var(--el-text-color-secondary);
   font-size: 12px;
+  line-height: 1.6;
+  padding: 2px 0;
 }
 
 :deep(.wan-enable-switch.el-switch:not(.is-checked) .el-switch__inner .is-text),
@@ -1946,6 +2106,40 @@ export default {
 
   .action-buttons .el-button {
     width: 200px;
+  }
+
+  .sim-inline-row,
+  .sim-pci-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sim-lock-section {
+    padding: 12px;
+  }
+
+  .sim-pci-entry-row {
+    padding: 10px;
+  }
+
+  .sim-pci-toolbar {
+    padding: 10px;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .sim-pci-mode-btn,
+  .sim-pci-add-btn {
+    width: 100%;
+  }
+
+  .sim-pci-remove-btn {
+    width: 100%;
+  }
+
+  .sim-pci-field,
+  .sim-pci-field-wide {
+    width: 100%;
   }
 }
 
