@@ -1075,25 +1075,54 @@ local function setSimLTEPCID(ifname, PCID)
     end
 
     local c = uci.cursor()
-    
-    if (PCID.enabled) then
-        c:set("sim", ifname, 'ltePciLockEnable', 'locked')
-    else
+
+    -- 清除旧的列表值
+    c:delete("sim", ifname, 'ltePciPcid')
+    c:delete("sim", ifname, 'ltePciBand')
+    c:delete("sim", ifname, 'ltePciFreq')
+    c:delete("sim", ifname, 'ltePciForbidFlag')
+
+    if not PCID.enabled then
         c:set("sim", ifname, 'ltePciLockEnable', 'unlocked')
-        c:set("sim", ifname, 'ltePciPcid', 'unlocked')
-        c:set("sim", ifname, 'ltePciBand', 'unlocked')
-        c:set("sim", ifname, 'ltePciFreq', 'unlocked')
         c:commit('sim')
-        return
+        return true
     end
 
-    c:set("sim", ifname, 'ltePciPcid', PCID.pcid)
-    c:set("sim", ifname, 'ltePciBand', PCID.band)
-    c:set("sim", ifname, 'ltePciFreq', PCID.freq)
+    c:set("sim", ifname, 'ltePciLockEnable', 'locked')
+
+    -- 重选切换: reSelEnabled=true 允许重选 → forbidFlag=0; reSelEnabled=false 禁止重选 → forbidFlag=1
+    local forbidFlag = PCID.reSelEnabled ~= false and '0' or '1'
+    c:set("sim", ifname, 'ltePciForbidFlag', forbidFlag)
+
+    local items = PCID.items
+    if not items or #items == 0 then
+        c:commit('sim')
+        return true
+    end
+
+    local pcid_list = {}
+    local band_list = {}
+    local freq_list = {}
+
+    for _, item in ipairs(items) do
+        if item and item.pcid and item.pcid ~= '' then
+            table.insert(pcid_list, tostring(item.pcid))
+            table.insert(band_list, tostring(item.band or ''))
+            table.insert(freq_list, tostring(item.freq or ''))
+        end
+    end
+
+    if #pcid_list > 0 then
+        c:set("sim", ifname, 'ltePciPcid', pcid_list)
+        c:set("sim", ifname, 'ltePciBand', band_list)
+        c:set("sim", ifname, 'ltePciFreq', freq_list)
+    end
 
     c:commit('sim')
 
     dial(ifname)
+
+    return true
 end
 
 -- 更改鉴权、用户名、密码
@@ -1179,8 +1208,8 @@ function M.changeSimSettings(params)
     log.info(string.format("index:%s %s lteBandLock:%s", params.index, params.alias, params.lteBand))
     log.info(string.format("index:%s %s NR PCI Lock: enable:%s items:%s", params.index, params.alias,
                         tostring(params.nr_pci and params.nr_pci.enabled), tostring(#((params.nr_pci and params.nr_pci.items) or {}))))
-    log.info(string.format("index:%s %s LTE PCI Lock: enable:%s pcid:%s band:%s freq:%s", params.index, params.alias, 
-                        params.lte_pci.enabled, params.lte_pci.pcid,params.lte_pci.band,params.lte_pci.freq))
+    log.info(string.format("index:%s %s LTE PCI Lock: enable:%s items:%s", params.index, params.alias,
+                        tostring(params.lte_pci and params.lte_pci.enabled), tostring(#((params.lte_pci and params.lte_pci.items) or {}))))
 
     setSimNRBand(ifname, params.nrBand)
     setSimLTEBand(ifname, params.lteBand)

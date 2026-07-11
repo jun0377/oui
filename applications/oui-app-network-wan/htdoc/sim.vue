@@ -20,14 +20,7 @@
               <el-tag type="info">{{ $t('配置') }}</el-tag>
             </div>
           </template>
-          <el-form :model="settings" label-width="120px" class="config-form" label-align="left" label-position="left">
-            <!-- <el-form-item :label="$t('Label')">
-              <el-input v-model="settings.alias" :placeholder="$t('Enter WAN label')" readonly disabled/>
-            </el-form-item>
-            <el-form-item :label="$t('Interface')">
-              <el-input v-model="settings.interface" :placeholder="$t('Enter interface name')" readonly disabled/>
-            </el-form-item> -->
-
+          <el-form :model="settings" label-width="90px" class="config-form" label-align="left" label-position="left">
             <el-form-item :label="$t('Network Access')">
               <el-select v-model="settings.net" :placeholder="$t('Select access type')" class="sim-full-width">
                 <el-option :label="$t('AUTO')" value="AUTO"/>
@@ -77,7 +70,7 @@
               <el-tag type="info">配置</el-tag>
             </div>
           </template>
-          <el-form :model="settings" label-width="120px" class="config-form sim-advanced-form" label-align="left" label-position="left">
+          <el-form :model="settings" label-width="90px" class="config-form sim-advanced-form" label-align="left" label-position="left">
             <div class="sim-inline-row">
               <el-form-item label="锁 NR 频段" class="sim-inline-form-item">
                 <div class="sim-lock-section">
@@ -239,6 +232,11 @@
                     <el-button size="small" type="warning" class="sim-pci-remove-btn" @click="removeLtePciEntry(idx)">删除条目</el-button>
                   </div>
                   <div class="sim-pci-row sim-pci-actions">
+                    <el-tooltip :content="'是否允许重选切换小区; 当前状态: ' + (settings.lte_pci.reSelEnabled ? '允许' : '不允许')" placement="top">
+                      <el-button size="small" :type="settings.lte_pci.reSelEnabled ? 'primary' : 'default'" class="sim-pci-mode-btn" @click="settings.lte_pci.reSelEnabled = !settings.lte_pci.reSelEnabled">
+                        {{ settings.lte_pci.reSelEnabled ? '允许重选切换' : '禁止重选切换' }}
+                      </el-button>
+                    </el-tooltip>
                     <el-button size="small" type="success" @click="addLtePciEntry">添加条目</el-button>
                   </div>
                 </template>
@@ -720,7 +718,7 @@ export default {
         lteBandLockEnabled: false,
         lteBandUnLock: true,
         nr_pci: { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '', scs: '' }] },
-        lte_pci: { enabled: false, items: [{ enabled: false, pcid: '', band: '', freq: '' }] },
+        lte_pci: { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '' }] },
         auth: '',
         username: '',
         password: ''
@@ -1281,7 +1279,7 @@ export default {
         this.settings.lteBandLockEnabled = false
         this.settings.bandUnLock = true
         this.settings.nr_pci = { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '', scs: '' }] }
-        this.settings.lte_pci = { enabled: false, items: [{ enabled: false, pcid: '', band: '', freq: '' }] }
+        this.settings.lte_pci = { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '' }] }
         this.$oui.call('sim', 'changeSimSettings', this.settings).then((response) => {
           if (response && response.code === 0) {
             this.$oui.call('sim', 'changeSimEnable', this.settings).then((res) => {
@@ -1501,7 +1499,7 @@ export default {
 
 .config-section {
   display: grid;
-  grid-template-columns: 0.85fr 1.15fr;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   gap: 16px;
   align-items: start;
 }
@@ -1510,19 +1508,26 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .right-column {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .top-cards {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr) minmax(0, 0.95fr);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
   align-items: stretch;
+}
+
+.connection-card {
+  min-width: 0;
+  grid-column: span 2;
 }
 
 .vertical-cards {
@@ -1534,6 +1539,10 @@ export default {
 
 .vertical-cards.freqlock-cards {
   flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-content: start;
+  grid-column: 1 / -1;
 }
 
 .vertical-cards .config-card {
@@ -1860,6 +1869,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
@@ -1869,12 +1879,18 @@ export default {
 }
 
 .status-label {
+  flex: 0 0 auto;
   font-weight: 500;
   color: var(--el-text-color-regular);
 }
 
 .status-value {
+  min-width: 0;
+  flex: 1 1 auto;
+  text-align: right;
   font-weight: 600;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .card-actions {
@@ -1967,12 +1983,15 @@ export default {
 }
 
 .sim-pci-entry-row {
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.15fr) auto;
   align-items: center;
+  column-gap: 16px;
+  row-gap: 12px;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  padding: 10px 12px;
+  padding: 12px 16px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.9);
@@ -2015,8 +2034,8 @@ export default {
 }
 
 .sim-pci-input {
-  flex: 0.9;
-  min-width: 132px;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
 }
 
@@ -2035,12 +2054,13 @@ export default {
 }
 
 .sim-pci-input-wide {
-  flex: 1.3;
-  min-width: 120px;
+  width: 100%;
+  min-width: 0;
 }
 
 .sim-pci-remove-btn {
   flex: 0 0 auto;
+  min-width: 88px;
 }
 
 .band-option-list {
@@ -2090,6 +2110,48 @@ export default {
   opacity: 1;
 }
 
+@media (max-width: 1400px) {
+  .connection-card {
+    grid-column: 1 / -1;
+  }
+
+  .vertical-cards.freqlock-cards {
+    grid-column: 1 / -1;
+  }
+
+  .signal-row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .signal-title {
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+
+  .signal-row-right .signal-title {
+    margin-right: 0;
+  }
+
+  .signal-row-right .signal-item {
+    justify-content: flex-start;
+  }
+
+  .sim-pci-entry-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sim-pci-field,
+  .sim-pci-field-wide {
+    min-width: 0;
+  }
+
+  .sim-pci-remove-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .config-section {
     grid-template-columns: 1fr;
@@ -2119,6 +2181,7 @@ export default {
   }
 
   .sim-pci-entry-row {
+    grid-template-columns: 1fr;
     padding: 10px;
   }
 
