@@ -1016,7 +1016,7 @@ export default {
       const min = Math.max(0, rawMin - padding)
       const max = Math.min(100, rawMax + padding)
       return { min, max, range: max - min || 1 }
-    },
+    }
   },
   created() {
     this.$timer.create('homeGetCpuTimes', this.getCpuTimes, { repeat: true, immediate: true, time: 3000 })

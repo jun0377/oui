@@ -604,10 +604,14 @@ export default {
     },
     // 初始化组件：加载可用 WAN 链路、初始化流量数据、启动所有定时任务
     bootstrap() {
+      this.loading = true
       return this.loadAvailWanLinks().then(() => {
         this.initTrafficSeries()
-        const initPromises = this.wanLinks.map((_, index) => this.getSimSettings(index).catch(() => {}))
 
+        // 先获取 SIM 配置
+        const simPromises = this.wanLinks.map((_, index) => this.getSimSettings(index).catch(() => {}))
+
+        // 创建轮询定时器（先不启动，等首轮数据加载完成后再启动）
         this.wanLinks.forEach((_, index) => {
           if (this.getRpcIndex(index) === null)
             return
@@ -617,8 +621,26 @@ export default {
           this.$timer.create('interface' + index, () => this.getInterfaceStatus(index), { time: 1000, repeat: true, autostart: false })
         })
 
-        this.updatePolling()
-        return Promise.all(initPromises)
+        return Promise.all(simPromises).then(() => {
+          // 首轮手动获取状态/产品/模块/接口数据
+          const firstRoundPromises = []
+          this.wanLinks.forEach((_, index) => {
+            if (this.getRpcIndex(index) === null)
+              return
+            firstRoundPromises.push(this.getProductInfo(index).catch(() => {}))
+            firstRoundPromises.push(this.getStatus(index).catch(() => {}))
+            firstRoundPromises.push(this.getModuleSettings(index).catch(() => {}))
+            firstRoundPromises.push(this.getInterfaceStatus(index).catch(() => {}))
+          })
+
+          return Promise.all(firstRoundPromises).then(() => {
+            this.loading = false
+            // 首轮数据就绪后启动轮询
+            this.updatePolling()
+          })
+        })
+      }).catch(() => {
+        this.loading = false
       })
     },
     // 通过 RPC 调用 'wan' 模块的 'getAvailWan' 方法，获取可用链路列表，并构建 wanLinks 数组
