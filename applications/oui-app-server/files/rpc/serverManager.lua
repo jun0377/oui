@@ -65,6 +65,11 @@ local function read_ping_cache(src, dst)
 end
 
 local function trigger_ping_refresh(src, dst)
+    -- dst may be a table (UCI list), convert to string
+    if type(dst) == 'table' then
+        dst = dst[1]
+    end
+
     local cache_file = get_ping_cache_file(src, dst)
     local cmd = 'ping -W 3 -c 3 -i 0.5'
     if src then
