@@ -1,0 +1,12 @@
+{
+    "/system/reset": {
+        "title": "reset",
+        "view": "reset",
+        "index": 70,
+        "locales": {
+            "en": "Restore",
+            "zh-CN": "恢复出厂设置",
+            "zh-TW": "恢复出厂设置"
+        }
+    }
+}

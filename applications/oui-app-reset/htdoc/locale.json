@@ -1,0 +1,17 @@
+{
+  "en": {
+    "Reset to defaults": "Reset to defaults",
+    "Perform reset": "Perform reset",
+    "ResettConfirm": "Do you really want to erase all settings"
+  },
+  "zh-CN": {
+    "Reset to defaults": "恢复到出厂设置",
+    "Perform reset": "执行重置",
+    "ResettConfirm": "您确定要清除所有设置吗"
+  },
+  "zh-TW": {
+    "Reset to defaults": "回復預設值",
+    "Perform reset": "執行重置",
+    "ResettConfirm": "您確定要清除所有設定"
+  }
+}
