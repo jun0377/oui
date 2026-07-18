@@ -84,7 +84,28 @@
               <el-tag type="info">实时</el-tag>
             </div>
 
-            <div v-if="interfaceCards.length" class="home-interface-list">
+            <div v-if="interfaceLoading" class="home-interface-loading">
+              <div
+                v-for="n in 3"
+                :key="'skel-' + n"
+                class="home-interface-skeleton"
+              >
+                <div class="home-interface-skeleton-row">
+                  <div class="home-interface-skeleton-summary">
+                    <div class="home-interface-skeleton-name skeleton-bar" />
+                    <div class="home-interface-skeleton-ifname skeleton-bar skeleton-bar-short" />
+                  </div>
+                  <div class="home-interface-skeleton-fields">
+                    <div class="home-interface-skeleton-field skeleton-bar" />
+                    <div class="home-interface-skeleton-field skeleton-bar" />
+                    <div class="home-interface-skeleton-field skeleton-bar skeleton-bar-narrow" />
+                  </div>
+                  <div class="home-interface-skeleton-tag skeleton-bar skeleton-bar-tag" />
+                </div>
+              </div>
+            </div>
+
+            <div v-else-if="interfaceCards.length" class="home-interface-list">
               <div class="home-interface-head-row">
                 <div class="home-interface-summary home-interface-summary-head">接口</div>
                 <div class="home-interface-inline-fields home-interface-inline-fields-head">
@@ -207,6 +228,7 @@ export default {
       sysinfo: null,
       boardinfo: null,
       interfaceStates: [],
+      interfaceLoading: true,
       interfaceSnapshots: {},
       serial: null,
       version: null,
@@ -793,6 +815,7 @@ export default {
 
         if (!links.length) {
           this.interfaceStates = []
+          this.interfaceLoading = false
           return
         }
 
@@ -805,9 +828,11 @@ export default {
           this.interfaceStates = cards
             .filter(Boolean)
             .map(card => this.attachInterfaceStats(card, card.rxBytes, card.txBytes, now))
+          this.interfaceLoading = false
         })
       }).catch(() => {
         this.interfaceStates = []
+        this.interfaceLoading = false
       })
     },
     formatIpv4Sections(sections) {
@@ -1523,6 +1548,80 @@ export default {
 
 .home-interface-status-tag {
   justify-self: center;
+}
+
+/* Skeleton loading */
+.skeleton-bar {
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.home-interface-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-interface-skeleton {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.home-interface-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.home-interface-skeleton-summary {
+  flex: 0 0 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.home-interface-skeleton-name {
+  height: 16px;
+  width: 80px;
+}
+
+.skeleton-bar-short {
+  width: 60px;
+  height: 12px;
+}
+
+.home-interface-skeleton-fields {
+  flex: 1;
+  display: flex;
+  gap: 20px;
+}
+
+.home-interface-skeleton-field {
+  height: 16px;
+  width: 64px;
+}
+
+.skeleton-bar-narrow {
+  width: 48px;
+}
+
+.skeleton-bar-tag {
+  width: 52px;
+  height: 24px;
+  border-radius: 12px;
+}
+
+.home-interface-skeleton-tag {
+  flex-shrink: 0;
 }
 
 @media (max-width: 1024px) {
