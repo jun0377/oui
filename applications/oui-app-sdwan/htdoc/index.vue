@@ -6,11 +6,11 @@
         <div class="sdwan-dashboard-grid">
           <div class="sdwan-section-card sdwan-settings-card">
             <div class="sdwan-metric-head">
-              <div>
+              <!-- <div>
                 <div class="sdwan-section-title">{{ $t('设置') }}</div>
                 <div class="sdwan-section-subtitle">{{ $t('以下配置项当前仅展示系统或服务器下发的参数') }}</div>
-              </div>
-              <el-tag type="info">{{ $t('只读') }}</el-tag>
+              </div> -->
+              <el-tag type="info">{{ $t('设置') }}</el-tag>
             </div>
 
             <el-form class="sdwan-settings-form" label-width="120px" label-position="top">
@@ -26,59 +26,6 @@
                 </el-tooltip>
               </el-form-item>
 
-              <el-form-item :label="$t('组网网段')">
-                <el-tooltip :content="$t('此配置在服务器端进行设置')" placement="top">
-                  <div class="sdwan-field-control">
-                    <el-radio-group v-model="fieldModes.virtual_net" size="small" class="sdwan-field-mode" @change="handleFieldModeChange('virtual_net')">
-                      <el-radio-button label="auto">{{ $t('自动') }}</el-radio-button>
-                      <el-radio-button label="manual">{{ $t('手动') }}</el-radio-button>
-                    </el-radio-group>
-                    <el-input
-                      :placeholder="$t('虚拟网络网络号')"
-                      v-model="settings.virtual_net"
-                      :disabled="fieldModes.virtual_net === 'auto'"
-                    ></el-input>
-                  </div>
-                </el-tooltip>
-              </el-form-item>
-
-              <el-form-item :label="$t('本地虚拟IP')">
-                <el-tooltip :content="$t('暂不支持手动设置,由服务器自动分配')" placement="top">
-                  <div class="sdwan-field-control">
-                    <el-radio-group v-model="fieldModes.local_ip" size="small" class="sdwan-field-mode" @change="handleFieldModeChange('local_ip')">
-                      <el-radio-button label="auto">{{ $t('自动') }}</el-radio-button>
-                      <el-radio-button label="manual">{{ $t('手动') }}</el-radio-button>
-                    </el-radio-group>
-                    <el-input
-                      :placeholder="$t('本地虚拟IP')"
-                      v-model="settings.local_ip"
-                      :disabled="fieldModes.local_ip === 'auto'"
-                    ></el-input>
-                  </div>
-                </el-tooltip>
-              </el-form-item>
-
-              <el-form-item :label="$t('本地端口')">
-                <el-tooltip :content="$t('暂不支持手动设置,由系统自动分配')" placement="top">
-                  <div class="sdwan-field-control">
-                    <el-radio-group v-model="fieldModes.local_port" size="small" class="sdwan-field-mode" @change="handleFieldModeChange('local_port')">
-                      <el-radio-button label="auto">{{ $t('自动') }}</el-radio-button>
-                      <el-radio-button label="manual">{{ $t('手动') }}</el-radio-button>
-                    </el-radio-group>
-                    <el-input
-                      :placeholder="$t('本地端口')"
-                      v-model="settings.local_port"
-                      :disabled="fieldModes.local_port === 'auto'"
-                    ></el-input>
-                  </div>
-                </el-tooltip>
-              </el-form-item>
-
-              <el-form-item :label="$t('子网地址')">
-                <el-tooltip :content="$t('DHCP地址池设置,由服务器自动分配')" placement="top">
-                  <el-input :placeholder="$t('子网地址')" v-model="settings.subnet" disabled></el-input>
-                </el-tooltip>
-              </el-form-item>
             </el-form>
 
             <div class="sdwan-settings-actions">
@@ -98,7 +45,7 @@
                 <el-tag type="info">{{ $t('状态') }}</el-tag>
               </div>
               <div class="sdwan-metric-value">{{ status.connected || '--' }}</div>
-              <div class="sdwan-metric-subtitle">{{ $t('用于展示当前 OpenVPN 中继连接状态') }}</div>
+              <!-- <div class="sdwan-metric-subtitle">{{ $t('用于展示当前 OpenVPN 中继连接状态') }}</div> -->
             </div>
 
             <div class="sdwan-metric-card sdwan-metric-card-primary is-accent-cyan">
@@ -107,7 +54,7 @@
                 <el-tag type="info">ms</el-tag>
               </div>
               <div class="sdwan-metric-value">{{ status.rtt }}</div>
-              <div class="sdwan-metric-subtitle">{{ $t('显示当前中继网络的往返时延') }}</div>
+              <div class="sdwan-metric-subtitle">组网延时</div>
             </div>
 
             <div class="sdwan-metric-card sdwan-metric-card-primary is-accent-amber">
@@ -141,16 +88,7 @@ export default {
     return {
       settings: {
         remote_ip: '',
-        remote_port: 0,
-        virtual_net: '',
-        local_ip: '',
-        local_port: 0,
-        subnet: ''
-      },
-      fieldModes: {
-        virtual_net: 'auto',
-        local_ip: 'auto',
-        local_port: 'auto'
+        remote_port: 0
       },
       status: {
         // openvpnDead - 进程未启动
@@ -190,21 +128,9 @@ export default {
     }
   },
   methods: {
-    handleFieldModeChange(field) {
-      if (field === 'virtual_net' && this.fieldModes.virtual_net === 'auto')
-        this.fetchSettingsVirtualNet()
-      if (field === 'local_ip' && this.fieldModes.local_ip === 'auto')
-        this.fetchSettingsLocalIP()
-      if (field === 'local_port' && this.fieldModes.local_port === 'auto')
-        this.fetchSettingsLocalPort()
-    },
     refreshSettings() {
       this.fetchSettingsRemoteIP()
       this.fetchSettingsRemotePort()
-      this.fetchSettingsVirtualNet()
-      this.fetchSettingsLocalIP()
-      this.fetchSettingsLocalPort()
-      this.fetchSettingsSubNet()
       this.fetchSettingsTransBytes()
       console.log(this.settings)
     },
@@ -226,37 +152,6 @@ export default {
       this.$oui.call('sdwan', 'getRemotePort').then(port => {
         this.settings.remote_port = Number(port)
         // console.log('fetchSettingsRemotePort: ', this.settings.remote_port)
-      })
-    },
-    fetchSettingsVirtualNet() {
-      // console.log('fetch virtual net')
-      this.$oui.call('sdwan', 'getVirtualNet').then(ip => {
-        if (this.fieldModes.virtual_net === 'auto')
-          this.settings.virtual_net = ip
-        // console.log('fetchSettingsVirtualNet: ', this.settings.virtual_net)
-      })
-    },
-    fetchSettingsLocalIP() {
-      // console.log('fetch local ip')
-      this.$oui.call('sdwan', 'getLocalIP').then(ip => {
-        if (this.fieldModes.local_ip === 'auto')
-          this.settings.local_ip = ip
-        // console.log('fetchSettingsLocalIP: ', this.settings.local_ip)
-      })
-    },
-    fetchSettingsLocalPort() {
-      // console.log('fetch local port')
-      this.$oui.call('sdwan', 'getLocalPort').then(port => {
-        if (this.fieldModes.local_port === 'auto')
-          this.settings.local_port = port
-        // console.log('fetchSettingsLocalPort: ', this.settings.local_port)
-      })
-    },
-    fetchSettingsSubNet() {
-      // console.log('fetch subnet')
-      this.$oui.call('sdwan', 'getSubnet').then(sublan => {
-        this.settings.subnet = sublan
-        // console.log('fetchSettingsSubNet: ', this.settings.subnet)
       })
     },
     fetchSettingsTransBytes() {
@@ -321,7 +216,7 @@ export default {
 
 .sdwan-dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: stretch;
   margin-top: 16px;
@@ -469,7 +364,6 @@ export default {
 
 .sdwan-settings-form {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 16px;
   margin-top: 18px;
 }

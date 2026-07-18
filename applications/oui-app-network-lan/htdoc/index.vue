@@ -9,7 +9,7 @@
       </template>
 
       <div class="lan-grid">
-        <el-card class="config-card lan-accent-slate">
+        <el-card class="config-card lan-accent-violet">
           <template #header>
             <div class="card-header">
               <span class="card-title">DHCP 地址池设置</span>
@@ -70,7 +70,7 @@
           </div>
         </el-card>
 
-        <el-card class="config-card lan-accent-slate lan-span-2">
+        <el-card class="config-card lan-accent-emerald lan-span-2">
           <template #header>
             <div class="card-header">
               <span class="card-title">子网设备</span>
@@ -502,6 +502,14 @@ export default {
 
 .lan-accent-blue::before {
   background: #3b82f6;
+}
+
+.lan-accent-violet::before {
+  background: #8b5cf6;
+}
+
+.lan-accent-emerald::before {
+  background: #10b981;
 }
 
 .lan-accent-slate::before {
