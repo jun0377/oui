@@ -154,9 +154,10 @@ function M.getOpenVPNStatus()
         msg = 'OpenVPN process not running'
     }
 
-    -- 检查进程是否存在
-    local pid = exec([[pgrep -f "openvpn.*omr|openvpn.*--config.*omr" 2>/dev/null | head -n 1]])
-    ret.running = pid ~= nil and pid:match('%S') ~= nil
+    -- 检查进程是否存在（[o] 防止 grep 匹配自身，ps w 显示完整命令行）
+    local pid = exec([[ps w | grep -E "[o]penvpn.*omr" | grep -v grep | awk '{print $1}' | head -n 1]])
+    pid = pid:gsub('[\r\n]', '')
+    ret.running = pid ~= ''
 
     -- 读取上下行数据量
     local function read_stat(path)

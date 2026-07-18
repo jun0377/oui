@@ -1079,7 +1079,12 @@ export default {
       command: 'sh',
       params: ['-c', 'cat /etc/version']
     }).then(r => {
-      this.version = r.stdout ? r.stdout.trim() : '-'
+      try {
+        const v = JSON.parse(r.stdout)
+        this.version = 'V' + ([v.version, v.build_timestamp, v.commit].filter(Boolean).join('-') || '-')
+      } catch {
+        this.version = '-'
+      }
     }).catch(() => {
       this.version = '-'
     })
