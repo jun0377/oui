@@ -156,6 +156,7 @@ export default {
   },
   methods: {
     formatSecond(second) {
+      if (typeof second === 'string') return second
       const s = Number(second)
       if (!Number.isFinite(s) || s < 0)
         return '-'
