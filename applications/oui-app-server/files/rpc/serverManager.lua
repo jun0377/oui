@@ -297,29 +297,36 @@ end
 -- 获取VPN隧道的连通性，比较耗时，需要在vue中异步获取
 function M.getVPNrtt()
     
-    log.info('getVPNrtt...')
+    log.info('getVPNrtt from /tmp/tracker-ovpn/tracker-ovpn.json')
 
     local state = {reachable = false, rtt_ms = 0, pkt_loss = 0}
 
-    local cmd = "cat /proc/net/dev | grep tun0"
-    local res = exec(cmd)
-    if nil == res then
-        log.warn('VPN interface tun0 not exist')
+    -- 从 omr-tracker 保存的 JSON 文件中读取 omrvpn 探测结果
+    local json_file = '/tmp/tracker-ovpn/tracker-ovpn.json'
+
+    local status = exec("jsonfilter -i " .. json_file .. " -e '@.status' 2>/dev/null")
+    if nil == status or status == "" then
+        log.warn('tracker-ovpn.json not available')
         return state
     end
+    status = status:gsub("[\r\n]", "")
 
-    cmd = "ip addr show dev tun0 | grep \'inet \' | awk \'{print $2}\' | cut -d/ -f1 | tr -d \'\n\'"
-    local src_ip = exec(cmd)
-    if nil == src_ip then
-        log.warn('VPN interface tun0 has no ip')
-        return state
+    local latency = exec("jsonfilter -i " .. json_file .. " -e '@.latency' 2>/dev/null")
+    if latency then
+        latency = latency:gsub("[\r\n]", "")
+        state.rtt_ms = tonumber(latency) or 0
     end
 
-    -- log.info(src_ip)
+    local loss = exec("jsonfilter -i " .. json_file .. " -e '@.loss' 2>/dev/null")
+    if loss then
+        loss = loss:gsub("[\r\n]", "")
+        state.pkt_loss = tonumber(loss) or 0
+    end
 
-    res = ping(src_ip, '10.255.252.1')
-    log.info('reachable = ', res.reachable, ' rtt_ms = ', res.rtt_ms)
-    return res
+    state.reachable = (status == "OK")
+
+    log.info('reachable = ', state.reachable, ' rtt_ms = ', state.rtt_ms, ' pkt_loss = ', state.pkt_loss)
+    return state
 end
 
 -- 获取服务器节点信息
