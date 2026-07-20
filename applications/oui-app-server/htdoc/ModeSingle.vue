@@ -228,7 +228,7 @@ export default {
     },
     // 单卡模式二次确认
     confirmSaveSingleMode() {
-      const message = `确认保存并应用当前出口链路：${this.singleModeLink}？`
+      const message = `确认选择使用出口链路：${this.singleModeLink}`
       const title = '提示'
       if (typeof this.$confirm === 'function') {
         this.$confirm(message, title, {
