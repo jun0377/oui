@@ -15,18 +15,63 @@ local function exec_async(command)
     os.execute(string.format("( %s ) >/dev/null 2>/dev/null &", command))
 end
 
+local function exec(command)
+    local pp = io.popen(command)
+    local data = pp:read("*a")
+    pp:close()
+    return (data or ''):gsub("[\r\n]+$", "")
+end
+
+local function trim(s)
+    if s == nil then
+        return ''
+    end
+    return tostring(s):gsub('^%s+', ''):gsub('%s+$', '')
+end
+
+-- 从 sysfs 中读取网口设备名（兼容未激活的接口）
+local function get_device_from_sysfs(c, channel)
+    -- 优先从 sim 配置获取 USB 路径（与 wan.lua 中 get_sim_device 逻辑相同）
+    local usb = c:get('sim', channel, 'usb')
+    usb = trim(usb)
+    if usb ~= '' then
+        local net_dir = trim(exec(string.format(
+            "find '%s' -maxdepth 2 -type d -name net 2>/dev/null | head -n 1 | tr -d '\\r\\n'",
+            usb:gsub("'", [['"'"']])
+        )))
+        local device = trim(exec(string.format(
+            "ls '%s' 2>/dev/null | head -n 1 | tr -d '\\r\\n'",
+            net_dir ~= '' and net_dir or '/nonexistent'
+        )))
+        if device ~= '' then
+            return device
+        end
+    end
+
+    -- 回退到 network 配置中的 device/ifname
+    local dev = c:get('network', channel, 'device') or c:get('network', channel, 'ifname')
+    return trim(dev)
+end
+
 local function get_channel_iface(ubus_conn, channel)
-    if not ubus_conn or not channel then
+    if not channel then
         return ''
     end
 
-    local status, err = ubus_conn:call('network.interface.' .. channel, 'status', {})
-    if not status or type(status) ~= 'table' then
-        log.warn('get channel status failed:', channel, err)
-        return ''
+    -- 优先通过 ubus 获取活跃接口的设备名
+    if ubus_conn then
+        local status, err = ubus_conn:call('network.interface.' .. channel, 'status', {})
+        if status and type(status) == 'table' then
+            local device = tostring(status.device or status.l3_device or '')
+            if device ~= '' then
+                return device
+            end
+        end
     end
 
-    return tostring(status.device or status.l3_device or '')
+    -- ubus 失败时回退到 sysfs/UCI 读取（兼容未激活/未插卡的接口）
+    local c = uci.cursor()
+    return get_device_from_sysfs(c, channel)
 end
 
 
