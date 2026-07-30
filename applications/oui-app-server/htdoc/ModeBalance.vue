@@ -230,7 +230,9 @@ export default {
       const centerY = 170
       const labelRadius = 120
       let current = 0
-      return this.pieLegendLinks.map((link) => {
+      return this.pieLegendLinks
+        .filter(link => link.connections > 0)
+        .map((link) => {
         const sweep = this.totalConnections > 0
           ? (link.connections / this.totalConnections) * 360
           : 0
@@ -260,12 +262,14 @@ export default {
         return 'conic-gradient(#e5e7eb 0 100%)'
       }
       let current = 0
-      const stops = this.pieLegendLinks.map((link) => {
-        const start = current
-        const end = current + (link.connections / this.totalConnections) * 100
-        current = end
-        return `${link.color} ${start}% ${end}%`
-      })
+      const stops = this.pieLegendLinks
+        .filter(link => link.connections > 0)
+        .map((link) => {
+          const start = current
+          const end = current + (link.connections / this.totalConnections) * 100
+          current = end
+          return `${link.color} ${start}% ${end}%`
+        })
       return `conic-gradient(${stops.join(', ')})`
     }
   },

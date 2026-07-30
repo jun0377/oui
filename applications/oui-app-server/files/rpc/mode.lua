@@ -279,6 +279,19 @@ function M.getIfContrackCnt(params)
     end
 
     for line in file:lines() do
+        -- 排除异常连接
+        if line:find('%[UNREPLIED%]') then
+            goto continue
+        end
+        -- 排除DNS: 路由器自身DNS查询,非用户业务流量
+        if line:find('dport=53') then
+            goto continue
+        end
+        -- 排除ping: 链路健康检测icmp,非用户业务流量
+        if line:find('icmp') then
+            goto continue
+        end
+
         all_total = all_total + 1
         local touched = {}
         for ip in line:gmatch('src=([%d%.]+)') do
@@ -298,6 +311,7 @@ function M.getIfContrackCnt(params)
         for channel, _ in pairs(touched) do
             by_channel[channel] = (by_channel[channel] or 0) + 1
         end
+        ::continue::
     end
 
     file:close()
