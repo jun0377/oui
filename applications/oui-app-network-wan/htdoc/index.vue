@@ -277,16 +277,12 @@
     <KeepAlive>
       <WanConfig v-if="currentView === 'wan-config' && selectedWan" :wan-data="selectedWan" @go-back="goBackToMain" />
     </KeepAlive>
-    <DhcpConfig v-if="currentView === 'dhcp'" @go-back="goBackToMain" />
-    <WirelessConfig v-if="currentView === 'wireless'" @go-back="goBackToMain" />
   </div>
 </template>
 
 <script>
 import SimConfig from './sim.vue'
 import WanConfig from './wan.vue'
-import DhcpConfig from './dhcp.vue'
-import WirelessConfig from './wireless.vue'
 
 const createEmptyMonsc = () => ({
   rat: '',
@@ -448,9 +444,7 @@ const createDefaultWanLink = (index) => {
 export default {
   components: {
     SimConfig,
-    WanConfig,
-    DhcpConfig,
-    WirelessConfig
+    WanConfig
   },
   computed: {
     simEntries() {
@@ -492,14 +486,6 @@ export default {
       wanLinks: [],
       loading: false,
       wanPortStateTimerId: null,
-      subnets: [
-        {
-          name: 'DHCP Service'
-        },
-        {
-          name: 'Wireless Lan'
-        }
-      ],
       traffic: {
         width: 760,
         height: 300,
@@ -540,10 +526,6 @@ export default {
             this.selectedWanIndex = idx
             this.currentView = view
           }
-        } else if (sub === 'dhcp') {
-          this.currentView = 'dhcp'
-        } else if (sub === 'wireless') {
-          this.currentView = 'wireless'
         }
       }
     }
@@ -558,8 +540,6 @@ export default {
         return { view: 'sim-config', index: idx }
       if (sub === 'wan' && idx !== undefined && Number.isFinite(idx))
         return { view: 'wan-config', index: idx }
-      if (sub === 'dhcp') return { view: 'dhcp' }
-      if (sub === 'wireless') return { view: 'wireless' }
       return { view: 'main' }
     },
     // 同步当前视图到 URL query
@@ -571,10 +551,6 @@ export default {
       } else if (view === 'wan-config') {
         query.sub = 'wan'
         query.idx = String(index)
-      } else if (view === 'dhcp') {
-        query.sub = 'dhcp'
-      } else if (view === 'wireless') {
-        query.sub = 'wireless'
       }
       // main view: empty query
       this.$router.replace({ query }).catch(() => {})
@@ -590,8 +566,6 @@ export default {
           this.selectedWanIndex = index
           this.currentView = view
         }
-      } else if (view === 'dhcp' || view === 'wireless') {
-        this.currentView = view
       }
     },
     // 获取指定索引链路的 RPC 参数（返回 {ifname: "sim1"} 或 null）
@@ -1772,20 +1746,6 @@ export default {
         }).catch(() => this.loading = false)
       }
     },
-    // 编辑子网配置（DHCP 或 Wireless）
-    editSubNet(lan) {
-      if (lan.name === 'DHCP Service') {
-        this.currentView = 'dhcp'
-        this.writeQuery('dhcp')
-        this.updateWanPortStatePolling()
-      } else if (lan.name === 'Wireless Lan') {
-        this.currentView = 'wireless'
-        this.writeQuery('wireless')
-        this.updateWanPortStatePolling()
-      } else {
-        alert('修改LAN设置: ' + lan.name)
-      }
-    }
   },
   created() {
     this.bootstrap().then(() => {
