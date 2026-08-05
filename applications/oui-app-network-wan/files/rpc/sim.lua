@@ -694,6 +694,8 @@ function M.getStatus(ifname)
     -- log.info('ifname', ifname)
 
     local timestamp = getRealTimeStatusTimestamp(ifname)
+    -- 路由器当前时间, 用于前端校准与浏览器时钟的偏移
+    local now = os.date("%Y-%m-%d %H:%M:%S")
     local sim = getRealTimeStatusSim(ifname)
     local country, mcc, mnc, operator = readPlmnInfo(ifname)
     if operator == "" then
@@ -723,8 +725,9 @@ function M.getStatus(ifname)
     end
 
     local ret = string.format(
-        '{"timestamp":"%s","sim":"%s","country":"%s","mcc":"%s","mnc":"%s","operator_name":"%s","freqInfo":%s,"C5GCore":%s,"C4GCore":%s,"monsc":%s,"monnc":%s,"hcsq":%s}',
+        '{"timestamp":"%s","now":"%s","sim":"%s","country":"%s","mcc":"%s","mnc":"%s","operator_name":"%s","freqInfo":%s,"C5GCore":%s,"C4GCore":%s,"monsc":%s,"monnc":%s,"hcsq":%s}',
         esc(timestamp),
+        esc(now),
         esc(sim),
         esc(country),
         esc(mcc),

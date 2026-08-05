@@ -233,29 +233,29 @@ export default {
       return this.pieLegendLinks
         .filter(link => link.connections > 0)
         .map((link) => {
-        const sweep = this.totalConnections > 0
-          ? (link.connections / this.totalConnections) * 360
-          : 0
-        const midAngle = current + sweep / 2 - 90
-        current += sweep
-        const radians = (midAngle * Math.PI) / 180
-        const anchorX = centerX + Math.cos(radians) * 94
-        const anchorY = centerY + Math.sin(radians) * 94
-        const labelX = centerX + Math.cos(radians) * labelRadius
-        const labelY = centerY + Math.sin(radians) * labelRadius
-        const side = Math.cos(radians) >= 0 ? 'right' : 'left'
-        const deltaX = labelX - anchorX
-        const deltaY = labelY - anchorY
-        return {
-          ...link,
-          side,
-          anchorClass: side === 'right' ? 'anchor-right' : 'anchor-left',
-          labelX,
-          labelY,
-          lineWidth: Math.max(24, Math.round(Math.sqrt(deltaX ** 2 + deltaY ** 2))),
-          lineAngle: Math.atan2(deltaY, deltaX) * 180 / Math.PI
-        }
-      })
+          const sweep = this.totalConnections > 0
+            ? (link.connections / this.totalConnections) * 360
+            : 0
+          const midAngle = current + sweep / 2 - 90
+          current += sweep
+          const radians = (midAngle * Math.PI) / 180
+          const anchorX = centerX + Math.cos(radians) * 94
+          const anchorY = centerY + Math.sin(radians) * 94
+          const labelX = centerX + Math.cos(radians) * labelRadius
+          const labelY = centerY + Math.sin(radians) * labelRadius
+          const side = Math.cos(radians) >= 0 ? 'right' : 'left'
+          const deltaX = labelX - anchorX
+          const deltaY = labelY - anchorY
+          return {
+            ...link,
+            side,
+            anchorClass: side === 'right' ? 'anchor-right' : 'anchor-left',
+            labelX,
+            labelY,
+            lineWidth: Math.max(24, Math.round(Math.sqrt(deltaX ** 2 + deltaY ** 2))),
+            lineAngle: Math.atan2(deltaY, deltaX) * 180 / Math.PI
+          }
+        })
     },
     pieGradient() {
       if (!this.totalConnections) {

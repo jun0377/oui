@@ -397,6 +397,7 @@ const createDefaultWanLink = (index) => {
     status: {
       status: '',
       timestamp: '',
+      routerTime: '',
       rat: '-',
       // 5G NR实时状态
       nr: {
@@ -1089,6 +1090,7 @@ export default {
 
           // NR/LTE信号强度
           if (data.timestamp) link.status.timestamp = data.timestamp
+          if (data.now) link.status.routerTime = data.now
           if (data.monsc) {
             const monsc = data.monsc
             const status = link.status

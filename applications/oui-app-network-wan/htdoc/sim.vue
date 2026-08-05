@@ -24,12 +24,12 @@
                 <div class="status-info">
                   <div class="status-item">
                     <span class="status-label"> 状态 :</span>
-                    <span class="status-value">{{ getStatusText() }}</span>
+                    <span class="status-value"><span :class="getStatusClass()">{{ getStatusText() }}</span></span>
                   </div>
 
                   <div class="status-item">
                     <span class="status-label">{{ $t('状态更新时间') }}:</span>
-                    <span class="status-value">{{ status.timestamp }}</span>
+                    <span class="status-value">{{ statusTimeText }}</span>
                   </div>
 
                   <div class="status-item">
@@ -219,7 +219,7 @@
                 <el-card class="config-card compact-card sim-accent-amber">
                   <template #header>
                     <div class="card-header">
-                      <span class="sim-card-title">{{ $t('5G锁频锁小区状态') }}</span>
+                      <span class="sim-card-title">{{ $t('5G锁频/锁小区状态') }}</span>
                     </div>
                   </template>
                   <div class="status-info">
@@ -249,7 +249,7 @@
                 <el-card class="config-card compact-card sim-accent-blue">
                   <template #header>
                     <div class="card-header">
-                      <span class="sim-card-title">{{ $t('LTE锁频锁小区状态') }}</span>
+                      <span class="sim-card-title">{{ $t('LTE锁频/锁小区状态') }}</span>
                     </div>
                   </template>
                   <div class="status-info">
@@ -273,6 +273,32 @@
                 </el-card>
               </div>
 
+              <!-- AT日志终端: 置于实时状态页右下角 -->
+              <el-card class="config-card compact-card at-log-card">
+                <div class="at-log-terminal" ref="atLogTerminal" @scroll="handleAtLogScroll">
+                  <div v-if="atLogs.length === 0" class="at-log-empty">暂无AT指令日志</div>
+                  <div
+                    v-for="(entry, idx) in atLogs"
+                    :key="entry.seq || `gap-${idx}`"
+                    v-show="!atLogErrorOnly || (entry.kind !== 'gap' && cleanAtLogRes(entry).indexOf('OK') === -1)"
+                    class="at-log-entry"
+                    :class="{ 'is-gap': entry.kind === 'gap' }"
+                  >
+                    <template v-if="entry.kind === 'gap'">
+                      <div class="at-log-gap">{{ entry.message }}</div>
+                    </template>
+                    <template v-else>
+                      <div class="at-log-entry-head">#{{ entry.seq }} {{ entry.ts || '-' }} {{ entry.tty || '-' }} : {{ entry.cmd }}</div>
+                      <pre class="at-log-line at-log-res" :class="getAtLogResultClass(cleanAtLogRes(entry))">{{ cleanAtLogRes(entry) }}</pre>
+                    </template>
+                  </div>
+                </div>
+                <div class="at-log-actions">
+                  <el-button size="small" :type="atLogErrorOnly ? 'danger' : 'default'" @click="atLogErrorOnly = !atLogErrorOnly">
+                    {{ atLogErrorOnly ? '显示全部' : '只看错误' }}
+                  </el-button>
+                </div>
+              </el-card>
             </div>
           </el-tab-pane>
 
@@ -557,39 +583,10 @@
               </div>
             </el-card>
           </el-tab-pane>
-
-          <!-- Tab 5: AT日志 -->
-          <el-tab-pane label="AT日志" name="atlog" lazy>
-            <el-card class="config-card compact-card at-log-card">
-              <div class="at-log-terminal" ref="atLogTerminal" @scroll="handleAtLogScroll">
-                <div v-if="atLogs.length === 0" class="at-log-empty">暂无AT指令日志</div>
-                <div
-                  v-for="(entry, idx) in atLogs"
-                  :key="entry.seq || `gap-${idx}`"
-                  v-show="!atLogErrorOnly || (entry.kind !== 'gap' && cleanAtLogRes(entry).indexOf('OK') === -1)"
-                  class="at-log-entry"
-                  :class="{ 'is-gap': entry.kind === 'gap' }"
-                >
-                  <template v-if="entry.kind === 'gap'">
-                    <div class="at-log-gap">{{ entry.message }}</div>
-                  </template>
-                  <template v-else>
-                    <div class="at-log-entry-head">#{{ entry.seq }} {{ entry.ts || '-' }} {{ entry.tty || '-' }} : {{ entry.cmd }}</div>
-                    <pre class="at-log-line at-log-res" :class="getAtLogResultClass(cleanAtLogRes(entry))">{{ cleanAtLogRes(entry) }}</pre>
-                  </template>
-                </div>
-              </div>
-              <div class="at-log-actions">
-                <el-button size="small" :type="atLogErrorOnly ? 'danger' : 'default'" @click="atLogErrorOnly = !atLogErrorOnly">
-                  {{ atLogErrorOnly ? '显示全部' : '只看错误' }}
-                </el-button>
-              </div>
-            </el-card>
-          </el-tab-pane>
         </el-tabs>
 
         <!-- Action buttons -->
-        <div class="action-buttons card-actions" v-if="simTab !== 'status' && simTab !== 'atlog'">
+        <div class="action-buttons card-actions" v-if="simTab !== 'status'">
           <el-button @click="saveConfig" type="primary" size="large">{{ $t('Save Configuration') }}</el-button>
           <el-button @click="resetConfig" type="warning" size="large" class="btn-disabled-warning">{{ $t('Reset to Default') }}</el-button>
           <el-button @click="goBack" type="info" size="large">{{ $t('Back') }}</el-button>
@@ -613,6 +610,7 @@ export default {
       status: {
         status: '',
         timestamp: '',
+        routerTime: '',
         rat: '-',
         nr: { rsrp: '', rsrq: '', sinr: '', band: '' },
         lte: { rsrp: '', rsrq: '', sinr: '', rssi: '', band: '' },
@@ -701,13 +699,22 @@ export default {
       atLogLoading: false,
       atLogAutoFollow: true,
       atLogDrainTimer: null,
-      simTab: 'status'
+      simTab: 'status',
+      nowTick: 0,
+      // 路由器与浏览器时钟偏移(ms), 在 routerTime 更新时校准并冻结
+      clockOffset: 0
     }
   },
   created() {
     if (this.wanData)
       this.applyWanData(this.wanData)
     this.$timer.create('sim-at-logs', () => this.fetchAtLogs(), { time: 1000, repeat: true, autostart: false })
+    // 每秒刷新相对时间显示
+    this.$timer.create('sim-time-ago', () => {
+      this.nowTick++
+    }, { time: 1000, repeat: true })
+    // AT日志终端常驻实时状态页, 默认开启拉取
+    this.atLogEnabled = true
   },
   beforeUnmount() {
     this.$timer.stop('sim-at-logs')
@@ -739,11 +746,6 @@ export default {
         }
       }
     },
-    simTab(val) {
-      if (val === 'atlog') {
-        this.atLogEnabled = true
-      }
-    },
     wanData: {
       handler(newVal, oldVal) {
         if (!newVal)
@@ -754,9 +756,19 @@ export default {
       },
       immediate: true,
       deep: true
+    },
+    // 路由器当前时间更新时, 重新校准时钟偏移(冻结), 使相对时间每秒正常递增
+    'status.routerTime'(val) {
+      const routerMs = this.parseLocalTime(String(val))
+      this.clockOffset = isNaN(routerMs) ? 0 : routerMs - Date.now()
     }
   },
   computed: {
+    // 状态更新时间, 以相对时间(x秒前)显示, 每秒刷新
+    statusTimeText() {
+      this.nowTick
+      return this.formatTimeAgo(this.status.timestamp)
+    },
     isNoService() {
       return this.status && this.status.hcsq && this.status.hcsq.sysmode === 'NOSERVICE'
     },
@@ -1134,7 +1146,7 @@ export default {
         this.$confirm('关闭后将断开蜂窝链路，是否确认关闭？', '提示', {
           confirmButtonText: '确认',
           cancelButtonText: '取消',
-          type: 'warning',
+          type: 'warning'
         }).then(() => {
           this.applyEnableChange(false)
         }).catch(() => {
@@ -1189,6 +1201,50 @@ export default {
         stat = stat + 'LTE' + this.CS.stat
       }
       return stat
+    },
+    // 当前状态对应的徽章样式
+    getStatusClass() {
+      const text = this.getStatusText()
+      if (text === '已禁用')
+        return 'status-badge status-badge-disabled'
+      if (text === '无服务')
+        return 'status-badge status-badge-noservice'
+      if (text === '在线')
+        return 'status-badge status-badge-online'
+      if (text === '离线')
+        return 'status-badge status-badge-offline'
+      return 'status-badge status-badge-info'
+    },
+    // 将本地格式时间字符串解析为时间戳(毫秒), 按浏览器本地时区解释
+    parseLocalTime(str) {
+      const full = str.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/)
+      if (full) {
+        const [, y, mo, d, h, mi, s] = full
+        return new Date(+y, +mo - 1, +d, +h, +mi, +s).getTime()
+      }
+      // 仅时间格式: HH:MM:SS (视为当天)
+      const parts = str.split(':').map(Number)
+      if (parts.length === 3 && !parts.some(n => isNaN(n))) {
+        const now = new Date()
+        const base = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+        return base + (parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1000
+      }
+      return NaN
+    },
+    // 将 "YYYY-MM-DD HH:MM:SS" 或 "HH:MM:SS" 格式的时间戳转为 "x秒前"
+    // 时钟偏移在 routerTime 更新时由 watcher 校准并冻结, 保证每秒正常递增
+    formatTimeAgo(ts) {
+      if (!ts)
+        return '-'
+      const text = String(ts).trim()
+      let tsMs = this.parseLocalTime(text)
+      if (isNaN(tsMs))
+        return text
+      // 纯时间格式跨天时往前推一天
+      if (tsMs > Date.now() + this.clockOffset)
+        tsMs -= 24 * 3600 * 1000
+      const diffSec = Math.max(0, Math.floor((Date.now() + this.clockOffset - tsMs) / 1000))
+      return `${diffSec}秒前`
     },
     // 保存配置
     saveConfig() {
@@ -1492,9 +1548,11 @@ export default {
 
 .status-card-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-  grid-column: 1 / -1;
+  grid-column: 1;
+  /* 与右侧AT日志卡片等高 */
+  align-self: stretch;
 }
 
 .status-side-col {
@@ -1872,6 +1930,41 @@ export default {
   word-break: break-word;
 }
 
+/* 状态徽章: 按不同状态显示不同背景色 */
+.status-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.status-badge-online {
+  background: rgba(34, 197, 94, 0.2);
+  color: #16a34a;
+}
+
+.status-badge-noservice {
+  background: rgba(245, 158, 11, 0.24);
+  color: #d97706;
+}
+
+.status-badge-offline {
+  background: rgba(239, 68, 68, 0.2);
+  color: #dc2626;
+}
+
+.status-badge-disabled {
+  background: rgba(148, 163, 184, 0.26);
+  color: #64748b;
+}
+
+.status-badge-info {
+  background: rgba(59, 130, 246, 0.2);
+  color: #2563eb;
+}
+
 .card-actions {
   justify-content: flex-end;
 }
@@ -2096,6 +2189,30 @@ export default {
 
   .status-card-grid {
     grid-template-columns: 1fr 1fr;
+    grid-column: auto;
+  }
+
+  .at-log-card {
+    grid-column: auto;
+    align-self: auto;
+  }
+
+  :deep(.at-log-card .el-card__body) {
+    position: static;
+    height: 380px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .at-log-terminal {
+    position: static;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .at-log-actions {
+    position: static;
+    margin-top: 12px;
   }
 
   .connection-card {
@@ -2195,19 +2312,39 @@ export default {
 
 .at-log-card {
   border-color: #374151;
+  /* 位于实时状态页网格右下角 */
+  grid-column: 2;
+  /* 与左侧锁频状态卡片等高 */
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.at-log-card .el-card__body) {
+  position: relative;
+  flex: 1;
+  min-height: 0;
 }
 
 .at-log-actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
   display: flex;
   justify-content: center;
-  margin-top: 12px;
+  margin-top: 0;
 }
 
 .at-log-terminal {
+  position: absolute;
+  top: 8px;
+  left: 14px;
+  right: 14px;
+  bottom: 40px;
   background: #1e1e1e;
   border-radius: 8px;
   padding: 10px 14px;
-  height: 512px;
   overflow-y: auto;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 12px;
