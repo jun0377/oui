@@ -503,6 +503,7 @@ export default {
 
 .mode-panel {
   position: relative;
+  box-sizing: border-box;
   border-radius: 16px;
   border: 1px solid var(--el-border-color);
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
@@ -551,23 +552,9 @@ export default {
 .server-settings-card,
 .server-status-card {
   position: relative;
-  padding: 18px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
-  overflow: hidden;
   min-width: 0;
-}
-
-.server-settings-card::before,
-.server-status-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  border-radius: 16px 0 0 16px;
-  background: rgba(34, 197, 94, 0.35);
+  padding: 4px 0;
+  overflow: hidden;
 }
 
 .config-form {
@@ -626,7 +613,7 @@ export default {
 }
 
 .balance-split::after {
-  display: none;
+  display: block;
   content: '';
   position: absolute;
   top: 0;
@@ -678,6 +665,8 @@ export default {
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+  width: 92%;
+  margin: 0 auto;
 }
 
 .balance-link-card:hover {
@@ -976,11 +965,6 @@ export default {
 
   :deep(.mode-panel .el-card__body) {
     padding: 12px 16px 16px;
-  }
-
-  .server-settings-card,
-  .server-status-card {
-    padding: 16px;
   }
 }
 </style>

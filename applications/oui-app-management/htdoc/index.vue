@@ -13,7 +13,10 @@
                   <el-tag type="info">IP:Port</el-tag>
                 </div>
                 <div class="mgmt-metric-value">{{ overview.serverIP || '--' }}</div>
-                <div class="mgmt-metric-subtitle">{{ $t('管理平台服务端地址') }}</div>
+                <div class="mgmt-metric-subtitle">
+                  <span>{{ $t('上报状态') }}:</span>
+                  <span class="report-state" :class="'report-state-' + reportStatusInfo.type">{{ reportStatusInfo.label }}</span>
+                </div>
               </div>
 
               <div class="mgmt-metric-card is-accent-green">
@@ -25,21 +28,6 @@
                 </div>
                 <div class="mgmt-metric-value">{{ overview.connected ? $t('在线') : $t('离线') }}</div>
                 <div class="mgmt-metric-subtitle">{{ $t('延时') }}: {{ overview.latency ?? '--' }} ms</div>
-              </div>
-
-              <div class="mgmt-metric-card is-accent-amber">
-                <div class="mgmt-metric-head">
-                  <div class="mgmt-metric-title">{{ $t('允许上报') }}</div>
-                  <el-tag :type="settings.reportEnabled ? 'success' : 'danger'">
-                    {{ settings.reportEnabled ? $t('允许') : $t('禁止') }}
-                  </el-tag>
-                </div>
-                <div class="mgmt-metric-value">{{ settings.reportEnabled ? $t('允许') : $t('禁止') }}</div>
-                <div v-if="settings.reportEnabled" class="mgmt-metric-subtitle">
-                  <span>{{ $t('上报状态:') }}</span>
-                  <span class="report-state report-state-active">{{ $t(overview.reportState) }}</span>
-                </div>
-                <div v-else class="mgmt-metric-subtitle">{{ $t('数据上报已关闭') }}</div>
               </div>
             </div>
 
@@ -156,7 +144,8 @@ export default {
         serverIP: '192.168.1.100:8080',
         connected: true,
         latency: 23,
-        reportState: '上报中'
+        // 上报状态: 'normal' 正常 / 'failed' 连接失败; 'disabled' 由 settings.reportEnabled 决定
+        reportStatus: 'normal'
       },
       settings: {
         serverIP: '192.168.1.100',
@@ -176,6 +165,18 @@ export default {
         { id: 2, time: '2026-08-10 10:31:20', level: 'warn', message: '连接延时偏高 (85ms)' },
         { id: 3, time: '2026-08-10 10:30:05', level: 'error', message: '数据上报失败, 重试中' }
       ]
+    }
+  },
+  computed: {
+    // 上报状态: 正常 / 连接失败 / 已禁用
+    reportStatusInfo() {
+      if (!this.settings.reportEnabled) {
+        return { label: this.$t('已禁用'), type: 'disabled' }
+      }
+      if (this.overview.reportStatus === 'failed') {
+        return { label: this.$t('连接失败'), type: 'failed' }
+      }
+      return { label: this.$t('正常'), type: 'normal' }
     }
   },
   methods: {
@@ -292,8 +293,16 @@ export default {
   font-weight: 600;
 }
 
-.report-state-active {
+.report-state-normal {
   color: var(--el-color-success);
+}
+
+.report-state-failed {
+  color: var(--el-color-danger);
+}
+
+.report-state-disabled {
+  color: var(--el-text-color-secondary);
 }
 
 /* ---- 服务器公告 ---- */

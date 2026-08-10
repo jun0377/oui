@@ -4,31 +4,6 @@
 
   <!-- 工作模式: 单卡模式 / 负载均衡 / 聚合 -->
   <div class="mode">
-    <h2> 管理平台 </h2>
-    <div class="server-section platform-section">
-      <el-card class="mode-panel platform-config-card is-accent-purple-soft">
-        <div class="mode-panel-body platform-config-card-body">
-          <el-form label-width="120px" label-align="left" label-position="left" class="config-form platform-form">
-            <el-form-item label="管理平台IP">
-              <el-input v-model="platformIp" class="platform-ip-input" :placeholder="$t('Enter Server IP')" clearable />
-              <el-button type="primary" class="platform-save-btn" :loading="platformSaving" @click="savePlatformIp">保存 &amp; 应用</el-button>
-            </el-form-item>
-          </el-form>
-        </div>
-      </el-card>
-
-      <el-card class="mode-panel platform-status-card is-accent-purple">
-        <div class="platform-status-card-body">
-          <div class="platform-status-card-header">
-            <span class="platform-status-card-title">管理平台</span>
-            <el-tag :type="platformStatus.type">{{ platformStatus.tag }}</el-tag>
-          </div>
-          <div class="platform-status-card-value">{{ platformStatus.tag }}</div>
-          <div class="platform-status-card-subtitle">{{ platformStatus.subtitle }}</div>
-        </div>
-      </el-card>
-    </div>
-
     <h2> {{ $t('Mode') }} </h2>
     <el-radio-group v-model="workMode" class="mode-group" :disabled="!workModeReady" @change="handleWorkModeChange">
       <el-radio-button value="single">{{ $t('单卡模式') }}</el-radio-button>
@@ -45,8 +20,6 @@
   <ModeAggregate
     v-if="workModeReady && workMode === 'aggregate'"
     :page-active="pageActive"
-    :server-ip="platformIp"
-    @update:server-ip="platformIp = normalizePlatformIp($event)"
   />
 </div>
 
@@ -67,44 +40,10 @@ export default {
   },
   data() {
     return {
-      platformIp: '',
-      platformSaving: false,
-      serverTrackerStatus: null,
       workMode: '',
       workModeReady: false,
       pageActive: false,
-      stopped: true,
-      serverStatusTimer: null
-    }
-  },
-  computed: {
-    // 连接状态
-    platformStatus() {
-      const addr = this.platformIp || '-'
-      const tracker = this.serverTrackerStatus
-      if (!tracker) {
-        return {
-          tag: '检测中',
-          type: 'warning',
-          subtitle: `地址: ${addr}`
-        }
-      }
-
-      const status = String(tracker.status || '').trim().toUpperCase()
-      const msg = String(tracker.msg || '').trim()
-      if (status === 'OK') {
-        return {
-          tag: '正常',
-          type: 'success',
-          subtitle: msg || `地址: ${addr}`
-        }
-      }
-
-      return {
-        tag: '异常',
-        type: 'danger',
-        subtitle: msg || `地址: ${addr}`
-      }
+      stopped: true
     }
   },
   created() {
@@ -142,21 +81,17 @@ export default {
     startAll() {
       this.stopped = false
       this.workModeReady = false
-      this.platformIp = ''
-      this.serverTrackerStatus = null
       this.workMode = ''
       this.pageActive = true
-      Promise.allSettled([this.fetchPlatformIp(), this.fetchWorkMode(), this.fetchServerStatus()]).finally(() => {
+      this.fetchWorkMode().finally(() => {
         if (this.stopped)
           return
         this.workModeReady = true
       })
-      this.startServerStatusPolling()
     },
     stopAll() {
       this.stopped = true
       this.pageActive = false
-      this.stopServerStatusPolling()
     },
     // 把后端返回的工作模组字段归一化处理
     normalizeWorkMode(rawMode) {
@@ -177,79 +112,6 @@ export default {
         const normalized = this.normalizeWorkMode(mode)
         this.workMode = normalized
       })
-    },
-    normalizePlatformIp(value) {
-      if (Array.isArray(value))
-        return String(value[0] || '').trim()
-      return String(value || '').trim()
-    },
-    fetchPlatformIp() {
-      return this.$oui.call('serverManager', 'getServerIP').then((ip) => {
-        if (this.stopped)
-          return
-        this.platformIp = this.normalizePlatformIp(ip)
-      }).catch(() => {})
-    },
-    fetchServerStatus() {
-      return this.$oui.call('home', 'getServerStatus').then((result) => {
-        if (this.stopped)
-          return
-        this.serverTrackerStatus = result || null
-      }).catch(() => {
-        if (this.stopped)
-          return
-        this.serverTrackerStatus = null
-      })
-    },
-    startServerStatusPolling() {
-      this.stopServerStatusPolling()
-      this.serverStatusTimer = setInterval(() => {
-        this.fetchServerStatus()
-      }, 5000)
-    },
-    stopServerStatusPolling() {
-      if (this.serverStatusTimer) {
-        clearInterval(this.serverStatusTimer)
-        this.serverStatusTimer = null
-      }
-    },
-    async savePlatformIp() {
-      const ip = this.normalizePlatformIp(this.platformIp)
-      this.platformIp = ip
-      if (!/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(ip) || ip.split('.').some(part => {
-        const num = Number(part)
-        return !Number.isInteger(num) || num < 0 || num > 255
-      })) {
-        this.$message({
-          message: 'IP地址格式不正确',
-          type: 'error'
-        })
-        return
-      }
-      this.platformSaving = true
-      try {
-        const result = await this.$oui.call('serverManager', 'setServerIP', { ip })
-        if (result === -1) {
-          this.$message({
-            message: '保存失败',
-            type: 'error'
-          })
-          return
-        }
-        this.$message({
-          message: this.$t('保存成功'),
-          type: 'success'
-        })
-        await this.fetchPlatformIp()
-        await this.fetchServerStatus()
-      } catch {
-        this.$message({
-          message: '保存失败',
-          type: 'error'
-        })
-      } finally {
-        this.platformSaving = false
-      }
     },
     // 设置工作模式
     handleWorkModeChange() {
@@ -333,11 +195,6 @@ export default {
 
 .mode-card {
   grid-column: 1 / -1;
-}
-
-.platform-section {
-  width: 100%;
-  margin-bottom: 0;
 }
 
 .mode-panel {
@@ -722,119 +579,6 @@ export default {
   padding: 10px;
 }
 
-.server-ip-input {
-  width: 33.3333%;
-}
-
-.platform-form .el-form-item {
-  margin-bottom: 12px;
-}
-
-.platform-form .el-form-item__content {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.platform-ip-input {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.platform-save-btn {
-  margin-top: 12px;
-  margin-left: 0;
-  align-self: flex-start;
-}
-
-.platform-config-card {
-  position: relative;
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid rgba(139, 92, 246, 0.12);
-  border-radius: 16px;
-  background: linear-gradient(135deg, #faf5ff 0%, #ffffff 100%);
-  box-shadow: 0 12px 28px rgba(139, 92, 246, 0.08);
-}
-
-.platform-config-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  border-radius: 16px 0 0 16px;
-  background: #c4b5fd;
-}
-
-.platform-config-card.is-accent-purple-soft::before {
-  background: #c4b5fd;
-}
-
-.platform-config-card-body {
-  padding: 10px 8px;
-}
-
-.platform-status-card {
-  position: relative;
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 16px;
-  background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
-  box-shadow: 0 14px 30px rgba(139, 92, 246, 0.12);
-}
-
-.platform-status-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  border-radius: 16px 0 0 16px;
-  background: #8b5cf6;
-}
-
-.platform-status-card.is-accent-purple::before {
-  background: #8b5cf6;
-}
-
-.platform-status-card-body {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 100%;
-  padding: 6px 4px;
-}
-
-.platform-status-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.platform-status-card-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.platform-status-card-subtitle {
-  margin-top: 10px;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-  line-height: 1.5;
-  word-break: break-all;
-}
-
-.platform-status-card-value {
-  margin: 14px 0 6px;
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-  line-height: 1.1;
-  word-break: break-word;
-}
-
 .status-info {
   padding: 10px;
 }
@@ -906,10 +650,6 @@ export default {
 
   .aggregate-v-divider {
     display: none;
-  }
-
-  .server-ip-input {
-    width: 100%;
   }
 
   .single-route-header,
