@@ -32,8 +32,6 @@
             <el-button type="primary" :loading="loading" @click="login" class="login-button">{{ $t('Login') }}</el-button>
           </el-form-item>
         </el-form>
-
-        <el-divider class="login-divider"/>
       </div>
     </el-card>
 
@@ -385,6 +383,7 @@ export default {
   width: 33.333vw;
   min-width: 360px;
   max-width: 520px;
+  min-height: 400px;
 }
 
 .mode-card {
@@ -400,15 +399,6 @@ export default {
   overflow: hidden;
 }
 
-.mode-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  border-radius: 14px 0 0 14px;
-  background: rgba(79, 141, 247, 0.6);
-}
-
 .login-head {
   display: flex;
   justify-content: center;
@@ -422,10 +412,6 @@ export default {
   line-height: 1.2;
 }
 
-.login-panel-body {
-  padding-top: 2px;
-}
-
 .login-form {
   width: 100%;
 }
@@ -435,14 +421,28 @@ export default {
   border-bottom: 0;
 }
 
+:deep(.mode-panel .el-card) {
+  display: flex;
+  flex-direction: column;
+}
+
 :deep(.mode-panel .el-card__body) {
   padding: 12px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
 }
 
 :deep(.login-form .el-form-item__label) {
   font-size: 13px;
   font-weight: 600;
   color: var(--el-text-color-secondary);
+}
+
+/* 隐藏必填项星号(红点) */
+:deep(.login-form .el-form-item.is-required:not(.is-no-asterisk) .el-form-item__label::before) {
+  display: none;
 }
 
 :deep(.login-form .el-input__wrapper) {
@@ -458,18 +458,10 @@ export default {
 }
 
 .login-button {
-  width: 100%;
+  width: 40%;
   border-radius: 12px;
   font-weight: 700;
   box-shadow: none;
-}
-
-.login-button:hover {
-  box-shadow: none;
-}
-
-.login-divider {
-  margin: 18px 0 12px;
 }
 
 .copyright {

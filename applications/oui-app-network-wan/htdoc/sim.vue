@@ -345,6 +345,13 @@
                   />
                 </el-form-item>
               </el-form>
+
+              <!-- Action buttons -->
+              <div class="action-buttons card-actions">
+                <el-button @click="saveConfig" type="primary" size="large">{{ $t('Save Configuration') }}</el-button>
+                <el-button @click="resetConfig" type="warning" size="large" class="btn-disabled-warning">{{ $t('Reset to Default') }}</el-button>
+                <el-button @click="goBack" type="info" size="large">{{ $t('Back') }}</el-button>
+              </div>
           </el-tab-pane>
 
           <!-- Tab 3: 锁频段 -->
@@ -414,11 +421,19 @@
                   </div>
                 </el-form-item>
               </el-form>
+
+              <!-- Action buttons -->
+              <div class="action-buttons card-actions">
+                <el-button @click="saveConfig" type="primary" size="large">{{ $t('Save Configuration') }}</el-button>
+                <el-button @click="resetConfig" type="warning" size="large" class="btn-disabled-warning">{{ $t('Reset to Default') }}</el-button>
+                <el-button @click="goBack" type="info" size="large">{{ $t('Back') }}</el-button>
+              </div>
           </el-tab-pane>
 
           <!-- Tab 4: 锁PCI小区 -->
           <el-tab-pane label="PCI小区设置" name="pcilock" lazy>
-            <el-card class="config-card sim-accent-amber">
+            <div class="pci-tab-grid">
+              <el-card class="config-card sim-accent-amber">
               <template #header>
                 <div class="card-header">
                   <span class="sim-card-title">锁PCI小区</span>
@@ -513,7 +528,7 @@
                             <el-option label="b34" value="34"/>
                             <el-option label="b39" value="39"/>
                             <el-option label="b40" value="40"/>
-                            <el-option label="b41" value="40"/>
+                            <el-option label="b41" value="41"/>
                           </el-select>
                         </div>
                         <el-button size="small" type="warning" class="sim-pci-remove-btn" @click="removeLtePciEntry(idx)">删除条目</el-button>
@@ -530,6 +545,13 @@
                   </div>
                 </el-form-item>
               </el-form>
+
+              <!-- Action buttons -->
+              <div class="action-buttons card-actions">
+                <el-button @click="saveConfig" type="primary" size="large">{{ $t('Save Configuration') }}</el-button>
+                <el-button @click="resetConfig" type="warning" size="large" class="btn-disabled-warning">{{ $t('Reset to Default') }}</el-button>
+                <el-button @click="goBack" type="info" size="large">{{ $t('Back') }}</el-button>
+              </div>
             </el-card>
 
             <el-card class="config-card neighbor-card sim-accent-red">
@@ -582,15 +604,9 @@
                 </div>
               </div>
             </el-card>
+            </div>
           </el-tab-pane>
         </el-tabs>
-
-        <!-- Action buttons -->
-        <div class="action-buttons card-actions" v-if="simTab !== 'status'">
-          <el-button @click="saveConfig" type="primary" size="large">{{ $t('Save Configuration') }}</el-button>
-          <el-button @click="resetConfig" type="warning" size="large" class="btn-disabled-warning">{{ $t('Reset to Default') }}</el-button>
-          <el-button @click="goBack" type="info" size="large">{{ $t('Back') }}</el-button>
-        </div>
       </el-card>
     </div>
 </template>
@@ -627,7 +643,6 @@ export default {
       sim: {
         operator: '',
         status: '',
-        country: '',
         mcc: '',
         mnc: ''
       },
@@ -838,15 +853,6 @@ export default {
       }
       return 'sig-empty'
     },
-    // 国家代码规范化
-    formatCountry(country) {
-      const code = String(country ?? '').trim().toUpperCase()
-      if (!code || code === '-')
-        return '-'
-      if (code === 'CN' || code === 'CHINA' || code === 'CHN' || code === 'CHINESE')
-        return '中国'
-      return country
-    },
     // sim卡状态可读性优化
     formatSimStatus(status) {
       const raw = String(status ?? '').trim()
@@ -945,7 +951,6 @@ export default {
       this.monsc = data.monsc
       this.monnc = data.monnc
       this.realSettings = data.realSettings
-      this.freqInfo = data.freqInfo
       if (!this.settingsInitialized) {
         this.settings.index = data.settings.index
         this.settings.enable = typeof data.settings.enable === 'boolean' ? data.settings.enable : true
@@ -973,8 +978,6 @@ export default {
           this.settings.nrBand = 'unlocked'
         if (this.settings.lteBandUnLock)
           this.settings.lteBand = 'unlocked'
-        this.settings.bandUnLock = this.settings.nrBandUnLock && this.settings.lteBandUnLock
-        this.settings.cell = data.settings.cell || data.settings.settingsCell
         this.settings.pci = data.settings.pcid || data.settings.settingsPCI
         this.settings.pciUnlock = (this.settings.pci === 'none' || this.settings.pci === '')
         if (data.settings.nr_pci) {
@@ -1136,9 +1139,6 @@ export default {
       } else {
         this.$message.warning('无法删除唯一的条目')
       }
-    },
-    handleSwitch() {
-      // TODO: 调用 RPC 切换网络
     },
     // 链路使能
     handleEnableChange(enabled) {
@@ -1305,9 +1305,6 @@ export default {
           this.$message.success('设置成功')
       })
     },
-    testConnection() {
-      this.$message.info(this.$t('Testing connection...'))
-    },
     resetConfig() {
       this.$confirm(this.$t('Are you sure to reset to default configuration?'), this.$t('Confirm Reset'), { type: 'warning' }).then(() => {
         this.settings.enable = true
@@ -1322,7 +1319,6 @@ export default {
         this.settings.lteBand = 'unlocked'
         this.settings.lteBandUnLock = true
         this.settings.lteBandLockEnabled = false
-        this.settings.bandUnLock = true
         this.settings.nr_pci = { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '', scs: '' }] }
         this.settings.lte_pci = { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '' }] }
         this.$oui.call('sim', 'changeSimSettings', this.settings).then((response) => {
@@ -1357,16 +1353,6 @@ export default {
         this.settings.lteBandLockEnabled = true
       }
     },
-    handleNRPciLock(enabled) {
-      if (!enabled) {
-        this.settings.nr_pci.items.forEach(e => {
-          e.pcid = ''
-          e.band = ''
-          e.freq = ''
-          e.scs = ''
-        })
-      }
-    },
     handleNRPciUnlock() {
       this.settings.nr_pci.enabled = false
       this.settings.nr_pci.items.forEach(e => {
@@ -1386,15 +1372,6 @@ export default {
         this.handleLtePciUnlock()
       } else {
         this.settings.lte_pci.enabled = true
-      }
-    },
-    handleLtePciLock(enabled) {
-      if (!enabled) {
-        this.settings.lte_pci.items.forEach(e => {
-          e.pcid = ''
-          e.band = ''
-          e.freq = ''
-        })
       }
     },
     handleLtePciUnlock() {
@@ -1422,30 +1399,6 @@ export default {
         this.settings.lte_pci.items.splice(idx, 1)
       } else {
         this.$message.warning('无法删除唯一的条目')
-      }
-    },
-    handleNrBandLockEnabledChange(enabled) {
-      if (!enabled) {
-        this.settings.nrBand = 'unlocked'
-        this.settings.nrBandUnLock = true
-        return
-      }
-      this.settings.nrBandUnLock = false
-      if (this.settings.nrBand === 'unlocked' || this.settings.nrBand === 'none' || this.settings.nrBand === '') {
-        const next = (this.getNRBandOptions().find(opt => opt !== '解锁') || 'none')
-        this.settings.nrBand = next
-      }
-    },
-    handleLteBandLockEnabledChange(enabled) {
-      if (!enabled) {
-        this.settings.lteBand = 'unlocked'
-        this.settings.lteBandUnLock = true
-        return
-      }
-      this.settings.lteBandUnLock = false
-      if (this.settings.lteBand === 'unlocked' || this.settings.lteBand === 'none' || this.settings.lteBand === '') {
-        const next = (this.getLTEBandOptions().find(opt => opt !== '解锁') || 'none')
-        this.settings.lteBand = next
       }
     },
     selectNRBandOption(value) {
@@ -1497,6 +1450,21 @@ export default {
   border-radius: 12px;
   border: 0;
   box-shadow: none;
+}
+
+/* ---- el-tabs 样式(与 management-tabs 统一) ---- */
+.sim-detail-tabs {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.sim-detail-tabs :deep(.el-tabs__header) {
+  background-color: var(--el-fill-color-light);
+}
+
+.sim-detail-tabs :deep(.el-tabs__item) {
+  font-weight: 600;
+  font-size: 14px;
 }
 
 :deep(.sim-panel .el-card__body) {
@@ -1565,12 +1533,17 @@ export default {
   grid-column: span 2;
 }
 
-.connection-card {
-  /* 占一列，宽度为原来的一半 */
+/* PCI小区设置 tab: 左设置/右状态 两栏布局 */
+.pci-tab-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
 }
 
-.neighbor-card {
-  /* 与驻留小区表格各占一列 */
+/* PCI设置卡内的操作按钮与表单拉开间距 */
+.pci-tab-grid .config-card .action-buttons {
+  margin-top: 18px;
 }
 
 .config-card {
@@ -1641,28 +1614,12 @@ export default {
   padding: 6px 0;
 }
 
-.vertical-cards .compact-card .status-item {
-  padding: 4px 0;
-}
-
 .compact-card .status-label {
   font-size: 13px;
 }
 
-.vertical-cards .compact-card .status-label {
-  font-size: 12px;
-}
-
 .compact-card .status-value {
   font-size: 13px;
-}
-
-.vertical-cards .compact-card .status-value {
-  font-size: 12px;
-}
-
-.compact-card .status-value-label {
-  font-size: 12px;
 }
 
 .neighbor-card {
@@ -1707,39 +1664,6 @@ export default {
 :deep(.config-form .el-form-item__content) {
   min-height: 32px;
   align-items: center;
-}
-
-.sim-advanced-card .config-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.sim-advanced-card :deep(.config-form .el-form-item) {
-  margin-bottom: 0;
-}
-
-.sim-advanced-card :deep(.config-form .el-form-item__label) {
-  color: #475569;
-  font-weight: 600;
-}
-
-.sim-advanced-form {
-  position: relative;
-}
-
-.sim-advanced-form::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
-  pointer-events: none;
-}
-
-.sim-advanced-form > * {
-  position: relative;
-  z-index: 1;
 }
 
 .status-info {
@@ -2168,13 +2092,6 @@ export default {
   color: var(--el-color-danger);
 }
 
-:deep(.btn-disabled-success.is-disabled) {
-  background-color: var(--el-color-success-light-7);
-  border-color: var(--el-color-success-light-5);
-  color: var(--el-color-success);
-  opacity: 1;
-}
-
 :deep(.btn-disabled-warning.is-disabled) {
   background-color: var(--el-color-warning-light-7);
   border-color: var(--el-color-warning-light-5);
@@ -2184,6 +2101,10 @@ export default {
 
 @media (max-width: 1400px) {
   .status-tab-content {
+    grid-template-columns: 1fr;
+  }
+
+  .pci-tab-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2213,10 +2134,6 @@ export default {
   .at-log-actions {
     position: static;
     margin-top: 12px;
-  }
-
-  .connection-card {
-    /* 窄屏下恢复默认流式布局 */
   }
 
   .signal-row {

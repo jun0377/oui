@@ -109,7 +109,7 @@ end
 function M.getMode()
     local c = uci.cursor()
     local mode = c:get('global', 'global', 'mode')
-    log.info('get mode: ', mode)
+    log.info('get mode:', mode)
     return mode
 end
 
@@ -207,9 +207,10 @@ function M.setBalanceWeight(params)
     return 0
 end
 
--- 获取某个网口上的连接数
+-- 获取某个网口上的连接数以及总连接数
 function M.getIfContrackCnt(params)
     if not params then
+        log.warn('getIfContrackCnt: params is nil')
         return 0
     end
 
@@ -239,8 +240,11 @@ function M.getIfContrackCnt(params)
     end
 
     if not channels or #channels == 0 then
+        log.warn('getIfContrackCnt: no channels')
         return 0
     end
+
+    log.info('getIfContrackCnt channels:', table.concat(channels, ','))
 
     ubus_conn = ubus.connect()
     if ubus_conn then
@@ -284,9 +288,9 @@ function M.getIfContrackCnt(params)
             goto continue
         end
         -- 排除DNS: 路由器自身DNS查询,非用户业务流量
-        if line:find('dport=53') then
-            goto continue
-        end
+        -- if line:find('dport=53') then
+        --     goto continue
+        -- end
         -- 排除ping: 链路健康检测icmp,非用户业务流量
         if line:find('icmp') then
             goto continue
@@ -327,10 +331,16 @@ function M.getIfContrackCnt(params)
             others = 0
         end
 
+        local detail = {}
+        for _, channel in ipairs(channels) do
+            detail[#detail + 1] = tostring(channel) .. '=' .. tostring(by_channel[tostring(channel)] or 0)
+        end
+        log.info('getIfContrackCnt result: total=', selected_total, ' all_total=', all_total, ' others=', others, ' detail=', table.concat(detail, ','))
         return { total = selected_total, all_total = all_total, others = others, by_channel = by_channel }
     end
 
     local single = tostring(params.channel or channels[1])
+    log.info('getIfContrackCnt result: channel=', single, ' count=', tonumber(by_channel[single] or 0) or 0)
     return tonumber(by_channel[single] or 0) or 0
 end
 

@@ -4,20 +4,13 @@
       <template #header>
         <div class="panel-header">
           <span class="panel-title">局域网</span>
-          <el-tag type="info">LAN</el-tag>
         </div>
       </template>
 
-      <div class="lan-grid">
-        <el-card class="config-card lan-accent-violet">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">DHCP 地址池设置</span>
-              <!-- <el-tag type="info">配置</el-tag> -->
-            </div>
-          </template>
-
-          <el-form ref="dhcpFormRef" :model="dhcpForm" :rules="dhcpRules" label-width="120px" label-align="left" label-position="left" class="config-form">
+      <el-tabs v-model="activeTab" type="border-card" class="lan-tabs">
+        <!-- Tab 1: DHCP设置 -->
+        <el-tab-pane label="DHCP设置" name="dhcp" lazy>
+          <el-form ref="dhcpFormRef" :model="dhcpForm" :rules="dhcpRules" label-width="120px" label-align="left" label-position="left" class="config-form dhcp-form">
             <el-form-item label="网关" prop="ipaddr">
               <el-input v-model="dhcpForm.ipaddr" placeholder="例如 192.168.100.1" @input="validateDhcpField('ipaddr')" />
             </el-form-item>
@@ -25,10 +18,10 @@
               <el-input v-model="dhcpForm.netmask" placeholder="例如 255.255.255.0" @input="validateDhcpField('netmask')" />
             </el-form-item>
             <el-form-item label="地址池起始" prop="poolStart">
-              <el-input v-model="dhcpForm.poolStart" class="pool-ip" placeholder="例如 192.168.100.100" @input="validateDhcpField('poolStart')" />
+              <el-input v-model="dhcpForm.poolStart" placeholder="例如 192.168.100.100" @input="validateDhcpField('poolStart')" />
             </el-form-item>
             <el-form-item label="地址池结束" prop="poolEnd">
-              <el-input v-model="dhcpForm.poolEnd" class="pool-ip" placeholder="例如 192.168.100.253" @input="validateDhcpField('poolEnd')" />
+              <el-input v-model="dhcpForm.poolEnd" placeholder="例如 192.168.100.253" @input="validateDhcpField('poolEnd')" />
             </el-form-item>
           </el-form>
 
@@ -36,28 +29,28 @@
             <el-button type="primary" size="large" :loading="dhcpSaving" @click="saveDhcp">保存 & 应用</el-button>
             <el-button type="warning" size="large" :disabled="dhcpSaving" @click="resetDhcpDefaults">恢复默认</el-button>
           </div>
-        </el-card>
+        </el-tab-pane>
 
-        <el-card class="config-card lan-accent-blue">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">WiFi AP设置</span>
-            </div>
-          </template>
-
-          <el-form :model="wifiForm" label-width="120px" label-align="left" label-position="left" class="config-form">
+        <!-- Tab 2: WIFI设置 -->
+        <el-tab-pane label="WIFI设置" name="wifi" lazy>
+          <el-form :model="wifiForm" label-width="120px" label-align="left" label-position="left" class="config-form wifi-form">
             <el-form-item label="SSID">
-              <el-input v-model="wifiForm.ssid" placeholder="请输入 SSID" />
+              <el-input v-model="wifiForm.ssid" placeholder="请输入 SSID" maxlength="32" show-word-limit />
             </el-form-item>
             <el-form-item label="密码">
               <el-input
                 v-model="wifiForm.password"
                 :type="wifiForm.passwordVisible ? 'text' : 'password'"
                 placeholder="请输入密码"
+                maxlength="63"
+                show-word-limit
               >
                 <template #append>
-                  <el-button link :disabled="wifiSaving" @click="togglePasswordVisibility">
-                    {{ wifiForm.passwordVisible ? '隐藏' : '显示' }}
+                  <el-button link :disabled="wifiSaving" :aria-label="wifiForm.passwordVisible ? '隐藏' : '显示'" @click="togglePasswordVisibility">
+                    <el-icon :size="16">
+                      <View v-if="!wifiForm.passwordVisible" />
+                      <Hide v-else />
+                    </el-icon>
                   </el-button>
                 </template>
               </el-input>
@@ -68,20 +61,14 @@
             <el-button type="primary" size="large" :loading="wifiSaving" @click="saveWifi">保存 & 应用</el-button>
             <el-button type="warning" size="large" :disabled="wifiSaving" @click="resetWifiDefaults">恢复默认</el-button>
           </div>
-        </el-card>
+        </el-tab-pane>
 
-        <el-card class="config-card lan-accent-emerald lan-span-2">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">子网设备</span>
-              <el-tag type="info">实时</el-tag>
-            </div>
-          </template>
-
+        <!-- Tab 3: 子网设备 -->
+        <el-tab-pane label="子网设备" name="devices">
           <el-table
             v-loading="dhcpLeasesLoading"
             :data="dhcpLeases"
-            height="320"
+            height="420"
             table-layout="fixed"
             border
             class="dhcp-lease-table"
@@ -99,8 +86,8 @@
               </template>
             </el-table-column>
           </el-table>
-        </el-card>
-      </div>
+        </el-tab-pane>
+      </el-tabs>
     </el-card>
   </div>
 </template>
@@ -110,6 +97,7 @@ export default {
   name: 'lan-settings',
   data() {
     return {
+      activeTab: 'dhcp',
       dhcpForm: {
         ipaddr: '',
         netmask: '',
@@ -420,6 +408,10 @@ export default {
         this.$message.error('密码长度至少 8 位')
         return
       }
+      if (password.length > 63) {
+        this.$message.error('密码长度不能超过 63 位')
+        return
+      }
 
       this.wifiSaving = true
       try {
@@ -474,83 +466,33 @@ export default {
   color: var(--el-text-color-primary);
 }
 
-.lan-grid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: minmax(360px, 1fr) minmax(360px, 1fr);
-  align-items: stretch;
-}
-
-.config-card {
-  height: 100%;
-  border: 1px solid var(--el-border-color);
-  border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+/* ---- el-tabs 样式(与 management-tabs 统一) ---- */
+.lan-tabs {
+  border-radius: 12px;
   overflow: hidden;
-  position: relative;
 }
 
-.config-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  border-radius: 16px 0 0 16px;
-  background: #cbd5e1;
+.lan-tabs :deep(.el-tabs__header) {
+  background-color: var(--el-fill-color-light);
 }
 
-.lan-accent-blue::before {
-  background: #3b82f6;
-}
-
-.lan-accent-violet::before {
-  background: #8b5cf6;
-}
-
-.lan-accent-emerald::before {
-  background: #10b981;
-}
-
-.lan-accent-slate::before {
-  background: #64748b;
-}
-
-:deep(.config-card .el-card__header) {
-  padding: 14px 18px 0;
-  border-bottom: 0;
-}
-
-:deep(.config-card .el-card__body) {
-  padding: 12px 18px 18px;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.card-title {
-  font-size: 15px;
+.lan-tabs :deep(.el-tabs__item) {
   font-weight: 600;
-  color: var(--el-text-color-primary);
+  font-size: 14px;
 }
 
 .config-form {
   padding: 10px 0;
 }
 
-.pool-ip {
-  width: 100%;
+/* DHCP表单: IP输入框宽度固定, 避免过长 */
+.dhcp-form :deep(.el-input) {
+  width: 260px;
 }
 
-.lan-span-2 {
-  grid-column: 1 / -1;
+/* WiFi表单: 输入框宽度固定, 避免过长 */
+.wifi-form :deep(.el-input) {
+  width: 260px;
 }
 
 .dhcp-lease-table {
@@ -558,16 +500,9 @@ export default {
 }
 
 .card-actions {
-  margin-top: auto;
-  padding-top: 12px;
+  margin-top: 12px;
   display: flex;
   justify-content: center;
   gap: 15px;
-}
-
-@media (max-width: 960px) {
-  .lan-grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
