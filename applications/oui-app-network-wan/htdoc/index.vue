@@ -592,10 +592,8 @@ export default {
         this.wanLinks.forEach((_, index) => {
           if (this.getRpcIndex(index) === null)
             return
-          this.$timer.create('sim-product' + index, () => this.getProductInfo(index), { time: 15000, repeat: true, autostart: false })
-          this.$timer.create('sim-status' + index, () => this.getStatus(index), { time: 10000, repeat: true, autostart: false })
+          this.$timer.create('sim-overview' + index, () => this.getSimOverview(index), { time: 1000, repeat: true, autostart: false })
           this.$timer.create('modules' + index, () => this.getModuleSettings(index), { time: 12000, repeat: true, autostart: false })
-          this.$timer.create('interface' + index, () => this.getInterfaceStatus(index), { time: 1000, repeat: true, autostart: false })
         })
 
         return Promise.all(simPromises).then(() => {
@@ -604,10 +602,8 @@ export default {
           this.wanLinks.forEach((_, index) => {
             if (this.getRpcIndex(index) === null)
               return
-            firstRoundPromises.push(this.getProductInfo(index).catch(() => {}))
-            firstRoundPromises.push(this.getStatus(index).catch(() => {}))
+            firstRoundPromises.push(this.getSimOverview(index).catch(() => {}))
             firstRoundPromises.push(this.getModuleSettings(index).catch(() => {}))
-            firstRoundPromises.push(this.getInterfaceStatus(index).catch(() => {}))
           })
 
           return Promise.all(firstRoundPromises).then(() => {
@@ -779,12 +775,12 @@ export default {
 
       this.resetTrafficSeries()
 
-      this.wanLinks.forEach((_, index) => this.getInterfaceStatus(index))
+      this.wanLinks.forEach((_, index) => this.getSimOverview(index))
       this.fetchWanPortStatesOnce()
       setTimeout(() => {
         if (this.currentView !== 'main' || !this.trafficEnabled)
           return
-        this.wanLinks.forEach((_, index) => this.getInterfaceStatus(index))
+        this.wanLinks.forEach((_, index) => this.getSimOverview(index))
         this.fetchWanPortStatesOnce()
       }, this.traffic.intervalSec * 1000)
     },
@@ -807,12 +803,12 @@ export default {
         const indexes = this.wanLinks
           .map((_, index) => index)
           .filter(index => this.getRpcIndex(index) !== null)
-        this.startPollingForIndexes(indexes, { status: true, product: true, modules: true, interface: this.trafficEnabled })
+        this.startPollingForIndexes(indexes, { overview: true, modules: true })
         return
       }
 
       if (this.currentView === 'sim-config' && typeof this.selectedWanIndex === 'number') {
-        this.startPollingForIndexes([this.selectedWanIndex], { status: true, product: true, modules: true, interface: true })
+        this.startPollingForIndexes([this.selectedWanIndex], { overview: true, modules: true })
       }
     },
     // 为指定的索引列表启动轮询任务
@@ -820,31 +816,21 @@ export default {
       indexes.forEach((index) => {
         if (this.getRpcIndex(index) === null)
           return
-        if (plan.product) {
-          this.$timer.start('sim-product' + index)
-          this.getProductInfo(index)
-        }
-        if (plan.status) {
-          this.$timer.start('sim-status' + index)
-          this.getStatus(index)
+        if (plan.overview) {
+          this.$timer.start('sim-overview' + index)
+          this.getSimOverview(index)
         }
         if (plan.modules) {
           this.$timer.start('modules' + index)
           this.getModuleSettings(index)
-        }
-        if (plan.interface) {
-          this.$timer.start('interface' + index)
-          this.getInterfaceStatus(index)
         }
       })
     },
     // 停止所有 SIM 相关的轮询定时器
     stopAllPolling() {
       this.wanLinks.forEach((_, index) => {
-        this.$timer.stop('sim-product' + index)
-        this.$timer.stop('sim-status' + index)
+        this.$timer.stop('sim-overview' + index)
         this.$timer.stop('modules' + index)
-        this.$timer.stop('interface' + index)
       })
     },
     // 防止重复调用 RPC 的辅助函数
@@ -868,24 +854,23 @@ export default {
       default: return ''
       }
     },
-    // 获取 SIM 卡的产品信息（厂家、型号、IMEI、ICCID、IMSI）
-    getProductInfo(index) {
-      return this.withInFlight('getProductInfo:' + index, () => {
+    // 一次 RPC 拉取 sim 链路全部展示数据(后端 sim.getOverview 聚合
+    // getStatus + getProductInfo + getInterfaceStatus 三个旧接口)
+    getSimOverview(index) {
+      return this.withInFlight('getSimOverview:' + index, () => {
         const token = this._pollingToken
         const rpcIndex = this.getRpcIndex(index)
         if (rpcIndex === null)
           return
-        return this.$oui.call('sim', 'getProductInfo', { ifname: rpcIndex }).then(result => {
+        return this.$oui.call('sim', 'getOverview', { ifname: rpcIndex }).then(result => {
           if (token !== this._pollingToken)
             return
-          if (this.currentView === 'sim-config' && this.selectedWanIndex !== index)
-            return
-          if (this.currentView !== 'sim-config' && this.currentView !== 'main')
+          const isDetail = this.currentView === 'sim-config' && this.selectedWanIndex === index
+          const isMain = this.currentView === 'main'
+          if (!isDetail && !isMain)
             return
 
           let data = result
-          console.log(data)
-
           if (typeof result === 'string') {
             try {
               data = JSON.parse(result)
@@ -893,13 +878,197 @@ export default {
               return
             }
           }
-          const productInfo = this.wanLinks[index].productInfo
+          if (!data || typeof data !== 'object')
+            return
+
+          const link = this.wanLinks[index]
+          if (!link)
+            return
+
+          // 模组是否被系统识别(后端通过 sysfs 判断)
+          if (typeof data.moduleExist === 'boolean')
+            link.moduleExist = data.moduleExist
+
+          // 产品信息
+          const productInfo = link.productInfo
           if (data.vendor) productInfo.vendor = data.vendor
           if (data.product) productInfo.product = data.product
           if (data.revision) productInfo.revision = data.revision
           if (data.imei) productInfo.imei = data.imei
           if (data.iccid) productInfo.iccid = data.iccid
           if (data.imsi) productInfo.imsi = data.imsi
+
+          // sim 概要
+          const sim = link.sim
+          if (data.sim) sim.status = data.sim
+          if (data.operator_name) sim.operator = data.operator_name
+          if (data.country) sim.country = data.country
+          if (data.mcc) sim.mcc = data.mcc
+          if (data.mnc) sim.mnc = data.mnc
+
+          // 网口实时状态
+          const inter = link.status.interface
+          if (data.up !== undefined) inter.up = !!data.up
+          if (data.ip !== undefined) inter.ip = data.ip || ''
+          if (data.mask !== undefined) inter.mask = data.mask || ''
+          if (data.gateway !== undefined) inter.gateway = data.gateway || ''
+          if (data.mac !== undefined) inter.mac = data.mac || ''
+          if (data.rxBytes) inter.rxBytes = data.rxBytes
+          if (data.txBytes) inter.txBytes = data.txBytes
+          this.recordTrafficSample(index, data.rxBytes, data.txBytes)
+
+          // NR/LTE频率频段信息
+          if (data.freqInfo) {
+            let freqInfo = data.freqInfo
+            if (typeof freqInfo === 'string') {
+              try {
+                freqInfo = JSON.parse(freqInfo)
+              } catch {
+                freqInfo = null
+              }
+            }
+
+            if (freqInfo) {
+              const fi = link.freqInfo
+              if (freqInfo.sysmode !== null && freqInfo.sysmode !== undefined)
+                fi.sysmode = String(freqInfo.sysmode)
+
+              const classes = freqInfo.class || freqInfo.classes || freqInfo.bands
+              fi.class = Array.isArray(classes) ? classes : []
+            }
+          }
+
+          // 5G 核心网注册状态
+          {
+            let c5 = data.C5GCore || data['5GCore']
+            if (typeof c5 === 'string') {
+              try {
+                c5 = JSON.parse(c5)
+              } catch {
+                c5 = null
+              }
+            }
+            if (c5) {
+              if (c5.stat) link.NR_5GCore.stat = c5.stat
+              if (c5.tac) link.NR_5GCore.tac = c5.tac
+              if (c5.ci) link.NR_5GCore.ci = c5.ci
+              if (c5.act) link.NR_5GCore.act = c5.act
+            }
+          }
+
+          // CS域注册状态
+          {
+            let cs = data.C4GCore || data['4GCore']
+            if (typeof cs === 'string') {
+              try {
+                cs = JSON.parse(cs)
+              } catch {
+                cs = null
+              }
+            }
+            if (cs) {
+              if (cs.stat) link.CS.stat = cs.stat
+              if (cs.lac) link.CS.lac = cs.lac
+              if (cs.ci) link.CS.ci = cs.ci
+              if (cs.act) link.CS.act = cs.act
+            }
+          }
+
+          // HCSQ 信号强度(优先于 monsc 中的值)
+          if (data.hcsq) {
+            let h = data.hcsq
+            if (typeof h === 'string') {
+              try {
+                h = JSON.parse(h)
+              } catch {
+                h = null
+              }
+            }
+            if (h) {
+              const hcsq = link.status.hcsq
+              if (h.sysmode) hcsq.sysmode = h.sysmode
+              if (h.rsrp) hcsq.rsrp = h.rsrp
+              if (h.rsrp_dbm) hcsq.rsrp_dbm = h.rsrp_dbm
+              if (h.rsrq) hcsq.rsrq = h.rsrq
+              if (h.rsrq_db) hcsq.rsrq_db = h.rsrq_db
+              if (h.sinr) hcsq.sinr = h.sinr
+              if (h.sinr_db) hcsq.sinr_db = h.sinr_db
+              if (h.rssi) hcsq.rssi = h.rssi
+              if (h.rssi_dbm) hcsq.rssi_dbm = h.rssi_dbm
+              // HCSQ 的 sysmode 比 monsc.rat 更准
+              const sysmode = String(h.sysmode).toUpperCase()
+              const status = link.status
+              if (sysmode.indexOf('NR') !== -1) {
+                if (h.rsrp_dbm) status.nr.rsrp = String(h.rsrp_dbm) + 'dBm'
+                if (h.rsrq_db) status.nr.rsrq = String(h.rsrq_db) + 'dB'
+                if (h.sinr_db) status.nr.sinr = String(h.sinr_db) + 'dB'
+              } else if (sysmode.indexOf('LTE') !== -1) {
+                if (h.rsrp_dbm) status.lte.rsrp = String(h.rsrp_dbm) + 'dBm'
+                if (h.rsrq_db) status.lte.rsrq = String(h.rsrq_db) + 'dB'
+                if (h.sinr_db) status.lte.sinr = String(h.sinr_db) + 'dB'
+                if (h.rssi_dbm) status.lte.rssi = String(h.rssi_dbm) + 'dBm'
+              }
+              if (h.sysmode) status.rat = h.sysmode
+            }
+          }
+
+          // 状态时间戳
+          if (data.timestamp) link.status.timestamp = data.timestamp
+          if (data.now) link.status.routerTime = data.now
+
+          // 小区信息
+          if (data.monsc) {
+            const monsc = data.monsc
+            const status = link.status
+            if (data.monsc.rat) status.rat = data.monsc.rat
+            const cell = monsc.cell
+            if (cell) {
+              if (cell.type === 'nr') {
+                if (cell.rsrp) status.nr.rsrp = cell.rsrp
+                if (cell.rsrq) status.nr.rsrq = cell.rsrq
+                if (cell.sinr) status.nr.sinr = cell.sinr
+                if (cell.band) status.nr.band = cell.band
+              } else if (cell.type === 'lte') {
+                if (cell.rsrp) status.lte.rsrp = cell.rsrp
+                if (cell.rsrq) status.lte.rsrq = cell.rsrq
+                if (cell.sinr) status.lte.sinr = cell.sinr
+                if (cell.rssi) status.lte.rssi = cell.rssi
+                if (cell.band) status.lte.band = cell.band
+              }
+            }
+
+            const newest = createEmptyMonsc()
+            if (monsc.rat) newest.rat = monsc.rat
+            if (monsc.mcc) newest.mcc = monsc.mcc
+            if (monsc.mnc) newest.mnc = monsc.mnc
+            if (monsc.cell) {
+              if (monsc.cell.type) newest.cell.type = monsc.cell.type
+              if (monsc.cell.arfcn) newest.cell.arfcn = monsc.cell.arfcn
+              if (monsc.cell.scs) newest.cell.scs = monsc.cell.scs
+              if (monsc.cell.cell_id) newest.cell.cell_id = monsc.cell.cell_id
+              if (monsc.cell.pci) newest.cell.pci = monsc.cell.pci
+              if (monsc.cell.tac) newest.cell.tac = monsc.cell.tac
+              if (monsc.cell.rsrp) newest.cell.rsrp = monsc.cell.rsrp
+              if (monsc.cell.rsrq) newest.cell.rsrq = monsc.cell.rsrq
+              if (monsc.cell.sinr) newest.cell.sinr = monsc.cell.sinr
+              if (monsc.cell.rssi) newest.cell.rssi = monsc.cell.rssi
+            }
+            link.monsc = newest
+          } else {
+            link.monsc = createEmptyMonsc()
+          }
+
+          // 邻区列表
+          const monnc = createEmptyMonnc()
+          if (data.monnc) {
+            if (Array.isArray(data.monnc.gsm)) monnc.gsm = data.monnc.gsm
+            if (Array.isArray(data.monnc.wcdma)) monnc.wcdma = data.monnc.wcdma
+            if (Array.isArray(data.monnc.lte)) monnc.lte = data.monnc.lte
+            if (Array.isArray(data.monnc.nr)) monnc.nr = data.monnc.nr
+          }
+          link.monnc = monnc
+        }).catch(err => {
+          console.warn('getSimOverview failed for index', index, err)
         })
       })
     },
@@ -958,229 +1127,6 @@ export default {
             if (data.ltefreqlock.arfcn) real.ltefreqlock.arfcn = data.ltefreqlock.arfcn
             if (data.ltefreqlock.pci) real.ltefreqlock.pci = data.ltefreqlock.pci
           }
-        })
-      })
-    },
-    // 获取 SIM 卡的状态信息（注册状态、信号强度、小区信息等）
-    getStatus(index) {
-      return this.withInFlight('getStatus:' + index, () => {
-        const token = this._pollingToken
-        const rpcIndex = this.getRpcIndex(index)
-        if (rpcIndex === null)
-          return
-        return this.$oui.call('sim', 'getStatus', { ifname: rpcIndex }).then(result => {
-          if (token !== this._pollingToken)
-            return
-
-          // console.log('status', result)
-
-          let data = result
-          if (typeof result === 'string') {
-            try {
-              data = JSON.parse(result)
-            } catch {
-              return
-            }
-          }
-
-          const link = this.wanLinks[index]
-          // 模组是否被系统识别(后端通过 sysfs 判断)
-          if (typeof data.moduleExist === 'boolean')
-            link.moduleExist = data.moduleExist
-          const sim = link.sim
-          if (data.sim) sim.status = data.sim
-          if (data.operator_name) sim.operator = data.operator_name
-          if (data.country) sim.country = data.country
-          if (data.mcc) sim.mcc = data.mcc
-          if (data.mnc) sim.mnc = data.mnc
-          const isDetail = this.currentView === 'sim-config' && this.selectedWanIndex === index
-          const isMain = this.currentView === 'main'
-          if (!isDetail && !isMain)
-            return
-
-          // NR/LTE频率频段信息
-          if (data.freqInfo) {
-            let freqInfo = data.freqInfo
-            if (typeof freqInfo === 'string') {
-              try {
-                freqInfo = JSON.parse(freqInfo)
-              } catch {
-                freqInfo = null
-              }
-            }
-
-            if (freqInfo) {
-              const fi = link.freqInfo
-              if (freqInfo.sysmode !== null && freqInfo.sysmode !== undefined)
-                fi.sysmode = String(freqInfo.sysmode)
-
-              const classes = freqInfo.class || freqInfo.classes || freqInfo.bands
-              fi.class = Array.isArray(classes) ? classes : []
-            }
-          }
-
-          {
-            let c5 = data.C5GCore || data['5GCore']
-            if (typeof c5 === 'string') {
-              try {
-                c5 = JSON.parse(c5)
-              } catch {
-                c5 = null
-              }
-            }
-            if (c5) {
-              if (c5.stat) link.NR_5GCore.stat = c5.stat
-              if (c5.tac) link.NR_5GCore.tac = c5.tac
-              if (c5.ci) link.NR_5GCore.ci = c5.ci
-              if (c5.act) link.NR_5GCore.act = c5.act
-            }
-          }
-
-          // CS域注册状态
-          {
-            let cs = data.C4GCore || data['4GCore']
-            if (typeof cs === 'string') {
-              try {
-                cs = JSON.parse(cs)
-              } catch {
-                cs = null
-              }
-            }
-            if (cs) {
-              if (cs.stat) link.CS.stat = cs.stat
-              if (cs.lac) link.CS.lac = cs.lac
-              if (cs.ci) link.CS.ci = cs.ci
-              if (cs.act) link.CS.act = cs.act
-            }
-          }
-
-          // HCSQ 信号强度（优先于 monsc 中的值）
-          if (data.hcsq) {
-            console.log(data.hcsq)
-            let h = data.hcsq
-            if (typeof h === 'string') {
-              try {
-                h = JSON.parse(h)
-              } catch {
-                h = null
-              }
-            }
-            if (h) {
-              const hcsq = link.status.hcsq
-              if (h.sysmode) hcsq.sysmode = h.sysmode
-              if (h.rsrp) hcsq.rsrp = h.rsrp
-              if (h.rsrp_dbm) hcsq.rsrp_dbm = h.rsrp_dbm
-              if (h.rsrq) hcsq.rsrq = h.rsrq
-              if (h.rsrq_db) hcsq.rsrq_db = h.rsrq_db
-              if (h.sinr) hcsq.sinr = h.sinr
-              if (h.sinr_db) hcsq.sinr_db = h.sinr_db
-              if (h.rssi) hcsq.rssi = h.rssi
-              if (h.rssi_dbm) hcsq.rssi_dbm = h.rssi_dbm
-              // HCSQ 的 sysmode 比 monsc.rat 更准
-              const sysmode = String(h.sysmode).toUpperCase()
-              const status = link.status
-              if (sysmode.indexOf('NR') !== -1) {
-                if (h.rsrp_dbm) status.nr.rsrp = String(h.rsrp_dbm) + 'dBm'
-                if (h.rsrq_db) status.nr.rsrq = String(h.rsrq_db) + 'dB'
-                if (h.sinr_db) status.nr.sinr = String(h.sinr_db) + 'dB'
-              } else if (sysmode.indexOf('LTE') !== -1) {
-                if (h.rsrp_dbm) status.lte.rsrp = String(h.rsrp_dbm) + 'dBm'
-                if (h.rsrq_db) status.lte.rsrq = String(h.rsrq_db) + 'dB'
-                if (h.sinr_db) status.lte.sinr = String(h.sinr_db) + 'dB'
-                if (h.rssi_dbm) status.lte.rssi = String(h.rssi_dbm) + 'dBm'
-              }
-              if (h.sysmode) status.rat = h.sysmode
-            }
-          }
-
-          // NR/LTE信号强度
-          if (data.timestamp) link.status.timestamp = data.timestamp
-          if (data.now) link.status.routerTime = data.now
-          if (data.monsc) {
-            const monsc = data.monsc
-            const status = link.status
-            if (data.monsc.rat) status.rat = data.monsc.rat
-            const cell = monsc.cell
-            if (cell) {
-              if (cell.type === 'nr') {
-                if (cell.rsrp) status.nr.rsrp = cell.rsrp
-                if (cell.rsrq) status.nr.rsrq = cell.rsrq
-                if (cell.sinr) status.nr.sinr = cell.sinr
-                if (cell.band) status.nr.band = cell.band
-              } else if (cell.type === 'lte') {
-                if (cell.rsrp) status.lte.rsrp = cell.rsrp
-                if (cell.rsrq) status.lte.rsrq = cell.rsrq
-                if (cell.sinr) status.lte.sinr = cell.sinr
-                if (cell.rssi) status.lte.rssi = cell.rssi
-                if (cell.band) status.lte.band = cell.band
-              }
-            }
-
-            const newest = createEmptyMonsc()
-            if (monsc.rat) newest.rat = monsc.rat
-            if (monsc.mcc) newest.mcc = monsc.mcc
-            if (monsc.mnc) newest.mnc = monsc.mnc
-            if (monsc.cell) {
-              if (monsc.cell.type) newest.cell.type = monsc.cell.type
-              if (monsc.cell.arfcn) newest.cell.arfcn = monsc.cell.arfcn
-              if (monsc.cell.scs) newest.cell.scs = monsc.cell.scs
-              if (monsc.cell.cell_id) newest.cell.cell_id = monsc.cell.cell_id
-              if (monsc.cell.pci) newest.cell.pci = monsc.cell.pci
-              if (monsc.cell.tac) newest.cell.tac = monsc.cell.tac
-              if (monsc.cell.rsrp) newest.cell.rsrp = monsc.cell.rsrp
-              if (monsc.cell.rsrq) newest.cell.rsrq = monsc.cell.rsrq
-              if (monsc.cell.sinr) newest.cell.sinr = monsc.cell.sinr
-              if (monsc.cell.rssi) newest.cell.rssi = monsc.cell.rssi
-            }
-            link.monsc = newest
-          } else {
-            link.monsc = createEmptyMonsc()
-          }
-
-          const monnc = createEmptyMonnc()
-          if (data.monnc) {
-            if (Array.isArray(data.monnc.gsm)) monnc.gsm = data.monnc.gsm
-            if (Array.isArray(data.monnc.wcdma)) monnc.wcdma = data.monnc.wcdma
-            if (Array.isArray(data.monnc.lte)) monnc.lte = data.monnc.lte
-            if (Array.isArray(data.monnc.nr)) monnc.nr = data.monnc.nr
-          }
-          link.monnc = monnc
-        }).catch(err => {
-          console.warn('getStatus failed for index', index, err)
-        })
-      })
-    },
-    // 获取网络接口信息
-    getInterfaceStatus(index) {
-      return this.withInFlight('getInterfaceStatus:' + index, () => {
-        const token = this._pollingToken
-        const rpcIndex = this.getRpcIndex(index)
-        if (rpcIndex === null)
-          return
-        return this.$oui.call('sim', 'getInterfaceStatus', { ifname: rpcIndex }).then(result => {
-          if (token !== this._pollingToken)
-            return
-          if (!((this.currentView === 'sim-config' && this.selectedWanIndex === index) || (this.currentView === 'main' && this.trafficEnabled)))
-            return
-
-          let data = result
-          if (typeof result === 'string') {
-            try {
-              data = JSON.parse(result)
-            } catch {
-              return
-            }
-          }
-          const inter = this.wanLinks[index].status.interface
-          if (data.up !== undefined) inter.up = !!data.up
-          if (data.ip !== undefined) inter.ip = data.ip || ''
-          if (data.mask !== undefined) inter.mask = data.mask || ''
-          if (data.gateway !== undefined) inter.gateway = data.gateway || ''
-          if (data.mac !== undefined) inter.mac = data.mac || ''
-          if (data.rxBytes) inter.rxBytes = data.rxBytes
-          if (data.txBytes) inter.txBytes = data.txBytes
-
-          this.recordTrafficSample(index, data.rxBytes, data.txBytes)
         })
       })
     },

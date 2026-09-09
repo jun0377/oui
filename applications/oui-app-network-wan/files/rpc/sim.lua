@@ -1,6 +1,7 @@
 local M = {}
 local log = require 'log'
 local uci = require 'eco.uci'
+local ubus = require 'eco.ubus'
 local cjson = require 'cjson'
 
 log.level = 'trace'
@@ -1408,6 +1409,134 @@ function M.getAtLogs(params)
     })
 end
 
+
+-- ==================== sim 链路状态聚合(方案B) ====================
+-- 一次 RPC 返回 sim 的实时状态/产品信息/接口运行数据, 内部基于
+-- netifd(eco.ubus) + sysfs(io.open) 进程内取数, 不产生阻塞性子进程,
+-- 供页面以每秒一次的频率轮询, 避免拖慢单线程 httpd。
+
+local function prefix_mask_str(prefix)
+    local n = tonumber(prefix)
+    if not n or n < 0 or n > 32 then
+        return ''
+    end
+    local parts = {}
+    for i = 1, 4 do
+        local bits = n >= 8 and 8 or (n > 0 and n or 0)
+        parts[i] = tostring((0xff << (8 - bits)) & 0xff)
+        n = n - bits
+    end
+    return table.concat(parts, '.')
+end
+
+local function read_trim(path)
+    local f = io.open(path, 'r')
+    if not f then
+        return ''
+    end
+    local data = f:read('*a')
+    f:close()
+    return (data or ''):gsub('[\r\n]', '')
+end
+
+-- 一次拉取 sim 链路的全部展示数据(字段对齐 getStatus + getProductInfo + getInterfaceStatus)
+function M.getOverview(ifname)
+    ifname = getIfname(ifname)
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local ret = {}
+
+    -- 1) sim 实时状态(纯文件读, 复用 M.getStatus)
+    local ok, st = pcall(cjson.decode, M.getStatus(ifname))
+    if ok and type(st) == 'table' then
+        ret.timestamp = st.timestamp
+        ret.now = st.now
+        ret.sim = st.sim
+        ret.country = st.country
+        ret.mcc = st.mcc
+        ret.mnc = st.mnc
+        ret.operator_name = st.operator_name
+        ret.freqInfo = st.freqInfo
+        ret.C5GCore = st.C5GCore
+        ret.C4GCore = st.C4GCore
+        ret.monsc = st.monsc
+        ret.monnc = st.monnc
+        ret.hcsq = st.hcsq
+        ret.moduleExist = (st.moduleExist == true)
+    end
+
+    -- 2) 产品信息(纯文件读, 复用 M.getProductInfo)
+    local ok2, pt = pcall(cjson.decode, M.getProductInfo(ifname))
+    if ok2 and type(pt) == 'table' then
+        ret.vendor = pt.vendor
+        ret.product = pt.product
+        ret.revision = pt.revision
+        ret.imei = pt.imei
+        ret.iccid = pt.iccid
+        ret.imsi = pt.imsi
+    end
+
+    -- 3) 接口运行状态(基于 netifd + sysfs, 无子进程)
+    local code = -1
+    local up = false
+    local ip, mask, gateway, mac = '', '', '', ''
+    local rxBytes, txBytes = '', ''
+    local dev = ''
+
+    local ok3, ns = pcall(ubus.call, string.format('network.interface.%s', ifname), 'status', {})
+    if ok3 and type(ns) == 'table' then
+        code = 0
+        up = ns.up == true
+        dev = ns.l3_device or ns.device or ''
+        if type(ns['ipv4-address']) == 'table' then
+            for _, a in ipairs(ns['ipv4-address']) do
+                if type(a) == 'table' and a.address and a.address ~= '0.0.0.0' then
+                    ip = a.address
+                    mask = prefix_mask_str(a.mask)
+                    break
+                end
+            end
+        end
+        if type(ns.route) == 'table' then
+            for _, r in ipairs(ns.route) do
+                if type(r) == 'table' and r.target == '0.0.0.0' and r.nexthop and r.nexthop ~= '0.0.0.0' then
+                    gateway = r.nexthop
+                    break
+                end
+            end
+        end
+    end
+    if gateway == '' then
+        local c = uci.cursor()
+        local gw = c:get('network', ifname, 'gateway')
+        if gw and gw ~= '' then
+            gateway = gw
+        end
+    end
+    if dev == '' then
+        -- 兜底: 模组 tracker 记录的接口名
+        dev = read_trim(string.format('/tmp/tracker-sim/%s/interface', ifname))
+    end
+    if dev ~= '' then
+        mac = read_trim(string.format('/sys/class/net/%s/address', dev))
+        rxBytes = read_trim(string.format('/sys/class/net/%s/statistics/rx_bytes', dev))
+        txBytes = read_trim(string.format('/sys/class/net/%s/statistics/tx_bytes', dev))
+    end
+
+    ret.code = code
+    ret.up = up
+    ret.ip = ip
+    ret.mask = mask
+    ret.gateway = gateway
+    ret.mac = mac
+    ret.rxBytes = rxBytes
+    ret.txBytes = txBytes
+
+    return ret
+end
 
 
 return M
