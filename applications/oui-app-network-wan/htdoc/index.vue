@@ -312,6 +312,8 @@ const createEmptyMonnc = () => ({
 const createDefaultWanLink = (index) => {
 
   return {
+    // 模组是否被系统识别(未安装模组 / 未上电时为 false)
+    moduleExist: true,
     settings: {
       index: index,
       ifname: '',
@@ -982,6 +984,9 @@ export default {
           }
 
           const link = this.wanLinks[index]
+          // 模组是否被系统识别(后端通过 sysfs 判断)
+          if (typeof data.moduleExist === 'boolean')
+            link.moduleExist = data.moduleExist
           const sim = link.sim
           if (data.sim) sim.status = data.sim
           if (data.operator_name) sim.operator = data.operator_name
@@ -1539,6 +1544,10 @@ export default {
       // 检查是否使能
       if (link.settings && !link.settings.enable)
         return '已禁用'
+
+      // 检查模组是否被系统识别(未安装模组或模组未上电)
+      if (link.moduleExist === false)
+        return '模组不存在'
 
       // 检查是否插卡（ICCID 为空说明未插卡/未插网线）
       const iccid = link.productInfo && link.productInfo.iccid

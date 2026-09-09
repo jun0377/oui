@@ -736,6 +736,18 @@ function M.getStatus(ifname)
     local monnc = getRealTimeStatusMONNC(ifname)
     local hcsq = getRealTimeStatusHCSQ(ifname)
 
+    -- 模组是否被系统识别: 检查 uci sim.<name>.usb 指向的 sysfs 目录是否存在
+    -- (有的设备可能未安装模组或模组未上电)
+    local moduleExist = false
+    local usb = getSimUsb(ifname)
+    if usb and usb ~= '' then
+        local f = io.open(usb, 'r')
+        if f then
+            f:close()
+            moduleExist = true
+        end
+    end
+
     local function esc(s)
         return s:gsub('\\', '\\\\'):gsub('"', '\\"')
     end
@@ -752,7 +764,7 @@ function M.getStatus(ifname)
     end
 
     local ret = string.format(
-        '{"timestamp":"%s","now":"%s","sim":"%s","country":"%s","mcc":"%s","mnc":"%s","operator_name":"%s","freqInfo":%s,"C5GCore":%s,"C4GCore":%s,"monsc":%s,"monnc":%s,"hcsq":%s}',
+        '{"timestamp":"%s","now":"%s","sim":"%s","country":"%s","mcc":"%s","mnc":"%s","operator_name":"%s","freqInfo":%s,"C5GCore":%s,"C4GCore":%s,"monsc":%s,"monnc":%s,"hcsq":%s,"moduleExist":%s}',
         esc(timestamp),
         esc(now),
         esc(sim),
@@ -765,7 +777,8 @@ function M.getStatus(ifname)
         jsonval(C4GCore),
         jsonval(monsc),
         jsonval(monnc),
-        jsonval(hcsq)
+        jsonval(hcsq),
+        tostring(moduleExist)
     )
 
     -- log.info(ret)

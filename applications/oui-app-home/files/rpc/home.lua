@@ -441,6 +441,24 @@ local function collect_sim_link(name)
         dev = runtime.interface
     end
 
+    local settings = sim_section_values(name)
+
+    -- 模组是否被系统识别: 通过 sysfs 目录检查
+    -- 有的设备可能未安装模组或模组未上电
+    -- root@MP-Router:~# uci get sim.sim1.usb
+    -- /sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/2-1
+    -- root@MP-Router:~# ls /sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/2-1
+    -- ls: /sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/2-1: No such file or directory
+    local moduleExist = false
+    local usb = trim_str(settings.usb)
+    if usb ~= '' then
+        local f = io.open(usb, 'r')
+        if f then
+            f:close()
+            moduleExist = true
+        end
+    end
+
     -- 产品信息(等价于 sim.getProductInfo)
     local product = {
         vendor = read_sim_file(name, 'vendor'),
@@ -476,7 +494,8 @@ local function collect_sim_link(name)
         kind = 'sim',
         name = name,
         device = dev,
-        settings = sim_section_values(name),
+        moduleExist = moduleExist,
+        settings = settings,
         product = product,
         simStatus = simStatus,
         status = runtime

@@ -756,6 +756,10 @@ export default {
       if (settings.enable === '0' || settings.enable === 'false') {
         statusText = '已禁用'
         statusTagType = 'danger'
+      } else if (link.moduleExist === false) {
+        // 模组未被系统识别(未安装模组 / 未上电)
+        statusText = '模组不存在'
+        statusTagType = 'danger'
       } else {
         const iccid = productInfo.iccid || ''
         if (iccid === '' || iccid === '-') {
