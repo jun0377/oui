@@ -717,7 +717,9 @@ export default {
       simTab: 'status',
       nowTick: 0,
       // 路由器与浏览器时钟偏移(ms), 在 routerTime 更新时校准并冻结
-      clockOffset: 0
+      clockOffset: 0,
+      // 模组是否被系统识别(未安装模组 / 未上电时为 false)
+      moduleExist: true
     }
   },
   created() {
@@ -944,6 +946,9 @@ export default {
         return
       this.status = data.status
       this.productInfo = data.productInfo
+      // 模组是否被系统识别(父级通过 sim.getOverview 同步到 wanData)
+      if (typeof data.moduleExist === 'boolean')
+        this.moduleExist = data.moduleExist
       this.sim = data.sim
       this.freqInfo = data.freqInfo
       this.NR_5GCore = data.NR_5GCore
@@ -1185,6 +1190,9 @@ export default {
     getStatusText() {
       if (!this.settings.enable)
         return '已禁用'
+      // 模组是否被系统识别(未安装模组或模组未上电)
+      if (this.moduleExist === false)
+        return '模组不存在'
       if (this.isNoService)
         return '无服务'
       // 判断是否有IP,有IP则返回'在线'
@@ -1207,6 +1215,8 @@ export default {
       const text = this.getStatusText()
       if (text === '已禁用')
         return 'status-badge status-badge-disabled'
+      if (text === '模组不存在')
+        return 'status-badge status-badge-nomodule'
       if (text === '无服务')
         return 'status-badge status-badge-noservice'
       if (text === '在线')
@@ -1872,6 +1882,11 @@ export default {
 .status-badge-noservice {
   background: rgba(245, 158, 11, 0.24);
   color: #d97706;
+}
+
+.status-badge-nomodule {
+  background: rgba(239, 68, 68, 0.16);
+  color: #dc2626;
 }
 
 .status-badge-offline {

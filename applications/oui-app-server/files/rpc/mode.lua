@@ -48,9 +48,8 @@ local function get_device_from_sysfs(c, channel)
         end
     end
 
-    -- 回退到 network 配置中的 device/ifname
-    local dev = c:get('network', channel, 'device') or c:get('network', channel, 'ifname')
-    return trim(dev)
+    -- 无可用物理网口时返回空串
+    return ''
 end
 
 local function get_channel_iface(ubus_conn, channel)
