@@ -229,6 +229,7 @@ export default {
       boardinfo: null,
       interfaceStates: [],
       interfaceLoading: true,
+      interfaceFetching: false,
       interfaceSnapshots: {},
       serial: null,
       version: null,
@@ -707,132 +708,122 @@ export default {
         online: false
       }
     },
-    // 网口 网络接口状态
+    // 网口 网络接口状态 (数据来自 home.getInterfaceOverview 聚合结果)
     buildWanInterfaceCard(link, index) {
       const section = link?.name ? String(link.name) : ''
       const iface = link?.device ? String(link.device) : ''
       const baseCard = this.buildDefaultInterfaceCard(link, index)
-      if (!section || !iface)
-        return Promise.resolve(baseCard)
+      const status = link.status || {}
+      if (!section || !iface || status.code !== 0)
+        return baseCard
 
-      return this.$oui.call('wan', 'getWanState', { section, interface: iface }).then((result) => {
-        const data = this.parseRpcResult(result)
-        if (!data || data.code !== 0)
-          return baseCard
-
-        return {
-          key: section,
-          name: section,
-          ifname: iface || '-',
-          ipv4: this.formatAddressWithMask(data.ip, data.mask),
-          gateway: data.gateway && data.gateway !== '-' ? data.gateway : '-',
-          rxBytes: data.rxBytes,
-          txBytes: data.txBytes,
-          online: data.status === '正常' || (data.ip && data.ip !== '-')
-        }
-      }).catch(() => baseCard)
+      const ip = status.ip && status.ip !== '-' ? status.ip : ''
+      return {
+        key: section,
+        name: section,
+        ifname: iface || '-',
+        ipv4: this.formatAddressWithMask(status.ip, status.mask),
+        gateway: status.gateway && status.gateway !== '-' ? status.gateway : '-',
+        rxBytes: status.rxBytes,
+        txBytes: status.txBytes,
+        online: status.status === '正常' || Boolean(ip)
+      }
     },
-    // sim卡 网络接口状态
+    // sim卡 网络接口状态 (数据来自 home.getInterfaceOverview 聚合结果)
     buildSimInterfaceCard(link, index) {
-      const ifname = link?.name || link?.device || ''
-      const baseCard = this.buildDefaultInterfaceCard(link, index)
-      if (!ifname)
-        return Promise.resolve(baseCard)
+      const settings = link.settings || {}
+      const status = link.status || {}
+      const simStatus = link.simStatus || {}
+      const productInfo = link.product || {}
 
-      return Promise.all([
-        this.$oui.call('sim', 'getSimUciSettings', { ifname }),
-        this.$oui.call('sim', 'getInterfaceStatus', { ifname }),
-        this.$oui.call('sim', 'getStatus', { ifname }),
-        this.$oui.call('sim', 'getProductInfo', { ifname })
-      ]).then(([settingsResult, statusResult, simStatusResult, productResult]) => {
-        const settings = this.parseRpcResult(settingsResult) || {}
-        const status = this.parseRpcResult(statusResult) || {}
-        const simStatus = this.parseRpcResult(simStatusResult) || {}
-        const productInfo = this.parseRpcResult(productResult) || {}
-        const iface = settings.interface || status.interface || link?.device || link?.name || ''
-        const ifname = settings.ifname || status.interface || '-'
-        const ip = status.ip || ''
+      const iface = settings.interface || status.interface || link.device || link.name || ''
+      const ifname = settings.ifname || status.interface || link.device || '-'
+      const ip = status.ip || ''
 
-        // 解析 hcsq（RPC 返回的可能是 JSON 字符串）
-        let hcsq = simStatus.hcsq || null
-        if (typeof hcsq === 'string') {
-          try {
-            hcsq = JSON.parse(hcsq)
-          } catch {
-            hcsq = null
-          }
+      // 解析 hcsq（可能是 JSON 字符串，聚合结果一般已是对象）
+      let hcsq = simStatus.hcsq || null
+      if (typeof hcsq === 'string') {
+        try {
+          hcsq = JSON.parse(hcsq)
+        } catch {
+          hcsq = null
         }
+      }
 
-        // 构建状态文本（与 network-wan 的 getStatusText 逻辑一致）
-        let statusText = '离线'
-        let statusTagType = 'danger'
-        if (settings.enable === '0' || settings.enable === 'false') {
-          statusText = '已禁用'
+      // 构建状态文本（与 network-wan 的 getStatusText 逻辑一致）
+      let statusText = '离线'
+      let statusTagType = 'danger'
+      if (settings.enable === '0' || settings.enable === 'false') {
+        statusText = '已禁用'
+        statusTagType = 'danger'
+      } else {
+        const iccid = productInfo.iccid || ''
+        if (iccid === '' || iccid === '-') {
+          statusText = '未识别SIM卡'
           statusTagType = 'danger'
+        } else if (hcsq && hcsq.sysmode === 'NOSERVICE') {
+          statusText = '无服务'
+          statusTagType = 'warning'
+        } else if (ip && ip !== '-') {
+          // 计算信号强度描述
+          const rsrp = this.getRsrpFromStatus(simStatus)
+          const rsrpLevel = this.getRsrpLevel(rsrp)
+          const labels = { 4: '信号极好', 3: '信号良好', 2: '信号一般', 1: '信号差' }
+          const signalLabel = labels[rsrpLevel] || ''
+          statusText = signalLabel ? '在线 ' + signalLabel : '在线'
+          statusTagType = 'success'
         } else {
-          const iccid = productInfo.iccid || ''
-          if (iccid === '' || iccid === '-') {
-            statusText = '未识别SIM卡'
-            statusTagType = 'danger'
-          } else if (hcsq && hcsq.sysmode === 'NOSERVICE') {
-            statusText = '无服务'
-            statusTagType = 'warning'
-          } else if (ip && ip !== '-') {
-            // 计算信号强度描述
-            const rsrp = this.getRsrpFromStatus(simStatus)
-            const rsrpLevel = this.getRsrpLevel(rsrp)
-            const labels = { 4: '信号极好', 3: '信号良好', 2: '信号一般', 1: '信号差' }
-            const signalLabel = labels[rsrpLevel] || ''
-            statusText = signalLabel ? '在线 ' + signalLabel : '在线'
-            statusTagType = 'success'
-          } else {
-            // 无 IP 时检查 SIM 卡状态
-            const simState = (simStatus.sim || '').toUpperCase()
-            if (simState && !simState.includes('NOT'))
-              statusText = '拨号中...'
-          }
+          // 无 IP 时检查 SIM 卡状态
+          const simState = (simStatus.sim || '').toUpperCase()
+          if (simState && !simState.includes('NOT'))
+            statusText = '拨号中...'
         }
+      }
 
-        return {
-          key: link?.name || iface || `sim${index}`,
-          name: settings.alias || link?.name || iface || `sim${index}`,
-          ifname,
-          ipv4: this.formatAddressWithMask(ip, status.mask),
-          gateway: status.gateway || '-',
-          rxBytes: status.rxBytes,
-          txBytes: status.txBytes,
-          online: Boolean(ip && ip !== '-'),
-          statusText,
-          statusTagType
-        }
-      }).catch(() => baseCard)
+      const key = link?.name || iface || `sim${index}`
+      return {
+        key,
+        name: settings.alias || link?.name || iface || `sim${index}`,
+        ifname,
+        ipv4: this.formatAddressWithMask(ip, status.mask),
+        gateway: status.gateway || '-',
+        rxBytes: status.rxBytes,
+        txBytes: status.txBytes,
+        online: Boolean(ip && ip !== '-'),
+        statusText,
+        statusTagType
+      }
     },
-    // 获取网口状态
+    // 获取网络接口状态
     fetchInterfaceStates() {
-      this.$oui.call('wan', 'getAvailWan').then((result) => {
+      // 上一次请求尚未返回时跳过本轮, 避免请求堆积
+      if (this.interfaceFetching)
+        return
+      this.interfaceFetching = true
+      this.$oui.call('home', 'getInterfaceOverview').then((result) => {
         const data = this.parseRpcResult(result)
         const links = Array.isArray(data?.links) ? data.links : []
 
         if (!links.length) {
           this.interfaceStates = []
-          this.interfaceLoading = false
           return
         }
 
-        return Promise.all(links.map((link, index) => {
-          if (link?.kind === 'sim')
-            return this.buildSimInterfaceCard(link, index)
-          return this.buildWanInterfaceCard(link, index)
-        })).then((cards) => {
-          const now = Date.now()
-          this.interfaceStates = cards
-            .filter(Boolean)
-            .map(card => this.attachInterfaceStats(card, card.rxBytes, card.txBytes, now))
-          this.interfaceLoading = false
-        })
+        const cards = links
+          .map((link, index) => {
+            if (link?.kind === 'sim')
+              return this.buildSimInterfaceCard(link, index)
+            return this.buildWanInterfaceCard(link, index)
+          })
+          .filter(Boolean)
+
+        const now = Date.now()
+        this.interfaceStates = cards.map(card => this.attachInterfaceStats(card, card.rxBytes, card.txBytes, now))
       }).catch(() => {
         this.interfaceStates = []
+      }).finally(() => {
         this.interfaceLoading = false
+        this.interfaceFetching = false
       })
     },
     formatIpv4Sections(sections) {

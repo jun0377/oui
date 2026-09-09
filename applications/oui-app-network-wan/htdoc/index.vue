@@ -1747,7 +1747,7 @@ export default {
           this.updatePolling()
         }).catch(() => this.loading = false)
       }
-    },
+    }
   },
   created() {
     this.bootstrap().then(() => {

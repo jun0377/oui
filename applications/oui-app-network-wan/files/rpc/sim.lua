@@ -33,21 +33,22 @@ local function get_interface(ifname)
         log.error('ifname is nil!')
         return false
     end
-    
-    -- 优先从 tracker-sim 的 interface 文件中读取
-    local f = io.open(string.format("/tmp/tracker-sim/%s/interface", ifname), "r")
-    if f then
-        local dev = f:read("*a")
-        f:close()
-        dev = dev:gsub("[\r\n]", "")
-        if dev ~= "" then
-            return dev
-        end
-    end
 
-    -- fallback: 通过 ubus 查询
+    -- 优先从 tracker-sim 的 interface 文件中读取
+    -- local f = io.open(string.format("/tmp/tracker-sim/%s/interface", ifname), "r")
+    -- if f then
+    --     local dev = f:read("*a")
+    --     f:close()
+    --     dev = dev:gsub("[\r\n]", "")
+    --     if dev ~= "" then
+    --         return dev
+    --     end
+    -- end
+
+    -- 通过 ubus 查询
     local cmd = string.format("ubus call network.interface.%s status 2>/dev/null | jsonfilter -e '@.device' | tr -d '\r\n'", ifname)
     return exec(cmd)
+
 end
 
 -- 获取模组对应的usb端点号
@@ -60,6 +61,32 @@ local function getSimUsb(ifname)
     
     local c = uci.cursor()
     return c:get('sim', ifname, 'usb')
+end
+
+-- 检查模组是否存在
+local function isModuleExist(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    -- # uci get sim.sim1.usb
+    -- /sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/2-1
+    local usb = getSimUsb(ifname)
+    if not usb or usb == '' then
+        log.error(string.format("%s usb sysfs path is not defined!", ifname))
+        return false
+    end
+
+    -- usb 是一个 sysfs 目录, io.open 只探测存在性, 不读取内容
+    local f = io.open(usb, "r")
+    if not f then
+        log.info(string.format("%s module not exist: %s", ifname, usb))
+        return false
+    end
+    f:close()
+    return true
 end
 
 -- 获取模组拨号节点
