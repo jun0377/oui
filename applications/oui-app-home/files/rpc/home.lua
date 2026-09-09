@@ -293,8 +293,45 @@ local function netifd_status(ifname)
     return status
 end
 
--- 从 netifd 状态解析默认网关, 兜底取 uci 静态配置的 gateway
-local function resolve_gateway(status, ifname)
+-- 兜底: 从策略路由表获取默认网关
+-- openmptcprouter 将各 WAN 的默认路由放入独立 table(main 表通常没有, 如 table 19: default via x dev eth1)
+-- 表号优先取 uci network.<ifname>.ip4table, 否则按源地址从 ip rule 推导(对应规则: from <local_ip> lookup <T>)
+-- 仅当接口在线(有 IP)且 netifd/UCI 都拿不到网关时才走此路径, 避免为离线接口空转 popen
+local function resolve_gateway_from_ip_route(ifname, local_ip)
+    if not ifname or ifname == '' or not local_ip or local_ip == '' then
+        return ''
+    end
+
+    local c = uci.cursor()
+    local tbl = trim_str(c:get('network', ifname, 'ip4table'))
+
+    if tbl == '' then
+        local rules = exec('ip rule show')
+        for line in rules:gmatch('[^\r\n]+') do
+            local from_ip = line:match('^%s*%d+:%s+from%s+(%S+)')
+            if from_ip and from_ip == local_ip then
+                tbl = line:match('lookup%s+(%S+)') or ''
+                if tbl ~= '' then
+                    break
+                end
+            end
+        end
+    end
+
+    if tbl == '' then
+        return ''
+    end
+
+    local out = exec('ip route show table ' .. tbl .. ' 2>/dev/null')
+    local gw = out:match('default%s+via%s+(%S+)')
+    if gw and gw ~= '0.0.0.0' then
+        return gw
+    end
+    return ''
+end
+
+-- 从 netifd 状态解析默认网关; 兜底取 uci 静态配置 gateway; 再兜底查策略路由表
+local function resolve_gateway(status, ifname, local_ip)
     if type(status) == 'table' and type(status.route) == 'table' then
         for _, r in ipairs(status.route) do
             if type(r) == 'table' and r.target == '0.0.0.0' then
@@ -313,7 +350,8 @@ local function resolve_gateway(status, ifname)
             return gw
         end
     end
-    return ''
+
+    return resolve_gateway_from_ip_route(ifname, local_ip)
 end
 
 -- 聚合单个接口的运行状态(基于 netifd + sysfs, 不产生子进程)
@@ -360,7 +398,7 @@ local function collect_iface_status(ifname, cfgdev)
         up = up,
         ip = ip,
         mask = mask,
-        gateway = resolve_gateway(status, ifname),
+        gateway = resolve_gateway(status, ifname, ip),
         rxBytes = rxBytes,
         txBytes = txBytes
     }

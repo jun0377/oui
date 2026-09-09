@@ -299,6 +299,11 @@
                   </el-button>
                 </div>
               </el-card>
+
+              <!-- Action buttons -->
+              <div class="action-buttons status-tab-actions">
+                <el-button @click="goBack" type="info" size="large">{{ $t('Back') }}</el-button>
+              </div>
             </div>
           </el-tab-pane>
 
@@ -1537,6 +1542,17 @@ export default {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+}
+
+/* 实时状态 tab 底部操作行(横跨两列) */
+.status-tab-actions {
+  grid-column: 1 / -1;
+  padding-top: 4px;
+}
+
+/* 底部返回按钮长度放大两倍 */
+.status-tab-actions .el-button {
+  min-width: 180px;
 }
 
 .resident-card {

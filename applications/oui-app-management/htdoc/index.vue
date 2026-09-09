@@ -33,7 +33,7 @@
 
             <div class="announce-card">
               <div class="mgmt-metric-head">
-                <div class="mgmt-metric-title">{{ $t('服务器公告') }}</div>
+                <div class="mgmt-metric-title">{{ $t('平台公告') }}</div>
                 <el-tag type="info">{{ announcements.length }}</el-tag>
               </div>
               <ul v-if="announcements.length" class="announce-list">
