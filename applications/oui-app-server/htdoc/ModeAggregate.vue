@@ -12,14 +12,14 @@
       <div class="mode-panel-body">
         <div class="server-section aggregate-section aggregate-split">
           <div class="server-settings-card">
-            <el-form :model="ServerConfig" :rules="rules" ref="serverForm" label-width="120px" label-position="left" class="config-form">
+            <el-form :model="ServerConfig" :rules="rules" ref="serverForm" label-width="120px" label-position="left" hide-required-asterisk class="config-form">
               <el-form-item :label="$t('服务器IP')" prop="ip">
-                <el-input v-model="ServerConfig.ip" class="server-ip-input" :placeholder="$t('Enter Server IP')" @focus="isEditing = true" @blur="isEditing = false" @input="handleServerIpInput"/>
+                <el-input v-model="ServerConfig.ip" class="server-ip-input" :placeholder="$t('请输入服务器IP')" @focus="isEditing = true" @blur="isEditing = false" @input="handleServerIpInput"/>
               </el-form-item>
-              <el-form-item :label="$t('服务器端口')" prop="port">
+              <el-form-item :label="$t('服务器端口')">
                 <el-input-number v-model="ServerConfig.port" :min="0" :max="65535" :controls="false" disabled/>
               </el-form-item>
-              <el-form-item :label="$t('传输模式')" prop="transport">
+              <el-form-item :label="$t('传输模式')">
                 <el-radio-group v-model="ServerConfig.transport" class="transport-group" @change="markUnsavedChanges">
                   <el-radio value="tcp">TCP</el-radio>
                   <el-radio value="udp">UDP</el-radio>
@@ -38,26 +38,23 @@
             <div class="status-info">
               <el-descriptions :column="1" border>
                 <el-descriptions-item :label="$t('连接状态')">
-                  <el-tag :class="{'blink-bg': true}" :type="getStatusTagType()">
+                  <el-tag :class="{ 'blink-bg': !serverStatus.checked }" :type="getStatusTagType()">
                     {{ getConnectionStatusText() }}
                   </el-tag>
                 </el-descriptions-item>
-                <el-descriptions-item :label="$t('RTT')">
+                <el-descriptions-item :label="$t('延时')">
                   <el-tag :type="getRttTagType(serverStatus.rtt)">
                     {{ getRttText() }}
                   </el-tag>
                 </el-descriptions-item>
                 <el-descriptions-item :label="$t('服务器节点')">
-                  <el-tag type="info">{{ serverStatus.location }}</el-tag>
+                  <el-tag type="info">{{ serverStatus.location || '-' }}</el-tag>
                 </el-descriptions-item>
                 <el-descriptions-item :label="$t('服务器版本')">
-                  <el-tag type="info">{{ serverStatus.version }}</el-tag>
-                </el-descriptions-item>
-                <el-descriptions-item :label="$t('服务器负载')">
-                  <el-tag type="info">{{ serverStatus.load }}</el-tag>
+                  <el-tag type="info">{{ serverStatus.version || '-' }}</el-tag>
                 </el-descriptions-item>
                 <el-descriptions-item :label="$t('服务器公告')">
-                  <el-tag type="info">{{ serverStatus.notice }}</el-tag>
+                  <el-tag type="info">{{ serverStatus.notice || '-' }}</el-tag>
                 </el-descriptions-item>
               </el-descriptions>
             </div>
@@ -71,15 +68,10 @@
 <script>
 export default {
   name: 'ModeAggregate',
-  emits: ['update:server-ip'],
   props: {
     pageActive: {
       type: Boolean,
       default: false
-    },
-    serverIp: {
-      type: String,
-      default: ''
     }
   },
   data() {
@@ -87,7 +79,7 @@ export default {
       // 服务器地址
       ServerConfig: {
         ip: '',
-        // 服务器端口固定为 65500
+        // 服务器端口默认 65500, 实际以服务端配置为准
         port: 65500,
         transport: 'udp'
       },
@@ -96,7 +88,6 @@ export default {
         checked: false,
         connected: false,
         rtt: 0,
-        load: 0,
         location: '',
         version: '',
         notice: ''
@@ -109,12 +100,8 @@ export default {
       pollIntervalMs: 5000,
       rules: {
         ip: [
-          { required: true, message: this.$t('Server IP is required'), trigger: 'blur' },
+          { required: true, message: this.$t('服务器IP不能为空'), trigger: 'blur' },
           { validator: this.validateIP, trigger: 'blur' }
-        ],
-        port: [
-          { required: true, message: this.$t('Server Port is required'), trigger: 'blur' },
-          { validator: this.validatePort, trigger: 'blur' }
         ]
       }
     }
@@ -125,13 +112,6 @@ export default {
         this.startAll()
       else
         this.stopAll()
-    },
-    serverIp(value) {
-      const normalized = this.normalizeServerIp(value)
-      if (this.isEditing || this.hasUnsavedChanges)
-        return
-      if (normalized !== this.ServerConfig.ip)
-        this.ServerConfig.ip = normalized
     }
   },
   mounted() {
@@ -143,8 +123,6 @@ export default {
   },
   methods: {
     normalizeServerIp(value) {
-      if (Array.isArray(value))
-        return String(value[0] || '').trim()
       return String(value || '').trim()
     },
     runAfterFirstFrame(fn) {
@@ -194,25 +172,25 @@ export default {
       this.$oui.call('serverManager', 'getAggregateConfig').then(config => {
         if (this.stopped || !config)
           return
-        const ip = this.normalizeServerIp(config.ip)
-        this.ServerConfig.ip = ip
-        this.$emit('update:server-ip', ip)
+        this.ServerConfig.ip = this.normalizeServerIp(config.ip)
+        // 端口以服务端实际配置为准, 避免展示值与保存值不一致
+        const port = Number(config.port)
+        if (port >= 1 && port <= 65535)
+          this.ServerConfig.port = port
         const transport = String(config.transport || '').trim().toLowerCase()
         this.ServerConfig.transport = transport === 'tcp' ? 'tcp' : 'udp'
-      })
+      }).catch(() => {})
     },
     // 获取状态信息
     fetchStaticInfo() {
-      setTimeout(() => this.fetchServerNode(), 100)
-      setTimeout(() => this.fetchServerVersion(), 150)
-      setTimeout(() => this.fetchServerAnnourcement(), 200)
+      this.fetchServerNode()
+      this.fetchServerVersion()
+      this.fetchServerAnnourcement()
     },
     async refreshOnce() {
-      if (this.stopped)
+      if (this.stopped || this.isEditing || this.hasUnsavedChanges)
         return
-      if (this.isEditing || this.hasUnsavedChanges)
-        return
-      await Promise.allSettled([this.fetchServerStatus()])
+      await this.fetchServerStatus()
     },
     withTimeout(promise, ms, operation) {
       return new Promise((resolve, reject) => {
@@ -230,21 +208,24 @@ export default {
     },
     // 保存配置
     saveConfig() {
-      this.$refs.serverForm.validate((valid) => {
-        if (valid) {
-          this.$message({
-            message: this.$t('保存成功'),
-            type: 'success'
-          })
-          this.applyConfig()
-          this.hasUnsavedChanges = false
-          this.fetchServerStatus()
-        } else {
-          return false
+      this.$refs.serverForm.validate(async(valid) => {
+        if (!valid)
+          return
+        const result = await this.applyConfig().catch(() => -1)
+        if (result !== 0) {
+          this.$message.error(this.$t('保存失败: '))
+          return
         }
+        this.hasUnsavedChanges = false
+        this.$message({
+          message: this.$t('保存成功'),
+          type: 'success'
+        })
+        this.fetchServerStatus()
       })
     },
     // 保存聚合模式配置: 工作模式 + 服务器IP/端口 + 传输模式, 一次下发
+    // 返回 0 表示成功
     applyConfig() {
       const params = {
         mode: 'aggregate',
@@ -255,33 +236,16 @@ export default {
       this.serverStatus.checked = false
       this.serverStatus.connected = false
       this.serverStatus.rtt = 0
-      this.$oui.call('serverManager', 'applyAggregateConfig', params)
-      console.log('聚合模式配置: ', params)
+      return this.$oui.call('serverManager', 'applyAggregateConfig', params)
     },
-    // IP格式是否合法
+    // IP格式是否合法(空值由 required 规则校验)
     validateIP(rule, value, callback) {
-      if (!value) {
-        callback(new Error(this.$t('Server IP is required')))
-      }
       const ip = String(value)
       if (!/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(ip) ||
         ip.split('.').some(part => parseInt(part, 10) < 0 || parseInt(part, 10) > 255)) {
-        callback(new Error(this.$t('Invalid IP address')))
+        callback(new Error(this.$t('非法的IP地址')))
         return
       }
-      this.ServerConfig.ip = ip
-      callback()
-    },
-    validatePort(rule, value, callback) {
-      if (!value) {
-        callback(new Error(this.$t('Server Port is required')))
-      }
-      const port = Number(value)
-      if (port < 0 || port > 65535) {
-        callback(new Error(this.$t('Port must be between 1 and 65535')))
-        return
-      }
-      this.ServerConfig.port = port
       callback()
     },
     fetchServerNode() {
@@ -316,9 +280,8 @@ export default {
       return this.withTimeout(this.$oui.call('serverManager', 'getHostRtt'), 5000, 'getHostRtt').then(state => {
         if (this.stopped)
           return
-        console.log('host rtt:', state)
         this.serverStatus.checked = true
-        if (!state.reachable) {
+        if (!state || !state.reachable) {
           this.serverStatus.connected = false
           this.serverStatus.rtt = 0
           return
@@ -335,9 +298,9 @@ export default {
       return this.withTimeout(this.$oui.call('serverManager', 'getVPNrtt'), 5000, 'getVPNrtt').then(state => {
         if (this.stopped)
           return
-        console.log('vpn rtt:', state)
         this.serverStatus.checked = true
-        if (!state.reachable) {
+        if (!state || !state.reachable) {
+          // 隧道不可达时回退探测服务器主机, 用于区分"服务器不可达"与"隧道异常"
           this.serverStatus.connected = false
           return this.fetchServerRTT()
             .catch(() => {})
@@ -353,27 +316,23 @@ export default {
       })
     },
     async fetchServerStatus() {
-      if (this.stopped)
-        return
-      if (this.statusInFlight)
+      if (this.stopped || this.statusInFlight)
         return
       this.statusInFlight = true
       try {
         await this.fetchVPNrtt()
-      } catch {
-        return
       } finally {
         this.statusInFlight = false
       }
     },
     getConnectionStatusText() {
       if (!this.serverStatus.checked)
-        return '检测中'
-      return this.serverStatus.connected ? this.$t('Connected') : this.$t('Disconnected')
+        return this.$t('检测中')
+      return this.serverStatus.connected ? this.$t('已连接') : this.$t('未连接')
     },
     getRttText() {
       if (!this.serverStatus.checked)
-        return '检测中'
+        return this.$t('检测中')
       return `${this.serverStatus.rtt} ms`
     },
     getRttTagType(rtt) {
@@ -397,7 +356,6 @@ export default {
     handleServerIpInput(value) {
       this.ServerConfig.ip = this.normalizeServerIp(value)
       this.markUnsavedChanges()
-      this.$emit('update:server-ip', this.ServerConfig.ip)
     },
     markUnsavedChanges() {
       this.hasUnsavedChanges = true
@@ -495,13 +453,15 @@ export default {
 }
 
 .server-ip-input {
-  width: 200px;
+  width: 100%;
+  max-width: 220px;
 }
 
 .transport-group {
   display: flex;
   align-items: center;
-  gap: 24px;
+  flex-wrap: wrap;
+  gap: 12px 24px;
 }
 
 :deep(.transport-group .el-radio) {

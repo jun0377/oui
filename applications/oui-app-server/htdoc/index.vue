@@ -627,17 +627,6 @@ export default {
   text-align: left !important;
 }
 
-/* 闪烁背景样式 */
-.blink-bg {
-  animation: blink-animation 1s infinite;
-}
-
-@keyframes blink-animation {
-  0% { opacity: 1; }
-  50% { opacity: 0.9; }
-  100% { opacity: 1; }
-}
-
 @keyframes route-packet-flow {
   0% { background-position: 0 0; }
   100% { background-position: 24px 0; }
