@@ -20,6 +20,24 @@ local function exec(command)
     return data
 end
 
+-- 获取VPN隧道设备名: mqvpn 由 mqvpn.interface.tun_name 决定(默认 mqvpn0), 其它后端用 network.omrvpn.device(默认 tun0)
+local function getTunnelDevice()
+    local c = uci.cursor()
+    if c:get('openmptcprouter', 'settings', 'vpn') == 'mqvpn' then
+        local dev = c:get('mqvpn', 'interface', 'tun_name')
+        if dev == nil or dev == '' then
+            dev = 'mqvpn0'
+        end
+        return dev
+    end
+
+    local dev = c:get('network', 'omrvpn', 'device')
+    if dev == nil or dev == '' then
+        dev = 'tun0'
+    end
+    return dev
+end
+
 -- 获取单卡模式设置
 local function workModeSingleSettings()
     
@@ -143,8 +161,9 @@ end
 
 -- 获取OpenVPN组网状态
 function M.getOpenVPNStatus()
-    local rx_path = '/sys/class/net/tun0/statistics/rx_bytes'
-    local tx_path = '/sys/class/net/tun0/statistics/tx_bytes'
+    local dev = getTunnelDevice()
+    local rx_path = string.format('/sys/class/net/%s/statistics/rx_bytes', dev)
+    local tx_path = string.format('/sys/class/net/%s/statistics/tx_bytes', dev)
     local ret = {
         running = false,
         connected = false,

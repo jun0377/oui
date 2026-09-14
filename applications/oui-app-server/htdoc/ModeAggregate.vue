@@ -17,8 +17,15 @@
                 <el-input v-model="ServerConfig.ip" class="server-ip-input" :placeholder="$t('Enter Server IP')" @focus="isEditing = true" @blur="isEditing = false" @input="handleServerIpInput"/>
               </el-form-item>
               <el-form-item :label="$t('服务器端口')" prop="port">
-                <el-input-number v-model="ServerConfig.port" :min="0" :max="65535" :controls="false" @focus="isEditing = true" @blur="isEditing = false" @input="markUnsavedChanges"/>
+                <el-input-number v-model="ServerConfig.port" :min="0" :max="65535" :controls="false" disabled/>
               </el-form-item>
+              <el-form-item :label="$t('传输模式')" prop="transport">
+                <el-radio-group v-model="ServerConfig.transport" class="transport-group" @change="markUnsavedChanges">
+                  <el-radio value="tcp">TCP</el-radio>
+                  <el-radio value="udp">UDP</el-radio>
+                </el-radio-group>
+              </el-form-item>
+
               <el-form-item>
                 <el-button type="primary" @click="saveConfig">{{ $t('保存 & 应用') }}</el-button>
               </el-form-item>
@@ -80,7 +87,9 @@ export default {
       // 服务器地址
       ServerConfig: {
         ip: '',
-        port: 0
+        // 服务器端口固定为 65500
+        port: 65500,
+        transport: 'udp'
       },
       // 服务器状态
       serverStatus: {
@@ -180,8 +189,17 @@ export default {
     },
     // 获取服务器配置信息
     fetchServerConfig() {
-      this.fetchServerIP()
-      this.fetchServerPort()
+      if (this.isEditing || this.hasUnsavedChanges)
+        return
+      this.$oui.call('serverManager', 'getAggregateConfig').then(config => {
+        if (this.stopped || !config)
+          return
+        const ip = this.normalizeServerIp(config.ip)
+        this.ServerConfig.ip = ip
+        this.$emit('update:server-ip', ip)
+        const transport = String(config.transport || '').trim().toLowerCase()
+        this.ServerConfig.transport = transport === 'tcp' ? 'tcp' : 'udp'
+      })
     },
     // 获取状态信息
     fetchStaticInfo() {
@@ -218,9 +236,7 @@ export default {
             message: this.$t('保存成功'),
             type: 'success'
           })
-          this.setWorkMode()
-          this.setServerIP()
-          this.setServerPort()
+          this.applyConfig()
           this.hasUnsavedChanges = false
           this.fetchServerStatus()
         } else {
@@ -228,28 +244,19 @@ export default {
         }
       })
     },
-    // 设置工作模式为聚合模式
-    setWorkMode() {
-      this.$oui.call('mode', 'setMode', { mode: 'aggregate' })
-      console.log('工作模式: 聚合模式')
-    },
-    // 设置服务器IP
-    setServerIP() {
-      const params = { ip: this.ServerConfig.ip }
+    // 保存聚合模式配置: 工作模式 + 服务器IP/端口 + 传输模式, 一次下发
+    applyConfig() {
+      const params = {
+        mode: 'aggregate',
+        ip: this.ServerConfig.ip,
+        port: this.ServerConfig.port,
+        transport: this.ServerConfig.transport
+      }
       this.serverStatus.checked = false
       this.serverStatus.connected = false
       this.serverStatus.rtt = 0
-      this.$oui.call('serverManager', 'setServerIP', params)
-      console.log('服务器IP: ', this.ServerConfig.ip)
-    },
-    // 设置服务器端口
-    setServerPort() {
-      const params = { port: this.ServerConfig.port }
-      this.serverStatus.checked = false
-      this.serverStatus.connected = false
-      this.serverStatus.rtt = 0
-      this.$oui.call('serverManager', 'setServerPort', params)
-      console.log('服务器IP: ', this.ServerConfig.port)
+      this.$oui.call('serverManager', 'applyAggregateConfig', params)
+      console.log('聚合模式配置: ', params)
     },
     // IP格式是否合法
     validateIP(rule, value, callback) {
@@ -276,34 +283,6 @@ export default {
       }
       this.ServerConfig.port = port
       callback()
-    },
-    // 获取服务器IP
-    fetchServerIP() {
-      if (this.isEditing)
-        return
-      if (this.hasUnsavedChanges)
-        return
-      this.$oui.call('serverManager', 'getServerIP').then(ip => {
-        if (this.stopped)
-          return
-        const normalized = this.normalizeServerIp(ip)
-        this.ServerConfig.ip = normalized
-        this.$emit('update:server-ip', normalized)
-      })
-    },
-    // 获取服务器端口
-    fetchServerPort() {
-      if (this.isEditing)
-        return
-      if (this.hasUnsavedChanges)
-        return
-      this.$oui.call('serverManager', 'getServerPort').then(port => {
-        if (this.stopped)
-          return
-        if (port) {
-          this.ServerConfig.port = parseInt(port)
-        }
-      }).catch(() => {})
     },
     fetchServerNode() {
       this.$oui.call('serverManager', 'getServerNode').then(node => {
@@ -516,7 +495,39 @@ export default {
 }
 
 .server-ip-input {
-  width: 100%;
+  width: 200px;
+}
+
+.transport-group {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+:deep(.transport-group .el-radio) {
+  margin-right: 0;
+  height: auto;
+}
+
+:deep(.transport-group .el-radio__label) {
+  padding-left: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+}
+
+:deep(.transport-group .el-radio.is-checked .el-radio__inner) {
+  border-color: #8b5cf6;
+  background: #8b5cf6;
+}
+
+:deep(.transport-group .el-radio.is-checked .el-radio__label) {
+  color: #7c3aed;
+  font-weight: 700;
+}
+
+:deep(.transport-group .el-radio__inner:hover) {
+  border-color: #8b5cf6;
 }
 
 .status-info {

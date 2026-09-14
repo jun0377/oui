@@ -19,6 +19,24 @@ local function exec(command)
     return data
 end
 
+-- 获取VPN隧道设备名: mqvpn 由 mqvpn.interface.tun_name 决定(默认 mqvpn0), 其它后端用 network.omrvpn.device(默认 tun0)
+local function getTunnelDevice()
+    local c = uci.cursor()
+    if c:get('openmptcprouter', 'settings', 'vpn') == 'mqvpn' then
+        local dev = c:get('mqvpn', 'interface', 'tun_name')
+        if dev == nil or dev == '' then
+            dev = 'mqvpn0'
+        end
+        return dev
+    end
+
+    local dev = c:get('network', 'omrvpn', 'device')
+    if dev == nil or dev == '' then
+        dev = 'tun0'
+    end
+    return dev
+end
+
 -- 获取指定网口的IP
 function getInterfaceIP(interface)
     local cmd = string.format("ip addr show %s | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1  | tr -d '\n'", interface)
@@ -47,15 +65,13 @@ end
 
 -- tun0 mask
 function M.getVirtualNet(params)
-    local c = uci.cursor()
-    local interface = c:get('openvpn', 'omr', 'dev')               -- uci get openvpn.omr.dev
+    local interface = getTunnelDevice()
     return getInterfaceMask(interface)
 end
 
 -- get interface tun0 ip
 function M.getLocalIP(params)
-    local c = uci.cursor()
-    local interface = c:get('openvpn', 'omr', 'dev')               -- uci get openvpn.omr.dev
+    local interface = getTunnelDevice()
     return getInterfaceIP(interface)
 end
 
@@ -77,9 +93,10 @@ function M.getSubnet(params)
 end
 
 function M.getTransBytes(params)
-    local cmd = "ifconfig tun0 | grep 'TX bytes' | awk '{print $6}' | cut -d':' -f2"
+    local dev = getTunnelDevice()
+    local cmd = string.format("ifconfig %s | grep 'TX bytes' | awk '{print $6}' | cut -d':' -f2", dev)
     local tx = exec(cmd)
-    cmd = "ifconfig tun0 | grep 'TX bytes' | awk '{print $2}' | cut -d':' -f2"
+    cmd = string.format("ifconfig %s | grep 'TX bytes' | awk '{print $2}' | cut -d':' -f2", dev)
     local rx = exec(cmd)
     return {
             tx_bytes = tx, 
@@ -96,15 +113,17 @@ function M.getStatusConnectStatus()
         unknown = 'openvpnUnknownStatus',               -- 未知状态,用于调试
     }
 
-    -- 进程是否存在
-    local cmd = "pidof openvpn"
+    -- 进程是否存在(mqvpn 模式下进程名为 mqvpn)
+    local c = uci.cursor()
+    local proc = c:get('openmptcprouter', 'settings', 'vpn') == 'mqvpn' and 'mqvpn' or 'openvpn'
+    local cmd = "pidof " .. proc
     local pid = exec(cmd)
     if nil == pid or ' ' == pid then
         return connectStatus.dead
     end
 
     -- 接口是否存在,接口存在说明连接正常
-    cmd = "ls /sys/class/net/ | grep tun0"
+    cmd = string.format("ls /sys/class/net/ | grep %s", getTunnelDevice())
     local exist = exec(cmd)
     if nil == exist or ' ' == exist then
         return connectStatus.broken
@@ -117,7 +136,7 @@ end
 
 function M.getStatusRTT()
 
-    local local_ip = getInterfaceIP('tun0')
+    local local_ip = getInterfaceIP(getTunnelDevice())
     if nil == local_ip or ' ' == local_ip then
         return 0
     end

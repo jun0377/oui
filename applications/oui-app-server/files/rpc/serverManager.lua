@@ -22,6 +22,28 @@ local function exec_async(command)
     os.execute(string.format("( %s ) >/dev/null 2>/dev/null &", command))
 end
 
+-- 重启 openmptcprouter-vps。
+-- 一次保存会连续触发多次重启请求(服务器IP/传输模式等)，并发执行会互相打断，
+-- 这里用 flock 串行化: 已有重启在跑时只登记 pending，由持锁的流程结束后补跑一次，
+-- 保证最后一次配置一定被应用。
+local function restart_vps_async()
+    exec_async([[
+        if ! command -v flock >/dev/null 2>&1 || ! exec 9>'/tmp/oui_vps_restart.lock'; then
+            /etc/init.d/openmptcprouter-vps restart
+            exit 0
+        fi
+        if ! flock -n 9; then
+            : > '/tmp/oui_vps_restart.pending'
+            exit 0
+        fi
+        while :; do
+            rm -f '/tmp/oui_vps_restart.pending'
+            /etc/init.d/openmptcprouter-vps restart
+            [ -f '/tmp/oui_vps_restart.pending' ] || break
+        done
+    ]])
+end
+
 local PING_CACHE_DIR = '/tmp/oui_ping_cache'
 local PING_CACHE_TTL = 5
 
@@ -125,6 +147,10 @@ local function is_valid_ipv4(ip)
     return true
 end
 
+local function trim(value)
+    return tostring(value or ''):match('^%s*(.-)%s*$')
+end
+
 -- ping ping -W 3 -c 3 -i 0.5 -I src dst
 local function ping(src, dst)
     local state = get_ping_default_state()
@@ -218,68 +244,86 @@ function M.getServerIP()
     return c:get('openmptcprouter', 'vps', 'ip')
 end
 
--- uci set openmptcprouter.vps.ip=xxx.xxx.xxx.xxx
-function M.setServerIP(params)
-    if params == nil or params.ip == nil then
-        return -1
-    end
-    if not is_valid_ipv4(params.ip) then
-        return -1
-    end
-
-    local server_ip = tostring(params.ip)
-    log.info('server IP: ', server_ip)
-    -- vps
-    setVPSip(server_ip)
-    -- shadowsocks
-    setShadowsocksIP(server_ip)
-    -- glorytun
-    setGlorytunIP(server_ip)
-    -- dsvpn
-    setDsvpnIP(server_ip)
-    -- mlvpn
-    setMLVPNip(server_ip)
-    -- openvpn
-    setOpenVpnIP(server_ip)
-
-    exec_async([[
-        lock="/tmp/oui_serverManager_setServerIP.lock";
-        if [ -e "$lock" ]; then exit 0; fi;
-        echo $$ > "$lock";
-        trap 'rm -f "$lock"' EXIT;
-        sleep 2;
-        env -i /bin/ubus call network reload;
-        ip addr flush dev tun0;
-        /etc/init.d/omr-tracker stop;
-        /etc/init.d/mptcp restart;
-        /etc/init.d/openmptcprouter-vps restart;
-        /etc/init.d/shadowsocks-libev restart;
-        /etc/init.d/shadowsocks-rust restart;
-        /etc/init.d/glorytun restart;
-        /etc/init.d/glorytun-udp restart;
-        /etc/init.d/dsvpn restart;
-        /etc/init.d/mlvpn restart;
-        /etc/init.d/openvpn restart;
-        /etc/init.d/omr-tracker start;
-        /etc/init.d/omr-6in4 restart;
-        /etc/init.d/vnstat restart;
-        /etc/init.d/sysntpd restart;
-    ]])
-
-    return 0
-end
-
 -- uci get openmptcprouter.vps.port
 function M.getServerPort()
     local c = uci.cursor()
     return c:get('openmptcprouter', 'vps', 'port')
 end
 
--- uci set openmptcprouter.vps.port=xxx
-function M.setServerPort(params)
+-- 获取聚合模式配置: 服务器IP/端口 + 传输模式(openvpn->tcp, mqvpn->udp)
+function M.getAggregateConfig()
     local c = uci.cursor()
-    c:set('openmptcprouter', 'vps', 'port', params.port)
-    return c:commit('openmptcprouter')
+    local vpn = c:get('openmptcprouter', 'settings', 'vpn')
+
+    return {
+        ip = c:get('openmptcprouter', 'vps', 'ip') or '',
+        port = tonumber(c:get('openmptcprouter', 'vps', 'port')) or 0,
+        -- settings.vpn 为空时聚合模式默认使用 mqvpn
+        transport = vpn == 'openvpn' and 'tcp' or 'udp'
+    }
+end
+
+-- 保存聚合模式配置: 工作模式 + 服务器IP/端口 + 传输模式
+-- 合并为一次下发, 只重启一次服务
+function M.applyAggregateConfig(params)
+    if params == nil or params.ip == nil or params.port == nil or params.transport == nil then
+        return -1
+    end
+    if not is_valid_ipv4(params.ip) then
+        log.error('invalid server ip: ', tostring(params.ip))
+        return -1
+    end
+
+    local server_port = tonumber(params.port)
+    if not server_port or server_port < 0 or server_port > 65535 then
+        log.error('invalid server port: ', tostring(params.port))
+        return -1
+    end
+
+    local transport = trim(params.transport):lower()
+    local vpn
+    if transport == 'tcp' then
+        vpn = 'openvpn'
+    elseif transport == 'udp' then
+        vpn = 'mqvpn'
+    else
+        log.error('unknown transport mode: ', transport)
+        return -1
+    end
+
+    local mode = trim(params.mode)
+    if mode == '' then
+        mode = 'aggregate'
+    end
+
+    local server_ip = tostring(params.ip)
+    log.info('apply aggregate config: mode=', mode, ' ip=', server_ip, ' port=', server_port, ' vpn=', vpn)
+
+    -- 服务器地址下发到各 VPN 后端(内部各自 commit)
+    setVPSip(server_ip)
+    setShadowsocksIP(server_ip)
+    setGlorytunIP(server_ip)
+    setDsvpnIP(server_ip)
+    setMLVPNip(server_ip)
+    setOpenVpnIP(server_ip)
+
+    -- 上面已改动过配置文件, cursor 必须在之后创建, 否则会用旧数据覆盖刚写入的内容
+    local c = uci.cursor()
+    c:set('global', 'global', 'mode', mode)
+    c:set('openmptcprouter', 'vps', 'port', tostring(server_port))
+    c:set('openmptcprouter', 'settings', 'vpn', vpn)
+
+    local mode_committed = c:commit('global')
+    local vps_committed = c:commit('openmptcprouter')
+    if not mode_committed or not vps_committed then
+        log.error('commit failed, mode=', tostring(mode_committed), ' vps=', tostring(vps_committed))
+        return -1
+    end
+
+    -- 配置变化后由 openmptcprouter-vps 重新下发配置并重启相关服务
+    restart_vps_async()
+
+    return 0
 end
 
 -- 获取服务器主机是否可达，比较耗时，需要在vue中异步获取
