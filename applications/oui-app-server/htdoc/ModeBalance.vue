@@ -37,8 +37,8 @@
               </div>
 
               <el-form-item class="balance-actions" label-width="0">
-                <el-button type="primary" @click="saveConfig">{{ $t('保存 & 应用') }}</el-button>
-                <el-button @click="resetConfig">{{ $t('恢复默认') }}</el-button>
+                <el-button type="primary" :loading="saving" @click="saveConfig">{{ $t('保存 & 应用') }}</el-button>
+                <el-button :loading="saving" @click="resetConfig">{{ $t('恢复默认') }}</el-button>
               </el-form-item>
             </el-form>
           </div>
@@ -153,7 +153,9 @@ export default {
       conntrackByChannel: {},
       conntrackUpdatedAt: 0,
       conntrackTimer: null,
-      stopped: true
+      stopped: true,
+      // 配置写入(保存/恢复)的加载态, 期间禁止重复提交
+      saving: false
     }
   },
   watch: {
@@ -436,6 +438,8 @@ export default {
     },
     // 保存配置
     saveConfig() {
+      if (this.saving)
+        return
       this.normalizeLinks()
       if (this.activeLinksCount === 0) {
         this.$message.warning(this.$t('请至少启用一条链路'))
@@ -453,6 +457,7 @@ export default {
         }
       })
 
+      this.saving = true
       this.$oui.call('mode', 'setMode', { mode: 'balance' }).then(() => this.$oui.call('mode', 'setBalanceWeight', { weights })).then(() => {
         this.savedLinks = cloneLinks(this.links)
         this.$message({
@@ -464,10 +469,14 @@ export default {
 
       }).catch((err) => {
         this.$message.error(this.$t('保存失败: ') + err.message)
+      }).finally(() => {
+        this.saving = false
       })
     },
     // 恢复默认配置
     resetConfig() {
+      if (this.saving)
+        return
       this.links = cloneLinks(this.savedLinks)
       this.nextId = this.links.reduce((maxId, link) => Math.max(maxId, link.id), 0) + 1
 
@@ -478,6 +487,7 @@ export default {
         }
       })
 
+      this.saving = true
       this.$oui.call('mode', 'setMode', { mode: 'balance' }).then(() => this.$oui.call('mode', 'setBalanceWeight', { weights })).then(() => {
         this.$message({
           message: this.$t('恢复成功'),
@@ -486,6 +496,8 @@ export default {
         console.log('恢复链路权重:', Object.entries(weights).map(([name, weight]) => `${name}: ${weight}`).join(', '))
       }).catch((err) => {
         this.$message.error(this.$t('恢复失败: ') + err.message)
+      }).finally(() => {
+        this.saving = false
       })
     }
   }
@@ -591,10 +603,17 @@ export default {
   border: 1px solid rgba(22, 163, 74, 0.55);
   background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
   box-shadow: 0 12px 24px rgba(34, 197, 94, 0.18);
+  transition: box-shadow 0.2s ease;
 }
 
 :deep(.balance-actions .el-button--primary:hover) {
   box-shadow: 0 16px 28px rgba(34, 197, 94, 0.22);
+}
+
+/* 按下反馈: 背景加深 + 内阴影, 不做位移, 避免文字上下抖动 */
+:deep(.balance-actions .el-button--primary:active) {
+  background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
+  box-shadow: inset 0 2px 6px rgba(21, 128, 61, 0.35);
 }
 
 :deep(.balance-actions .el-button) {
@@ -602,6 +621,28 @@ export default {
   padding: 10px 18px;
   min-height: 40px;
   font-weight: 700;
+}
+
+/* 不显示配置写入过程中的圆环图标 */
+:deep(.balance-actions .el-button.is-loading .el-icon) {
+  display: none;
+}
+
+/* 图标隐藏后 Element Plus 给"图标 + 文字"预留的 6px 间距仍会命中, 去掉以免文字被推偏 */
+:deep(.balance-actions .el-button.is-loading .el-icon + span) {
+  margin-left: 0;
+}
+
+/* Element Plus 在 loading 时会给按钮盖一层 30% 白色遮罩(.is-loading::before),
+   会让底色与文字发白一闪, 这里直接去掉 */
+:deep(.balance-actions .el-button.is-loading::before) {
+  display: none;
+}
+
+/* 写入过程中: 按钮外观保持不变, 只把光标切为不可点击 */
+:deep(.balance-actions .el-button.is-loading),
+:deep(.balance-actions .el-button.is-disabled) {
+  cursor: not-allowed;
 }
 
 .balance-split {

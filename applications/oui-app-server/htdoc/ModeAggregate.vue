@@ -27,7 +27,7 @@
               </el-form-item>
 
               <el-form-item>
-                <el-button type="primary" @click="saveConfig">{{ $t('保存 & 应用') }}</el-button>
+                <el-button type="primary" :loading="saving" @click="saveConfig">{{ $t('保存 & 应用') }}</el-button>
               </el-form-item>
             </el-form>
           </div>
@@ -96,6 +96,8 @@ export default {
       isEditing: false,
       stopped: true,
       statusInFlight: false,
+      // 保存按钮的加载态, 避免保存过程中重复点击
+      saving: false,
       pollTimer: null,
       pollIntervalMs: 5000,
       rules: {
@@ -208,20 +210,27 @@ export default {
     },
     // 保存配置
     saveConfig() {
+      if (this.saving)
+        return
       this.$refs.serverForm.validate(async(valid) => {
         if (!valid)
           return
-        const result = await this.applyConfig().catch(() => -1)
-        if (result !== 0) {
-          this.$message.error(this.$t('保存失败: '))
-          return
+        this.saving = true
+        try {
+          const result = await this.applyConfig().catch(() => -1)
+          if (result !== 0) {
+            this.$message.error(this.$t('保存失败: '))
+            return
+          }
+          this.hasUnsavedChanges = false
+          this.$message({
+            message: this.$t('保存成功'),
+            type: 'success'
+          })
+          this.fetchServerStatus()
+        } finally {
+          this.saving = false
         }
-        this.hasUnsavedChanges = false
-        this.$message({
-          message: this.$t('保存成功'),
-          type: 'success'
-        })
-        this.fetchServerStatus()
       })
     },
     // 保存聚合模式配置: 工作模式 + 服务器IP/端口 + 传输模式, 一次下发
@@ -533,10 +542,39 @@ export default {
   border: 1px solid rgba(124, 58, 237, 0.55);
   background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%);
   box-shadow: 0 12px 24px rgba(139, 92, 246, 0.18);
+  transition: box-shadow 0.2s ease;
 }
 
 :deep(.config-form .el-button--primary:hover) {
   box-shadow: 0 16px 28px rgba(139, 92, 246, 0.22);
+}
+
+/* 不显示保存过程中的圆环图标 */
+:deep(.config-form .el-button--primary.is-loading .el-icon) {
+  display: none;
+}
+
+/* 图标隐藏后 Element Plus 给"图标 + 文字"预留的 6px 间距仍会命中, 去掉以免文字被推偏 */
+:deep(.config-form .el-button--primary.is-loading .el-icon + span) {
+  margin-left: 0;
+}
+
+/* 按下反馈: 背景加深 + 内阴影, 不做位移, 避免文字跟着上下抖动 */
+:deep(.config-form .el-button--primary:active) {
+  background: linear-gradient(180deg, #7c3aed 0%, #6d28d9 100%);
+  box-shadow: inset 0 2px 6px rgba(76, 29, 149, 0.35);
+}
+
+/* Element Plus 在 loading 时会给按钮盖一层 30% 白色遮罩(.is-loading::before),
+   松手瞬间出现、保存结束瞬间消失, 视觉上就是"闪一下", 且会让底色与文字发白, 这里直接去掉 */
+:deep(.config-form .el-button--primary.is-loading::before) {
+  display: none;
+}
+
+/* 保存中: 按钮外观保持不变, 只把光标切为不可点击 */
+:deep(.config-form .el-button--primary.is-loading),
+:deep(.config-form .el-button--primary.is-disabled) {
+  cursor: not-allowed;
 }
 
 :deep(.status-info .el-descriptions) {
