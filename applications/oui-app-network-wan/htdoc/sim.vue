@@ -203,7 +203,7 @@
                         <div class="table-cell">{{ monsc.cell.arfcn }}</div>
                         <div class="table-cell" v-if="monsc.cell.type === 'nr'">{{ monsc.cell.scs }}</div>
                         <div class="table-cell">{{ monsc.cell.cell_id }}</div>
-                        <div class="table-cell">{{ monsc.cell.pci }}</div>
+                        <div class="table-cell">{{ monsc.cell.pci }}<span class="cell-sub">({{ parseInt(monsc.cell.pci, 16) || '-' }})</span></div>
                         <div class="table-cell">{{ monsc.cell.tac }}</div>
                         <div class="table-cell"><span class="signal-badge" :class="getSignalColor(monsc.cell.rsrp, 'rsrp')">{{ monsc.cell.rsrp || '-' }}</span></div>
                         <div class="table-cell"><span class="signal-badge" :class="getSignalColor(monsc.cell.rsrq, 'rsrq')">{{ monsc.cell.rsrq || '-' }}</span></div>
@@ -1833,6 +1833,14 @@ export default {
   font-weight: 400;
   color: var(--el-text-color-secondary);
   line-height: 1.2;
+}
+
+/* 数值单元格内的补充值, 如 PCI 的十进制: DF (223) */
+.cell-sub {
+  margin-left: 2px;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--el-text-color-secondary);
 }
 
 .table-row:not(.header-row) .table-cell {
