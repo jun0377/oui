@@ -2,19 +2,15 @@
   <div class="sim-page">
     <el-card class="sim-panel">
       <div class="sim-hero">
-          <div class="sim-metric-head">
-            <div class="sim-metric-main">
-              <div class="sim-metric-title">{{ settings.alias }}</div>
-              <div class="sim-metric-subtitle">{{ settings.interface || '-' }}</div>
-            </div>
-          </div>
-        </div>
+        <div class="sim-metric-title">{{ settings.alias }}</div>
+        <div class="sim-metric-subtitle">{{ settings.interface || '-' }}</div>
+      </div>
 
         <el-tabs v-model="simTab" type="border-card" class="sim-detail-tabs">
           <!-- Tab 1: 实时状态 -->
           <el-tab-pane label="实时状态" name="status" lazy>
             <div class="status-tab-content">
-              <el-card class="config-card compact-card connection-card sim-accent-green">
+              <el-card class="config-card compact-card connection-card">
                 <template #header>
                   <div class="card-header">
                     <span class="sim-card-title">{{ $t('连接状态') }}</span>
@@ -123,7 +119,7 @@
               </el-card>
 
               <div class="status-side-col">
-                <el-card class="config-card compact-card sim-accent-purple">
+                <el-card class="config-card compact-card">
                   <template #header>
                     <div class="card-header">
                       <span class="sim-card-title">{{ $t('SIM卡状态') }}</span>
@@ -150,7 +146,7 @@
                   </div>
                 </el-card>
 
-                <el-card class="config-card compact-card sim-accent-cyan">
+                <el-card class="config-card compact-card">
                   <template #header>
                     <div class="card-header">
                       <span class="sim-card-title">{{ $t('模组信息') }}</span>
@@ -173,7 +169,7 @@
                   </div>
                 </el-card>
 
-                <el-card class="config-card compact-card resident-card sim-accent-slate">
+                <el-card class="config-card compact-card resident-card">
                   <template #header>
                     <div class="card-header">
                       <span class="sim-card-title">{{ $t('当前驻留小区') }}{{ isNoService ? '-无服务' : monsc.cell.type === 'nr' ? '-NR(5G)' : monsc.cell.type === 'lte' ? '-LTE' : '' }}</span>
@@ -216,7 +212,7 @@
               </div>
 
               <div class="status-card-grid">
-                <el-card class="config-card compact-card sim-accent-amber">
+                <el-card class="config-card compact-card">
                   <template #header>
                     <div class="card-header">
                       <span class="sim-card-title">{{ $t('5G锁频/锁小区状态') }}</span>
@@ -246,7 +242,7 @@
                   </div>
                 </el-card>
 
-                <el-card class="config-card compact-card sim-accent-blue">
+                <el-card class="config-card compact-card">
                   <template #header>
                     <div class="card-header">
                       <span class="sim-card-title">{{ $t('LTE锁频/锁小区状态') }}</span>
@@ -438,11 +434,10 @@
           <!-- Tab 4: 锁PCI小区 -->
           <el-tab-pane label="PCI小区设置" name="pcilock" lazy>
             <div class="pci-tab-grid">
-              <el-card class="config-card sim-accent-amber">
+              <el-card class="config-card">
               <template #header>
                 <div class="card-header">
                   <span class="sim-card-title">锁PCI小区</span>
-                  <el-tag type="info">配置</el-tag>
                 </div>
               </template>
               <el-form :model="settings" label-width="90px" class="config-form" label-align="left" label-position="left">
@@ -559,7 +554,7 @@
               </div>
             </el-card>
 
-            <el-card class="config-card neighbor-card sim-accent-red">
+            <el-card class="config-card neighbor-card">
               <template #header>
                 <div class="card-header">
                   <span class="sim-card-title">{{ $t('相邻小区信息') }}</span>
@@ -1456,20 +1451,32 @@ export default {
 .sim-page {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 18px;
+  padding: 16px;
+
+  /* 本地设计 token: 圆角/间距/字号/边框统一取值, 避免逐处硬编码 */
   --status-value-col-width: 10ch;
+  --sim-radius: 8px;
+  --sim-radius-sm: 6px;
+  --sim-gap: 12px;
+  --sim-font-title: 16px;
+  --sim-font-base: 14px;
+  --sim-font-label: 13px;
+  --sim-font-minor: 12px;
+  --sim-font-xs: 11px;
+  --sim-border: 1px solid var(--el-border-color-lighter);
 }
 
+/* 页面容器: 仅作承载, 不设圆角/边框/阴影 */
 .sim-panel {
   width: 100%;
-  border-radius: 12px;
   border: 0;
+  border-radius: 0;
   box-shadow: none;
 }
 
 /* ---- el-tabs 样式(与 management-tabs 统一) ---- */
 .sim-detail-tabs {
-  border-radius: 12px;
+  border-radius: var(--sim-radius);
   overflow: hidden;
 }
 
@@ -1479,44 +1486,32 @@ export default {
 
 .sim-detail-tabs :deep(.el-tabs__item) {
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--sim-font-base);
 }
 
 :deep(.sim-panel .el-card__body) {
   padding: 0;
 }
 
+/* 模组标题条: 标题与网口名同行, 靠下边框分隔, 不做渐变/彩边/投影 */
 .sim-hero {
-  margin-bottom: 16px;
-  padding: 18px;
-  border: 1px solid rgba(59, 130, 246, 0.18);
-  border-radius: 16px;
-  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
-  box-shadow: 0 14px 30px rgba(59, 130, 246, 0.12);
-}
-
-.sim-metric-head {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.sim-metric-main {
-  flex: 1;
-  text-align: center;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: var(--sim-gap);
+  padding: 0 4px 10px;
+  border-bottom: var(--sim-border);
 }
 
 .sim-metric-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--sim-font-title);
+  font-weight: 600;
   color: var(--el-text-color-primary);
   line-height: 1.2;
 }
 
 .sim-metric-subtitle {
-  margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--sim-font-label);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }
@@ -1525,14 +1520,14 @@ export default {
 .status-tab-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: var(--sim-gap);
   align-items: start;
 }
 
 .status-card-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: var(--sim-gap);
   grid-column: 1;
   /* 与右侧AT日志卡片等高 */
   align-self: stretch;
@@ -1541,7 +1536,7 @@ export default {
 .status-side-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: var(--sim-gap);
 }
 
 /* 实时状态 tab 底部操作行(横跨两列) */
@@ -1563,76 +1558,37 @@ export default {
 .pci-tab-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: var(--sim-gap);
   align-items: start;
 }
 
 /* PCI设置卡内的操作按钮与表单拉开间距 */
 .pci-tab-grid .config-card .action-buttons {
-  margin-top: 18px;
+  margin-top: 16px;
 }
 
+/* 卡片: 一层浅边框 + 纯色底, 不使用渐变/投影/彩色装饰条 */
 .config-card {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--el-border-color);
-  border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
-}
-
-.config-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  border-radius: 16px 0 0 16px;
-  background: #cbd5e1;
-}
-
-.sim-accent-blue::before {
-  background: #3b82f6;
-}
-
-.sim-accent-green::before {
-  background: #22c55e;
-}
-
-.sim-accent-purple::before {
-  background: #8b5cf6;
-}
-
-.sim-accent-cyan::before {
-  background: #06b6d4;
-}
-
-.sim-accent-amber::before {
-  background: #f59e0b;
-}
-
-.sim-accent-red::before {
-  background: #ef4444;
-}
-
-.sim-accent-slate::before {
-  background: #64748b;
+  border: var(--sim-border);
+  border-radius: var(--sim-radius);
+  background: var(--el-bg-color);
 }
 
 :deep(.config-card .el-card__header) {
-  padding: 14px 18px 0;
+  padding: 12px 16px 0;
   border-bottom: 0;
 }
 
 :deep(.config-card .el-card__body) {
-  padding: 12px 18px 18px;
+  padding: 10px 16px 16px;
 }
 
 :deep(.compact-card .el-card__header) {
-  padding: 12px 16px 0;
+  padding: 12px 14px 0;
 }
 
 :deep(.compact-card .el-card__body) {
-  padding: 10px 16px 16px;
+  padding: 8px 14px 14px;
   overflow: visible;
 }
 
@@ -1641,11 +1597,11 @@ export default {
 }
 
 .compact-card .status-label {
-  font-size: 13px;
+  font-size: var(--sim-font-label);
 }
 
 .compact-card .status-value {
-  font-size: 13px;
+  font-size: var(--sim-font-label);
 }
 
 .neighbor-card {
@@ -1660,7 +1616,7 @@ export default {
 }
 
 .sim-card-title {
-  font-size: 15px;
+  font-size: var(--sim-font-base);
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
@@ -1723,10 +1679,10 @@ export default {
 }
 
 .signal-title {
-  font-size: 13px;
+  min-width: 80px;
+  font-size: var(--sim-font-label);
   font-weight: 500;
   color: var(--el-text-color-regular);
-  min-width: 80px;
 }
 
 .signal-item {
@@ -1739,12 +1695,12 @@ export default {
 }
 
 .signal-item .status-label {
-  font-size: 11px;
+  font-size: var(--sim-font-minor);
   color: var(--el-text-color-regular);
 }
 
 .signal-item .status-value {
-  font-size: 12px;
+  font-size: var(--sim-font-label);
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
@@ -1757,23 +1713,11 @@ export default {
 }
 
 .table-title {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--el-text-color-primary);
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   text-align: center;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.table-title::before,
-.table-title::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-  margin: 0 10px;
+  font-size: var(--sim-font-label);
+  font-weight: 600;
+  color: var(--el-text-color-regular);
 }
 
 .table-row {
@@ -1790,7 +1734,7 @@ export default {
 .table-cell {
   flex: 1;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--sim-font-minor);
   padding: 5px 2px;
 }
 
@@ -1798,23 +1742,25 @@ export default {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 14px;
-  padding: 0 1px;
-  border-radius: 7px;
-  font-size: 10px;
-  font-weight: 600;
-  color: #fff;
+  min-width: 40px;
+  height: 16px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: var(--sim-font-xs);
+  font-weight: 500;
+  color: var(--el-color-white);
   white-space: nowrap;
   line-height: 1;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.signal-badge.sig-excellent { background: #22c55e; }
-.signal-badge.sig-good      { background: #84cc16; }
-.signal-badge.sig-fair      { background: #eab308; color: #333; }
-.signal-badge.sig-poor      { background: #ef4444; }
-.signal-badge.sig-empty     { background: #9ca3af; }
+
+/* 信号等级: 颜色只表达强弱, 取自 el 语义色板 */
+.signal-badge.sig-excellent { background: var(--el-color-success); }
+.signal-badge.sig-good      { background: var(--el-color-success-light-3); color: var(--el-text-color-primary); }
+.signal-badge.sig-fair      { background: var(--el-color-warning); }
+.signal-badge.sig-poor      { background: var(--el-color-danger); }
+.signal-badge.sig-empty     { background: var(--el-fill-color); color: var(--el-text-color-secondary); }
 
 .header-row .table-cell {
   font-weight: 600;
@@ -1829,7 +1775,7 @@ export default {
 
 .cell-en {
   margin-top: 2px;
-  font-size: 10px;
+  font-size: var(--sim-font-xs);
   font-weight: 400;
   color: var(--el-text-color-secondary);
   line-height: 1.2;
@@ -1838,7 +1784,7 @@ export default {
 /* 数值单元格内的补充值, 如 PCI 的十进制: DF (223) */
 .cell-sub {
   margin-left: 2px;
-  font-size: 10px;
+  font-size: var(--sim-font-xs);
   font-weight: 400;
   color: var(--el-text-color-secondary);
 }
@@ -1857,7 +1803,7 @@ export default {
   text-align: center;
   padding: 20px;
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--sim-font-label);
 }
 
 .status-item {
@@ -1888,44 +1834,44 @@ export default {
   word-break: break-word;
 }
 
-/* 状态徽章: 按不同状态显示不同背景色 */
+/* 状态徽章: 底色/文字均取自 el 语义色板 */
 .status-badge {
   display: inline-block;
   padding: 3px 12px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--sim-font-minor);
   font-weight: 600;
   line-height: 1.6;
 }
 
 .status-badge-online {
-  background: rgba(34, 197, 94, 0.2);
-  color: #16a34a;
+  background: var(--el-color-success-light-9);
+  color: var(--el-color-success);
 }
 
 .status-badge-noservice {
-  background: rgba(245, 158, 11, 0.24);
-  color: #d97706;
+  background: var(--el-color-warning-light-9);
+  color: var(--el-color-warning);
 }
 
 .status-badge-nomodule {
-  background: rgba(239, 68, 68, 0.16);
-  color: #dc2626;
+  background: var(--el-color-danger-light-9);
+  color: var(--el-color-danger);
 }
 
 .status-badge-offline {
-  background: rgba(239, 68, 68, 0.2);
-  color: #dc2626;
+  background: var(--el-color-danger-light-9);
+  color: var(--el-color-danger);
 }
 
 .status-badge-disabled {
-  background: rgba(148, 163, 184, 0.26);
-  color: #64748b;
+  background: var(--el-fill-color);
+  color: var(--el-text-color-secondary);
 }
 
 .status-badge-info {
-  background: rgba(59, 130, 246, 0.2);
-  color: #2563eb;
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
 }
 
 .card-actions {
@@ -1967,14 +1913,13 @@ export default {
 .sim-lock-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sim-gap);
   width: 100%;
   box-sizing: border-box;
-  padding: 14px;
-  border: 1px solid rgba(245, 158, 11, 0.18);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 251, 235, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  padding: 12px 14px;
+  border: var(--sim-border);
+  border-radius: var(--sim-radius);
+  background: var(--el-fill-color-lighter);
 }
 
 .sim-lock-toggle {
@@ -1997,24 +1942,24 @@ export default {
 
 .sim-band-panel {
   box-sizing: border-box;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px dashed rgba(245, 158, 11, 0.24);
+  padding: 10px 12px;
+  border: var(--sim-border);
+  border-radius: var(--sim-radius-sm);
+  background: var(--el-bg-color);
 }
 
 .sim-pci-toolbar {
   justify-content: space-between;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 14px;
+  gap: var(--sim-gap);
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  padding: 8px 12px;
+  border: var(--sim-border);
+  border-radius: var(--sim-radius-sm);
+  background: var(--el-bg-color);
 }
 
 .sim-pci-entry-row {
@@ -2022,14 +1967,14 @@ export default {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.15fr) auto;
   align-items: center;
   column-gap: 16px;
-  row-gap: 12px;
+  row-gap: var(--sim-gap);
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
   padding: 12px 16px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.9);
+  border: var(--sim-border);
+  border-radius: var(--sim-radius-sm);
+  background: var(--el-bg-color);
 }
 
 .sim-pci-meta {
@@ -2040,15 +1985,15 @@ export default {
 }
 
 .sim-pci-meta-title {
-  font-size: 13px;
+  font-size: var(--sim-font-label);
   font-weight: 600;
-  color: #334155;
+  color: var(--el-text-color-primary);
 }
 
 .sim-pci-meta-desc {
-  font-size: 12px;
+  font-size: var(--sim-font-minor);
   line-height: 1.5;
-  color: #64748b;
+  color: var(--el-text-color-secondary);
 }
 
 .sim-pci-mode-btn {
@@ -2111,17 +2056,17 @@ export default {
   min-height: 30px;
   padding: 0 14px;
   border-radius: 999px;
-  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
 .band-option-tag:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(148, 163, 184, 0.16);
+  color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
 }
 
 .band-option-empty {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--sim-font-minor);
   line-height: 1.6;
   padding: 2px 0;
 }
@@ -2266,8 +2211,14 @@ export default {
   }
 }
 
+/* AT日志: 深色终端配色集中在此定义, 深底不随主题变化, 故不复用 el 文本色 */
 .at-log-card {
-  border-color: #374151;
+  --sim-term-bg: #1e1e1e;
+  --sim-term-fg: #cbd5e1;
+  --sim-term-dim: #94a3b8;
+  --sim-term-res-bg: rgba(255, 255, 255, 0.04);
+  --sim-term-divider: rgba(255, 255, 255, 0.06);
+  --sim-term-line: rgba(255, 255, 255, 0.12);
   /* 位于实时状态页网格右下角 */
   grid-column: 2;
   /* 与左侧锁频状态卡片等高 */
@@ -2298,24 +2249,24 @@ export default {
   left: 14px;
   right: 14px;
   bottom: 40px;
-  background: #1e1e1e;
-  border-radius: 8px;
+  background: var(--sim-term-bg);
+  border-radius: var(--sim-radius-sm);
   padding: 10px 14px;
   overflow-y: auto;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 12px;
+  font-size: var(--sim-font-minor);
   line-height: 1.6;
 }
 
 .at-log-empty {
-  color: #6b7280;
+  color: var(--sim-term-dim);
   text-align: center;
   padding: 20px 0;
 }
 
 .at-log-entry {
   padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--sim-term-divider);
 }
 
 .at-log-entry:last-child {
@@ -2327,55 +2278,55 @@ export default {
   align-items: center;
   gap: 10px;
   margin-bottom: 6px;
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: var(--sim-font-xs);
+  color: var(--sim-term-dim);
 }
 
 .at-log-seq {
-  color: #fbbf24;
+  color: var(--el-color-warning-light-3);
 }
 
 .at-log-ts {
-  color: #cbd5e1;
+  color: var(--sim-term-fg);
 }
 
 .at-log-tty {
-  color: #a78bfa;
+  color: var(--el-color-primary-light-3);
 }
 
 .at-log-line {
-  color: #9ca3af;
+  color: var(--sim-term-dim);
   word-break: break-all;
   white-space: pre-wrap;
 }
 
 .at-log-cmd {
-  color: #60a5fa;
+  color: var(--el-color-primary-light-3);
   font-weight: 600;
 }
 
 .at-log-res {
   margin: 0;
   font: inherit;
-  color: #cbd5e1;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 6px;
+  color: var(--sim-term-fg);
+  background: var(--sim-term-res-bg);
+  border-radius: var(--sim-radius-sm);
   padding: 8px 10px;
 }
 
 .at-log-res.is-ok {
-  color: #34d399;
+  color: var(--el-color-success-light-3);
 }
 
 .at-log-res.is-err {
-  color: #f87171;
+  color: var(--el-color-danger-light-3);
 }
 
 .at-log-gap {
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.08);
-  border: 1px solid rgba(251, 191, 36, 0.18);
-  border-radius: 6px;
+  color: var(--el-color-warning-light-3);
+  background: var(--sim-term-res-bg);
+  border: 1px solid var(--sim-term-line);
+  border-radius: var(--sim-radius-sm);
   padding: 8px 10px;
 }
 </style>

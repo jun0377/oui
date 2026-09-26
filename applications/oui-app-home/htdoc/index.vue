@@ -4,16 +4,8 @@
 
       <div class="mode-panel-body">
         <div class="home-dashboard-grid">
-          <div
-            class="home-metric-card home-metric-card-primary home-workmode-card"
-            :class="[featuredWorkModeCard.accentClass, workModeThemeClass]"
-          >
-            <div class="home-metric-head">
-              <div>
-                <div class="home-metric-title">{{ featuredWorkModeCard.title }}</div>
-              </div>
-              <el-tag :type="featuredWorkModeCard.type">{{ featuredWorkModeCard.tag }}</el-tag>
-            </div>
+          <div class="home-metric-card home-metric-card-primary home-workmode-card">
+            <div class="home-metric-title">{{ featuredWorkModeCard.title }}</div>
             <div class="home-metric-value">{{ featuredWorkModeCard.value }}</div>
             <div class="home-metric-subtitle">{{ featuredWorkModeCard.subtitle }}</div>
             <div class="home-workmode-foot">
@@ -21,18 +13,15 @@
             </div>
           </div>
 
-          <div class="home-metric-card home-metric-card-primary home-resource-card is-accent-blue">
-            <div class="home-metric-head">
-              <div class="home-metric-title">系统资源</div>
-              <el-tag type="info">实时</el-tag>
-            </div>
+          <div class="home-metric-card home-metric-card-primary home-resource-card">
+            <div class="home-metric-title">系统资源</div>
 
             <div class="home-resource-usage-list">
               <div v-for="item in resourceUsageItems" :key="item.title" class="home-resource-usage-item">
                 <div class="home-resource-usage-label">{{ item.title }}</div>
                 <div class="home-resource-usage-sparkline">
                   <svg viewBox="0 0 96 30" preserveAspectRatio="none" aria-hidden="true">
-                    <rect x="0" y="0" width="96" height="30" rx="4" fill="#f8fafc"/>
+                    <rect x="0" y="0" width="96" height="30" rx="4" class="home-resource-sparkline-bg"/>
                     <line x1="0" y1="26" x2="96" y2="26" class="home-resource-axis-line"/>
                     <polyline
                       :points="getUsageSparklinePoints(item.title)"
@@ -61,12 +50,8 @@
               v-for="card in primaryStatusCards"
               :key="card.key"
               class="home-metric-card home-metric-card-primary"
-              :class="card.accentClass"
             >
-              <div class="home-metric-head">
-                <div class="home-metric-title">{{ card.title }}</div>
-                <el-tag :type="card.type">{{ card.tag }}</el-tag>
-              </div>
+              <div class="home-metric-title">{{ card.title }}</div>
               <div class="home-metric-value">{{ card.value }}</div>
               <div class="home-metric-subtitle">{{ card.subtitle }}</div>
               <el-progress
@@ -79,10 +64,7 @@
           </div>
 
           <div class="home-section-card home-interface-panel">
-            <div class="home-metric-head">
-              <div class="home-section-title">网络接口状态</div>
-              <el-tag type="info">实时</el-tag>
-            </div>
+            <div class="home-section-title">网络接口状态</div>
 
             <div v-if="interfaceLoading" class="home-interface-loading">
               <div
@@ -171,33 +153,29 @@
 const WORK_MODE_META = {
   single: {
     label: '单卡模式',
-    description: '组网的流量经过服务器中转, 其它流量固定走单条链路(不经过服务器)',
-    themeClass: 'is-mode-single'
+    description: '组网的流量经过服务器中转, 其它流量固定走单条链路(不经过服务器)'
   },
   aggregate: {
     label: '聚合模式',
-    description: '聚合多链路带宽',
-    themeClass: 'is-mode-aggregate'
+    description: '聚合多链路带宽'
   },
   balance: {
     label: '负载均衡',
-    description: '并发的连接按链路权重分流',
-    themeClass: 'is-mode-balance'
+    description: '并发的连接按链路权重分流'
   }
 }
 
 const DEFAULT_WORK_MODE_META = {
   label: '未知模式',
-  description: '等待模式数据',
-  themeClass: 'is-mode-default'
+  description: '等待模式数据'
 }
 
 // 卡片显示顺序与在此数据中的顺序相同
 const SERVICE_CARD_META = [
-  { key: 'admin-backend', title: '管理平台', accentClass: 'is-accent-purple' },
-  { key: 'network-status', title: '组网状态', accentClass: 'is-accent-cyan' },
-  { key: 'dhcp-status', title: 'DHCP服务器', accentClass: 'is-accent-green' },
-  { key: 'dns-status', title: 'DNS服务', accentClass: 'is-accent-blue' }
+  { key: 'admin-backend', title: '管理平台' },
+  { key: 'network-status', title: '组网状态' },
+  { key: 'dhcp-status', title: 'DHCP服务器' },
+  { key: 'dns-status', title: 'DNS服务' }
 ]
 
 const INTERFACE_FIELD_META = [
@@ -285,10 +263,6 @@ export default {
     workModeMeta() {
       return WORK_MODE_META[this.workMode] || DEFAULT_WORK_MODE_META
     },
-    // 工作模式
-    workModeThemeClass() {
-      return this.workModeMeta.themeClass
-    },
     // DHCP租约状态
     dhcpLeaseCount() {
       return Array.isArray(this.dhcpLeases) ? this.dhcpLeases.length : 0
@@ -308,13 +282,11 @@ export default {
       if (!this.dhcpSettings)
         return {
           label: '待检测',
-          subtitle: '正在获取 DHCP 配置',
-          type: 'warning'
+          subtitle: '正在获取 DHCP 配置'
         }
       return {
         label: '运行中',
-        subtitle: `租约数 ${this.dhcpLeaseCount} / 地址池 ${this.dhcpRangeText}`,
-        type: 'success'
+        subtitle: `租约数 ${this.dhcpLeaseCount} / 地址池 ${this.dhcpRangeText}`
       }
     },
     // 网络接口状态
@@ -334,9 +306,7 @@ export default {
       if (!status) {
         return {
           label: '待检测',
-          subtitle: '正在获取 OpenVPN 组网状态',
-          tag: '检测中',
-          type: 'warning'
+          subtitle: '正在获取 OpenVPN 组网状态'
         }
       }
 
@@ -348,26 +318,20 @@ export default {
       if (status.connected) {
         return {
           label: '组网已连接',
-          subtitle: `上行: ${this.formatBytes(tx_bytes)} | 下行: ${this.formatBytes(rx_bytes)} | 总计: ${this.formatBytes(totalBytes)}`,
-          tag: '正常',
-          type: 'success'
+          subtitle: `上行: ${this.formatBytes(tx_bytes)} | 下行: ${this.formatBytes(rx_bytes)} | 总计: ${this.formatBytes(totalBytes)}`
         }
       }
       // 运行中, 但是未连接成功
       if (status.running) {
         return {
           label: '运行中,未连接',
-          subtitle: '组网进程运行中, 但是尚未建立连接',
-          tag: '注意',
-          type: 'warning'
+          subtitle: '组网进程运行中, 但是尚未建立连接'
         }
       }
 
       return {
         label: '组网未启动',
-        subtitle: status.updated ? `${status.msg || '组网进程未运行'} / ${updated}` : (status.msg || '组网进程未运行'),
-        tag: '离线',
-        type: 'danger'
+        subtitle: status.updated ? `${status.msg || '组网进程未运行'} / ${updated}` : (status.msg || '组网进程未运行')
       }
     },
     // CPU温度
@@ -434,18 +398,13 @@ export default {
         title: '工作模式',
         value: this.workModeMeta.label,
         subtitle: this.workModeMeta.description,
-        detail: this.workModeSettings?.detail || '等待工作模式配置',
-        tag: '策略',
-        type: 'info',
-        accentClass: 'is-accent-amber'
+        detail: this.workModeSettings?.detail || '等待工作模式配置'
       }
     },
     sharedServiceStatus() {
       return {
         value: this.dhcpStatus.label,
-        subtitle: this.dhcpStatus.subtitle,
-        tag: `${this.dhcpLeaseCount} 租约`,
-        type: this.dhcpStatus.type
+        subtitle: this.dhcpStatus.subtitle
       }
     },
     // DNS 服务器状态
@@ -455,35 +414,27 @@ export default {
       if (!status) {
         return {
           value: '检测中',
-          subtitle: '正在获取 DNS 解析状态',
-          tag: '检测中',
-          type: 'warning'
+          subtitle: '正在获取 DNS 解析状态'
         }
       }
       // 进程未启动, 服务未运行
       if (!status.running) {
         return {
           value: '未启动',
-          subtitle: status.msg || 'DNS 服务未运行',
-          tag: '离线',
-          type: 'danger'
+          subtitle: status.msg || 'DNS 服务未运行'
         }
       }
       // 解析正常
       if (status.resolved) {
         return {
           value: '解析正常',
-          subtitle: `正常: ${status.query} -> ${status.answer}`,
-          tag: '正常',
-          type: 'success'
+          subtitle: `正常: ${status.query} -> ${status.answer}`
         }
       }
       // 其它异常
       return {
         value: '解析异常',
-        subtitle: status.msg || `${status.resolver || 'DNS'} 解析失败`,
-        tag: '异常',
-        type: 'danger'
+        subtitle: status.msg || `${status.resolver || 'DNS'} 解析失败`
       }
     },
     // 管理平台状态: 聚合服务器 和 控制后台 是同一个
@@ -493,9 +444,7 @@ export default {
       if (!tracker) {
         return {
           value: '检测中',
-          subtitle: `地址: ${addr}`,
-          tag: '检测中',
-          type: 'warning'
+          subtitle: `地址: ${addr}`
         }
       }
       // 连接状态: OK/ERROR
@@ -506,17 +455,13 @@ export default {
       if (status === 'OK') {
         return {
           value: '已连接',
-          subtitle: `地址: ${addr}`,
-          tag: '正常',
-          type: 'success'
+          subtitle: `地址: ${addr}`
         }
       }
       // 连接异常
       return {
         value: '连接异常',
-        subtitle: msg || `地址: ${addr}`,
-        tag: '异常',
-        type: 'danger'
+        subtitle: msg || `地址: ${addr}`
       }
     },
     serviceCards() {
@@ -527,7 +472,7 @@ export default {
         'dns-status': this.dnsServiceStatus
       }
 
-      return SERVICE_CARD_META.map(({ key, title, accentClass }) => this.createStatusCard(key, title, statusMap[key], accentClass))
+      return SERVICE_CARD_META.map(({ key, title }) => this.createStatusCard(key, title, statusMap[key]))
     },
     primaryStatusCards() {
       return this.serviceCards
@@ -549,23 +494,13 @@ export default {
       const val = (times1CPU - times0CPU) * 100.0 / ((times1CPU + times1[3]) - (times0CPU + times0[3]))
       return parseFloat(val.toFixed(2))
     },
-    getAccentClassByType(type) {
-      if (type === 'success')
-        return 'is-accent-green'
-      if (type === 'danger')
-        return 'is-accent-red'
-      return 'is-accent-amber'
-    },
-    createStatusCard(key, title, status, accentClass) {
+    createStatusCard(key, title, status) {
       return {
         key,
         title,
         value: status.value || status.label || '-',
         subtitle: status.subtitle || '',
-        tag: status.tag || '状态',
-        type: status.type || 'info',
-        percentage: null,
-        accentClass: accentClass || this.getAccentClassByType(status.type)
+        percentage: null
       }
     },
     parseRpcResult(result) {
@@ -1097,15 +1032,27 @@ export default {
 <style scoped>
 .home-page {
   width: 100%;
+
+  /* 本地设计 token: 圆角/间距/字号/边框统一取值, 避免逐处硬编码 */
+  --home-radius: 8px;
+  --home-radius-sm: 6px;
+  --home-gap: 16px;
+  --home-font-title: 14px;
+  --home-font-label: 13px;
+  --home-font-minor: 12px;
+  --home-font-metric: 26px;
+  --home-font-metric-sm: 20px;
+  --home-border: 1px solid var(--el-border-color-lighter);
 }
 
 .mode-card {
   width: 100%;
 }
 
+/* 页面容器: 仅作承载, 不设圆角/边框/阴影 */
 .mode-panel {
-  border-radius: 12px;
   border: 0;
+  border-radius: 0;
   box-shadow: none;
 }
 
@@ -1119,8 +1066,8 @@ export default {
   grid-template-areas:
     'workmode workmode interface interface'
     'status status interface interface'
-    'status status resource resource';
-  gap: 16px;
+    'resource resource interface interface';
+  gap: var(--home-gap);
   align-items: stretch;
 }
 
@@ -1138,8 +1085,9 @@ export default {
 .home-status-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-content: stretch;
+  gap: var(--home-gap);
+  /* 卡片按自身内容定高, 不被外层网格拉伸 */
+  align-content: start;
   grid-area: status;
 }
 
@@ -1150,81 +1098,39 @@ export default {
   box-sizing: border-box;
 }
 
+/* 指标卡: 一层浅边框 + 纯色底, 不使用渐变/投影/彩色装饰条 */
 .home-metric-card,
 .home-section-card {
   display: flex;
   flex-direction: column;
-  padding: 18px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
-}
-
-.home-metric-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.home-metric-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  border-radius: 16px 0 0 16px;
-  background: #cbd5e1;
+  padding: 16px;
+  border: var(--home-border);
+  border-radius: var(--home-radius);
+  background: var(--el-bg-color);
 }
 
 .home-metric-card-primary {
   min-height: 168px;
 }
 
-.home-workmode-card {
-  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
-  border-color: rgba(245, 158, 11, 0.28);
-  box-shadow: 0 14px 30px rgba(245, 158, 11, 0.12);
+/* 服务卡只有标题/数值/副标题三行, 压到约半高(168px -> 84px), 消除卡片内大片留白 */
+.home-status-grid .home-metric-card-primary {
+  min-height: 84px;
+  padding: 10px 14px;
 }
 
-.home-workmode-card.is-mode-single {
-  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
-  border-color: rgba(59, 130, 246, 0.28);
-  box-shadow: 0 14px 30px rgba(59, 130, 246, 0.12);
+.home-status-grid .home-metric-title {
+  line-height: 1.2;
 }
 
-.home-workmode-card.is-mode-aggregate {
-  background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
-  border-color: rgba(139, 92, 246, 0.28);
-  box-shadow: 0 14px 30px rgba(139, 92, 246, 0.12);
+.home-status-grid .home-metric-value {
+  margin: 8px 0 2px;
+  font-size: var(--home-font-metric-sm);
 }
 
-.home-workmode-card.is-mode-balance {
-  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
-  border-color: rgba(34, 197, 94, 0.28);
-  box-shadow: 0 14px 30px rgba(34, 197, 94, 0.12);
-}
-
-.home-workmode-card.is-mode-default {
-  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
-  border-color: rgba(245, 158, 11, 0.28);
-  box-shadow: 0 14px 30px rgba(245, 158, 11, 0.12);
-}
-
-.home-workmode-card .home-metric-value {
-  margin-top: 18px;
-  font-size: 36px;
-  line-height: 1;
-}
-
-.home-workmode-card.is-mode-single .home-workmode-foot {
-  border-top-color: rgba(59, 130, 246, 0.18);
-}
-
-.home-workmode-card.is-mode-aggregate .home-workmode-foot {
-  border-top-color: rgba(139, 92, 246, 0.18);
-}
-
-.home-workmode-card.is-mode-balance .home-workmode-foot {
-  border-top-color: rgba(34, 197, 94, 0.18);
+.home-status-grid .home-metric-subtitle {
+  margin-top: 2px;
+  line-height: 1.3;
 }
 
 .home-workmode-foot {
@@ -1234,13 +1140,13 @@ export default {
   gap: 12px;
   margin-top: 18px;
   padding-top: 14px;
-  border-top: 1px solid rgba(245, 158, 11, 0.18);
+  border-top: var(--home-border);
 }
 
 .home-workmode-foot-value {
   flex: 1 1 auto;
   text-align: left;
-  font-size: 13px;
+  font-size: var(--home-font-label);
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
@@ -1259,7 +1165,7 @@ export default {
 }
 
 .home-resource-usage-label {
-  font-size: 13px;
+  font-size: var(--home-font-label);
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
@@ -1275,25 +1181,28 @@ export default {
   height: 30px;
 }
 
+.home-resource-sparkline-bg {
+  fill: var(--el-fill-color-lighter);
+}
+
 .home-resource-axis-line {
-  stroke: rgba(148, 163, 184, 0.7);
+  stroke: var(--el-border-color);
   stroke-width: 0.8;
 }
 
 .home-resource-grid-line {
-  stroke: rgba(191, 219, 254, 0.95);
+  stroke: var(--el-border-color-lighter);
   stroke-width: 0.65;
 }
 
 .home-resource-curve-line {
-  stroke: #3b82f6;
+  stroke: var(--el-color-primary);
   stroke-width: 1.35;
-  filter: drop-shadow(0 1px 1px rgba(59, 130, 246, 0.16));
 }
 
 .home-resource-usage-value {
   text-align: right;
-  font-size: 13px;
+  font-size: var(--home-font-label);
   font-weight: 700;
   color: var(--el-text-color-primary);
   font-variant-numeric: tabular-nums;
@@ -1305,7 +1214,7 @@ export default {
   gap: 10px 20px;
   margin-top: 18px;
   padding-top: 16px;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  border-top: var(--home-border);
 }
 
 .home-resource-info-item {
@@ -1316,74 +1225,47 @@ export default {
 }
 
 .home-resource-info-title {
-  font-size: 13px;
+  font-size: var(--home-font-label);
   color: var(--el-text-color-secondary);
 }
 
 .home-resource-info-value {
   text-align: right;
-  font-size: 13px;
+  font-size: var(--home-font-label);
   font-weight: 600;
   color: var(--el-text-color-primary);
   word-break: break-word;
 }
 
-.home-metric-card.is-accent-blue::before {
-  background: #3b82f6;
-}
-
-.home-metric-card.is-accent-purple::before {
-  background: #8b5cf6;
-}
-
-.home-metric-card.is-accent-cyan::before {
-  background: #06b6d4;
-}
-
-.home-metric-card.is-accent-amber::before {
-  background: #f59e0b;
-}
-
-.home-metric-card.is-accent-green::before {
-  background: #22c55e;
-}
-
-.home-metric-card.is-accent-red::before {
-  background: #ef4444;
-}
-
-.home-metric-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-
 .home-metric-title,
 .home-section-title,
 .home-interface-name {
-  font-size: 15px;
+  font-size: var(--home-font-title);
   font-weight: 600;
   color: var(--el-text-color-primary);
+}
+
+/* 网口名在表格列内居中, 卡片标题保持左对齐 */
+.home-interface-name {
   text-align: center;
 }
 
 .home-metric-subtitle {
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--home-font-label);
   color: var(--el-text-color-secondary);
 }
 
 .home-interface-ifname {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--home-font-minor);
   color: var(--el-text-color-secondary);
   text-align: center;
 }
 
 .home-metric-value {
   margin: 14px 0 6px;
-  font-size: 28px;
+  font-size: var(--home-font-metric);
   font-weight: 700;
   color: var(--el-text-color-primary);
   line-height: 1.1;
@@ -1406,9 +1288,9 @@ export default {
 
 .home-interface-summary-head {
   flex: 0 0 72px;
-  font-size: 12px;
+  font-size: var(--home-font-minor);
   font-weight: 600;
-  color: #6b7280;
+  color: var(--el-text-color-secondary);
   white-space: nowrap;
   text-align: center;
 }
@@ -1422,9 +1304,9 @@ export default {
 
 .home-interface-inline-field-head,
 .home-interface-status-head {
-  font-size: 12px;
+  font-size: var(--home-font-minor);
   font-weight: 600;
-  color: #6b7280;
+  color: var(--el-text-color-secondary);
   white-space: nowrap;
   text-align: center;
 }
@@ -1433,38 +1315,35 @@ export default {
   width: 100%;
 }
 
+/* 网口行: 状态色只取 el 语义色板, 不做渐变/内阴影 */
 .home-interface-card {
   padding: 10px 14px;
-  border-radius: 14px;
-  background: #f8fafc;
   border: 1px solid transparent;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  border-radius: var(--home-radius);
+  background: var(--el-fill-color-lighter);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .home-interface-card.is-online,
 .home-interface-card.is-status-success {
-  border-color: rgba(34, 197, 94, 0.26);
-  background: linear-gradient(180deg, #f0fdf4 0%, #f8fafc 100%);
-  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.08);
+  border-color: var(--el-color-success-light-5);
+  background: var(--el-color-success-light-9);
 }
 
 .home-interface-card.is-offline,
 .home-interface-card.is-status-danger {
-  border-color: rgba(239, 68, 68, 0.26);
-  background: linear-gradient(180deg, #fef2f2 0%, #fff7f7 100%);
-  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.06);
+  border-color: var(--el-color-danger-light-5);
+  background: var(--el-color-danger-light-9);
 }
 
 .home-interface-card.is-status-warning {
-  border-color: rgba(245, 158, 11, 0.26);
-  background: linear-gradient(180deg, #fffbeb 0%, #f8fafc 100%);
-  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.08);
+  border-color: var(--el-color-warning-light-5);
+  background: var(--el-color-warning-light-9);
 }
 
 .home-interface-card.is-status-info {
-  border-color: rgba(107, 114, 128, 0.22);
-  background: linear-gradient(180deg, #f3f4f6 0%, #f8fafc 100%);
-  box-shadow: inset 0 0 0 1px rgba(107, 114, 128, 0.06);
+  border-color: var(--el-border-color-lighter);
+  background: var(--el-fill-color-light);
 }
 
 .home-interface-row {
@@ -1518,8 +1397,8 @@ export default {
 .home-interface-subvalue-label {
   width: 14px;
   margin-right: 4px;
-  font-size: 12px;
-  color: #6b7280;
+  font-size: var(--home-font-minor);
+  color: var(--el-text-color-secondary);
   flex: 0 0 auto;
   text-align: center;
 }
@@ -1535,9 +1414,9 @@ export default {
 
 .home-interface-value {
   display: block;
-  font-size: 13px;
+  font-size: var(--home-font-label);
   font-weight: 600;
-  color: #111827;
+  color: var(--el-text-color-primary);
   line-height: 1.25;
   text-align: center;
   white-space: nowrap;
@@ -1550,12 +1429,12 @@ export default {
   justify-self: center;
 }
 
-/* Skeleton loading */
+/* Skeleton loading: 保留流光动画(功能性加载反馈), 配色取自 el 填充色 */
 .skeleton-bar {
-  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background: linear-gradient(90deg, var(--el-fill-color) 25%, var(--el-fill-color-light) 50%, var(--el-fill-color) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
-  border-radius: 6px;
+  border-radius: var(--home-radius-sm);
 }
 
 @keyframes shimmer {
@@ -1571,9 +1450,9 @@ export default {
 
 .home-interface-skeleton {
   padding: 10px 14px;
-  border-radius: 14px;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
+  border: var(--home-border);
+  border-radius: var(--home-radius);
+  background: var(--el-fill-color-lighter);
 }
 
 .home-interface-skeleton-row {
@@ -1617,7 +1496,7 @@ export default {
 .skeleton-bar-tag {
   width: 52px;
   height: 24px;
-  border-radius: 12px;
+  border-radius: 999px;
 }
 
 .home-interface-skeleton-tag {
@@ -1633,18 +1512,13 @@ export default {
   .home-dashboard-grid {
     grid-template-areas:
       'workmode'
-      'resource'
       'status'
+      'resource'
       'interface';
   }
 }
 
 @media (max-width: 768px) {
-  .home-metric-head {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .home-interface-row {
     flex-direction: column;
     align-items: flex-start;
