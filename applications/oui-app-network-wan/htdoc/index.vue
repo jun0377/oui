@@ -361,6 +361,17 @@ const createDefaultWanLink = (index) => {
     },
     monsc: createEmptyMonsc(),
     monnc: createEmptyMonnc(),
+    // 自动优选小区探测状态(由后端 tracker-sim 提供, 探测结果仅本次运行有效)
+    pciAutoSelect: {
+      enabled: false,
+      running: false,
+      remain: 0,
+      round: 0,
+      timeout: 0,
+      reason: '',
+      nr: null,
+      lte: null
+    },
     // 配置
     realSettings:{
       rat:'',
@@ -1067,6 +1078,21 @@ export default {
             if (Array.isArray(data.monnc.nr)) monnc.nr = data.monnc.nr
           }
           link.monnc = monnc
+
+          // 自动优选小区探测状态(剩余时间/轮次/选优结果均由后端计算)
+          if (data.pciAutoSelect && typeof data.pciAutoSelect === 'object') {
+            const pas = data.pciAutoSelect
+            link.pciAutoSelect = {
+              enabled: pas.enabled === true,
+              running: pas.running === true,
+              remain: Number(pas.remain) || 0,
+              round: Number(pas.round) || 0,
+              timeout: Number(pas.timeout) || 0,
+              reason: pas.reason || '',
+              nr: pas.nr || null,
+              lte: pas.lte || null
+            }
+          }
         }).catch(err => {
           console.warn('getSimOverview failed for index', index, err)
         })
@@ -1587,6 +1613,10 @@ export default {
         if (data.dhcpRangeEnd) settings.dhcpRanageEnd = data.dhcpRangeEnd
         if (data.dhcpRangeMask) settings.dhcpRanageMask = data.dhcpRangeMask
         if (data.dhcpRangeGateway) settings.dhcpRanageGateway = data.dhcpRangeGateway
+        // 自动优选小区配置: pciAutoSelect=1 表示启用自动优选小区
+        if (data.pciAutoSelect !== undefined) settings.pciAutoSelect = data.pciAutoSelect
+        if (data.pciAutoSelectTimeout !== undefined) settings.pciAutoSelectTimeout = data.pciAutoSelectTimeout
+        if (data.pciAutoSelectExclude !== undefined) settings.pciAutoSelectExclude = data.pciAutoSelectExclude
       })
     },
     // 从freqInfo中解析出频段信息

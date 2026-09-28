@@ -431,119 +431,207 @@
               </div>
           </el-tab-pane>
 
-          <!-- Tab 4: 锁PCI小区 -->
+          <!-- Tab 4: PCI小区设置(优选PCI小区 / 手动锁PCI小区) -->
           <el-tab-pane label="PCI小区设置" name="pcilock" lazy>
             <div class="pci-tab-grid">
               <el-card class="config-card">
               <template #header>
                 <div class="card-header">
-                  <span class="sim-card-title">锁PCI小区</span>
+                  <span class="sim-card-title">PCI小区设置</span>
                 </div>
               </template>
               <el-form :model="settings" label-width="90px" class="config-form" label-align="left" label-position="left">
-                <el-form-item label="锁 NR PCI" class="sim-lock-form-item">
-                  <div class="sim-lock-section">
-                    <div class="sim-pci-row sim-lock-toolbar">
-                      <el-tag
-                        class="band-option-tag"
-                        :type="!settings.nr_pci.enabled ? 'primary' : 'info'"
-                        :effect="!settings.nr_pci.enabled ? 'dark' : 'plain'"
-                        @click="handleNRPciToggle"
-                      >
-                        {{ settings.nr_pci.enabled ? '解锁' : '未锁定,点击进行设置' }}
-                      </el-tag>
-                    </div>
-                    <template v-if="settings.nr_pci.enabled">
-                      <div v-for="(entry, idx) in settings.nr_pci.items" :key="idx" class="sim-pci-row sim-pci-entry-row">
-                        <div class="sim-pci-field">
-                          <el-tooltip content="请输入十进制的PCID" placement="top">
+                <el-form-item label="锁定方式" class="sim-lock-form-item">
+                  <el-radio-group v-model="settings.pci_mode" size="small">
+                    <el-tooltip
+                      content="按驻留稳定性自动优选小区<br/>探测完成后锁定最优小区并重新拨号"
+                      raw-content
+                      effect="light"
+                      popper-class="sim-prefer-tip-popper"
+                      placement="top"
+                    >
+                      <el-radio-button value="prefer">自动优选小区</el-radio-button>
+                    </el-tooltip>
+                    <el-radio-button value="manual">手动锁小区</el-radio-button>
+                  </el-radio-group>
+                </el-form-item>
+
+                <!-- 手动锁PCI小区: 显示 NR/LTE PCI 锁定配置 -->
+                <template v-if="settings.pci_mode === 'manual'">
+                  <el-form-item label="锁 NR PCI" class="sim-lock-form-item">
+                    <div class="sim-lock-section">
+                      <div class="sim-lock-head">
+                        <el-switch :model-value="settings.nr_pci.enabled" size="small" @change="handleNRPciToggle"/>
+                        <span class="sim-lock-head-text">{{ settings.nr_pci.enabled ? '已启用锁定' : '未启用, 打开开关后配置锁定条目' }}</span>
+                      </div>
+
+                      <template v-if="settings.nr_pci.enabled">
+                        <div class="sim-pci-table">
+                          <div class="sim-pci-col-head">
+                            <span>PCID(十进制)</span>
+                            <span>频点</span>
+                            <span>频段</span>
+                            <span>子载波间隔</span>
+                            <span></span>
+                          </div>
+                          <div v-for="(entry, idx) in settings.nr_pci.items" :key="idx" class="sim-pci-entry-row">
                             <el-input v-model="entry.pcid" placeholder="PCID(十进制)" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
-                          </el-tooltip>
-                        </div>
-                        <div class="sim-pci-field">
-                          <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
-                        </div>
-                        <div class="sim-pci-field">
-                          <el-select v-model="entry.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)">
-                            <el-option label="n1" value="1"/>
-                            <el-option label="n3" value="3"/>
-                            <el-option label="n5" value="5"/>
-                            <el-option label="n8" value="8"/>
-                            <el-option label="n28" value="28"/>
-                            <el-option label="n41" value="41"/>
-                            <el-option label="n78" value="78"/>
-                          </el-select>
-                        </div>
-                        <div class="sim-pci-field sim-pci-field-wide">
-                          <el-tooltip content="子载波间隔" placement="top">
-                            <el-select v-model="entry.scs" placeholder="子载波间隔" class="sim-pci-input sim-pci-input-wide" size="small" @change="handleNRPciInputChange(idx)">
+                            <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
+                            <el-select v-model="entry.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)">
+                              <el-option label="n1" value="1"/>
+                              <el-option label="n3" value="3"/>
+                              <el-option label="n5" value="5"/>
+                              <el-option label="n8" value="8"/>
+                              <el-option label="n28" value="28"/>
+                              <el-option label="n41" value="41"/>
+                              <el-option label="n78" value="78"/>
+                            </el-select>
+                            <el-select v-model="entry.scs" placeholder="子载波间隔" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)">
                               <el-option label="15KHz" value="0"/>
                               <el-option label="30KHz" value="1"/>
                               <el-option label="60KHz" value="2"/>
                               <el-option label="120KHz" value="3"/>
                               <el-option label="240KHz" value="4"/>
                             </el-select>
-                          </el-tooltip>
+                            <el-button link type="danger" class="sim-pci-remove-btn" @click="removeNRPciEntry(idx)">删除</el-button>
+                          </div>
                         </div>
-                        <el-button size="small" type="warning" class="sim-pci-remove-btn" @click="removeNRPciEntry(idx)">删除条目</el-button>
-                      </div>
-                      <div class="sim-pci-row sim-pci-actions">
-                        <el-tooltip :content="'是否允许重选切换小区; 当前状态: ' + (settings.nr_pci.reSelEnabled ? '允许' : '不允许')" placement="top">
-                          <el-button size="small" :type="settings.nr_pci.reSelEnabled ? 'primary' : 'default'" class="sim-pci-mode-btn" @click="settings.nr_pci.reSelEnabled = !settings.nr_pci.reSelEnabled">
-                            {{ settings.nr_pci.reSelEnabled ? '允许重选切换' : '禁止重选切换' }}
-                          </el-button>
-                        </el-tooltip>
-                        <el-button size="small" type="success" class="sim-pci-add-btn" @click="addNRPciEntry">添加条目</el-button>
-                      </div>
-                    </template>
-                  </div>
-                </el-form-item>
 
-                <el-form-item label="锁 LTE PCI" class="sim-lock-form-item">
-                  <div class="sim-lock-section">
-                    <div class="sim-pci-row sim-lock-toolbar">
-                      <el-tag
-                        class="band-option-tag"
-                        :type="!settings.lte_pci.enabled ? 'primary' : 'info'"
-                        :effect="!settings.lte_pci.enabled ? 'dark' : 'plain'"
-                        @click="handleLtePciToggle"
-                      >
-                        {{ settings.lte_pci.enabled ? '解锁' : '未锁定,点击进行设置' }}
-                      </el-tag>
+                        <div class="sim-pci-foot">
+                          <el-button size="small" class="sim-pci-add-btn" @click="addNRPciEntry">添加条目</el-button>
+                          <div class="sim-pci-foot-item">
+                            <span class="sim-pci-foot-label">允许重选切换小区</span>
+                            <el-switch v-model="settings.nr_pci.reSelEnabled" size="small"/>
+                          </div>
+                        </div>
+                      </template>
                     </div>
-                    <template v-if="settings.lte_pci.enabled">
-                      <div v-for="(entry, idx) in settings.lte_pci.items" :key="idx" class="sim-pci-row sim-pci-entry-row">
-                        <div class="sim-pci-field">
-                          <el-input v-model="entry.pcid" placeholder="PCID" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)"/>
-                        </div>
-                        <div class="sim-pci-field">
-                          <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)"/>
-                        </div>
-                        <div class="sim-pci-field">
-                          <el-select v-model="entry.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)">
-                            <el-option label="b1" value="1"/>
-                            <el-option label="b3" value="3"/>
-                            <el-option label="b5" value="5"/>
-                            <el-option label="b8" value="8"/>
-                            <el-option label="b34" value="34"/>
-                            <el-option label="b39" value="39"/>
-                            <el-option label="b40" value="40"/>
-                            <el-option label="b41" value="41"/>
-                          </el-select>
-                        </div>
-                        <el-button size="small" type="warning" class="sim-pci-remove-btn" @click="removeLtePciEntry(idx)">删除条目</el-button>
+                  </el-form-item>
+
+                  <el-form-item label="锁 LTE PCI" class="sim-lock-form-item">
+                    <div class="sim-lock-section">
+                      <div class="sim-lock-head">
+                        <el-switch :model-value="settings.lte_pci.enabled" size="small" @change="handleLtePciToggle"/>
+                        <span class="sim-lock-head-text">{{ settings.lte_pci.enabled ? '已启用锁定' : '未启用, 打开开关后配置锁定条目' }}</span>
                       </div>
-                      <div class="sim-pci-row sim-pci-actions">
-                        <el-tooltip :content="'是否允许重选切换小区; 当前状态: ' + (settings.lte_pci.reSelEnabled ? '允许' : '不允许')" placement="top">
-                          <el-button size="small" :type="settings.lte_pci.reSelEnabled ? 'primary' : 'default'" class="sim-pci-mode-btn" @click="settings.lte_pci.reSelEnabled = !settings.lte_pci.reSelEnabled">
-                            {{ settings.lte_pci.reSelEnabled ? '允许重选切换' : '禁止重选切换' }}
-                          </el-button>
+
+                      <template v-if="settings.lte_pci.enabled">
+                        <div class="sim-pci-table is-lte">
+                          <div class="sim-pci-col-head">
+                            <span>PCID</span>
+                            <span>频点</span>
+                            <span>频段</span>
+                            <span></span>
+                          </div>
+                          <div v-for="(entry, idx) in settings.lte_pci.items" :key="idx" class="sim-pci-entry-row">
+                            <el-input v-model="entry.pcid" placeholder="PCID" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)"/>
+                            <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)"/>
+                            <el-select v-model="entry.band" placeholder="频段" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)">
+                              <el-option label="b1" value="1"/>
+                              <el-option label="b3" value="3"/>
+                              <el-option label="b5" value="5"/>
+                              <el-option label="b8" value="8"/>
+                              <el-option label="b34" value="34"/>
+                              <el-option label="b39" value="39"/>
+                              <el-option label="b40" value="40"/>
+                              <el-option label="b41" value="41"/>
+                            </el-select>
+                            <el-button link type="danger" class="sim-pci-remove-btn" @click="removeLtePciEntry(idx)">删除</el-button>
+                          </div>
+                        </div>
+
+                        <div class="sim-pci-foot">
+                          <el-button size="small" class="sim-pci-add-btn" @click="addLtePciEntry">添加条目</el-button>
+                          <div class="sim-pci-foot-item">
+                            <span class="sim-pci-foot-label">允许重选切换小区</span>
+                            <el-switch v-model="settings.lte_pci.reSelEnabled" size="small"/>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </el-form-item>
+                </template>
+
+                <!-- 优选PCI小区: 由模组按信号质量自动选优小区 -->
+                <template v-else>
+                  <el-form-item label="优选策略" class="sim-lock-form-item">
+                    <el-radio-group v-model="settings.pci_prefer.strategy" size="small">
+                      <el-radio value="stability">按驻留稳定性</el-radio>
+                    </el-radio-group>
+                  </el-form-item>
+                  <el-form-item label="超时时间" class="sim-lock-form-item">
+                    <div class="sim-prefer-row">
+                      <el-tooltip
+                        content="探测时长(秒), 超时后按最优小区锁定"
+                        effect="light"
+                        popper-class="sim-prefer-tip-popper"
+                        placement="top"
+                      >
+                        <el-input-number
+                          v-model="settings.pci_prefer.timeout"
+                          :min="30"
+                          :max="300"
+                          :step="30"
+                          size="small"
+                          controls-position="right"
+                          class="sim-prefer-input"
+                        />
+                      </el-tooltip>
+                      <span class="sim-prefer-hint">秒</span>
+                    </div>
+                  </el-form-item>
+                  <el-form-item label="排除小区" class="sim-lock-form-item">
+                    <div class="sim-prefer-col">
+                      <div
+                        v-for="(_pci, idx) in settings.pci_prefer.exclude_pcis"
+                        :key="idx"
+                        class="sim-prefer-row"
+                      >
+                        <el-tooltip
+                          content="优选时忽略这些小区; 十进制 PCI(0-1007)"
+                          effect="light"
+                          popper-class="sim-prefer-tip-popper"
+                          placement="top"
+                        >
+                          <el-input
+                            v-model="settings.pci_prefer.exclude_pcis[idx]"
+                            size="small"
+                            placeholder="PCI(十进制)"
+                            class="sim-prefer-input"
+                            @change="handleExcludePciInputChange(idx)"
+                          />
                         </el-tooltip>
-                        <el-button size="small" type="success" @click="addLtePciEntry">添加条目</el-button>
+                        <el-button
+                          v-if="idx === settings.pci_prefer.exclude_pcis.length - 1"
+                          size="small"
+                          circle
+                          type="primary"
+                          class="sim-prefer-icon-btn"
+                          @click="addExcludePciEntry"
+                        >+</el-button>
+                        <el-button
+                          v-if="settings.pci_prefer.exclude_pcis.length > 1"
+                          size="small"
+                          circle
+                          class="sim-prefer-icon-btn"
+                          @click="removeExcludePciEntry(idx)"
+                        >−</el-button>
                       </div>
-                    </template>
-                  </div>
-                </el-form-item>
+                    </div>
+                  </el-form-item>
+                  <el-form-item class="sim-lock-form-item">
+                    <div class="sim-prefer-row">
+                      <el-tooltip
+                        content="重新执行优先小区策略"
+                        effect="light"
+                        popper-class="sim-prefer-tip-popper"
+                        placement="top"
+                      >
+                        <el-button size="small" type="primary" @click="handlePreferReselectNow">立即重选</el-button>
+                      </el-tooltip>
+                    </div>
+                  </el-form-item>
+                </template>
               </el-form>
 
               <!-- Action buttons -->
@@ -551,6 +639,69 @@
                 <el-button @click="saveConfig" type="primary" size="large">{{ $t('Save Configuration') }}</el-button>
                 <el-button @click="resetConfig" type="warning" size="large" class="btn-disabled-warning">{{ $t('Reset to Default') }}</el-button>
                 <el-button @click="goBack" type="info" size="large">{{ $t('Back') }}</el-button>
+              </div>
+            </el-card>
+
+            <div class="pci-side-col">
+            <el-card v-if="settings.pci_mode === 'prefer'" class="config-card pci-prefer-card">
+              <template #header>
+                <div class="card-header">
+                  <span class="sim-card-title">优选小区状态</span>
+                </div>
+              </template>
+
+              <div class="status-info">
+                <div class="status-item">
+                  <span class="pci-prefer-status-group">
+                    <span class="status-label">优选状态</span>
+                    <span class="status-badge" :class="preferRunning ? 'status-badge-running' : (pciAutoSelect.enabled ? 'status-badge-done' : 'status-badge-disabled')">
+                      {{ preferStatusText }}
+                      <span v-if="preferRunning">剩余 {{ preferRemainSeconds }} 秒</span>
+                    </span>
+                  </span>
+                </div>
+                <div class="pci-prefer-subtitle">
+                  <span>探测结果</span>
+                  <span v-if="!preferRunning && preferDecisionText" class="pci-prefer-reason">{{ preferDecisionText }}</span>
+                </div>
+                <div
+                  class="pci-prefer-result"
+                  v-loading="preferRunning"
+                  :element-loading-text="'探测中(第' + preferRound + '轮)...'"
+                >
+                  <div class="no-data" v-if="isNoService">
+                    无服务
+                  </div>
+                  <div class="no-data" v-else-if="!monsc.cell.arfcn">
+                    {{ $t('暂无数据') }}
+                  </div>
+                  <template v-else>
+                    <div class="sim-cell-table">
+                      <div class="table-row header-row">
+                        <div class="table-cell"><div class="cell-zh">频点</div><div class="cell-en">ARFCN</div></div>
+                        <div class="table-cell" v-if="monsc.cell.type === 'nr'"><div class="cell-zh">子载波间隔</div><div class="cell-en">SCS</div></div>
+                        <div class="table-cell"><div class="cell-zh">小区标识</div><div class="cell-en">Cell_ID</div></div>
+                        <div class="table-cell"><div class="cell-zh">物理小区ID</div><div class="cell-en">PCI</div></div>
+                        <div class="table-cell"><div class="cell-zh">跟踪区码</div><div class="cell-en">TAC</div></div>
+                        <div class="table-cell"><div class="cell-zh">信号强度</div><div class="cell-en">RSRP/dBm</div></div>
+                        <div class="table-cell"><div class="cell-zh">信号质量</div><div class="cell-en">RSRQ/dB</div></div>
+                        <div class="table-cell" v-if="monsc.cell.type === 'nr'"><div class="cell-zh">信号与干扰比</div><div class="cell-en">SINR/dB</div></div>
+                        <div class="table-cell" v-if="monsc.cell.type === 'lte'"><div class="cell-zh">接收信号强度</div><div class="cell-en">RSSI/dBm</div></div>
+                      </div>
+                      <div class="table-row">
+                        <div class="table-cell">{{ monsc.cell.arfcn }}</div>
+                        <div class="table-cell" v-if="monsc.cell.type === 'nr'">{{ monsc.cell.scs }}</div>
+                        <div class="table-cell">{{ monsc.cell.cell_id }}</div>
+                        <div class="table-cell">{{ monsc.cell.pci }}<span class="cell-sub">({{ parseInt(monsc.cell.pci, 16) || '-' }})</span></div>
+                        <div class="table-cell">{{ monsc.cell.tac }}</div>
+                        <div class="table-cell"><span class="signal-badge" :class="getSignalColor(monsc.cell.rsrp, 'rsrp')">{{ monsc.cell.rsrp || '-' }}</span></div>
+                        <div class="table-cell"><span class="signal-badge" :class="getSignalColor(monsc.cell.rsrq, 'rsrq')">{{ monsc.cell.rsrq || '-' }}</span></div>
+                        <div class="table-cell" v-if="monsc.cell.type === 'nr'"><span class="signal-badge" :class="getSignalColor(monsc.cell.sinr, 'sinr')">{{ monsc.cell.sinr || '-' }}</span></div>
+                        <div class="table-cell" v-if="monsc.cell.type === 'lte'"><span class="signal-badge" :class="getSignalColor(monsc.cell.rssi, 'rssi')">{{ monsc.cell.rssi || '-' }}</span></div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
               </div>
             </el-card>
 
@@ -569,41 +720,46 @@
                   {{ $t('暂无数据') }}
                 </div>
                 <div class="table-title" v-if="monnc.nr.length">NR相邻小区</div>
-                <div class="table-row header-row" v-if="monnc.nr.length">
-                  <div class="table-cell">ARFCN</div>
-                  <div class="table-cell">PCI(十六进制)</div>
-                  <div class="table-cell">PCI(十进制)</div>
-                  <div class="table-cell">RSRP/dBm</div>
-                  <div class="table-cell">RSRQ/dB</div>
-                  <div class="table-cell">SINR/dBm</div>
-                </div>
-                <div class="table-row" v-for="(cell, index) in sortedNrCells" :key="'nr-' + index">
-                  <div class="table-cell">{{ cell.arfcn }}</div>
-                  <div class="table-cell">{{ cell.pci }}</div>
-                  <div class="table-cell">{{ parseInt(cell.pci, 16) || '-' }}</div>
-                  <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrp, 'rsrp')">{{ cell.rsrp || '-' }}</span></div>
-                  <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrq, 'rsrq')">{{ cell.rsrq || '-' }}</span></div>
-                  <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.sinr, 'sinr')">{{ cell.sinr || '-' }}</span></div>
+                <div class="sim-cell-table" v-if="monnc.nr.length">
+                  <div class="table-row header-row">
+                    <div class="table-cell">ARFCN</div>
+                    <div class="table-cell">PCI(十六进制)</div>
+                    <div class="table-cell">PCI(十进制)</div>
+                    <div class="table-cell">RSRP/dBm</div>
+                    <div class="table-cell">RSRQ/dB</div>
+                    <div class="table-cell">SINR/dBm</div>
+                  </div>
+                  <div class="table-row" v-for="(cell, index) in sortedNrCells" :key="'nr-' + index">
+                    <div class="table-cell">{{ cell.arfcn }}</div>
+                    <div class="table-cell">{{ cell.pci }}</div>
+                    <div class="table-cell">{{ parseInt(cell.pci, 16) || '-' }}</div>
+                    <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrp, 'rsrp')">{{ cell.rsrp || '-' }}</span></div>
+                    <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrq, 'rsrq')">{{ cell.rsrq || '-' }}</span></div>
+                    <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.sinr, 'sinr')">{{ cell.sinr || '-' }}</span></div>
+                  </div>
                 </div>
                 <div class="table-title" v-if="monnc.lte.length">LTE相邻小区</div>
-                <div class="table-row header-row" v-if="monnc.lte.length">
-                  <div class="table-cell">ARFCN</div>
-                  <div class="table-cell">PCI(十六进制)</div>
-                  <div class="table-cell">PCI(十进制)</div>
-                  <div class="table-cell">RSRP</div>
-                  <div class="table-cell">RSRQ</div>
-                  <div class="table-cell">RXLEV</div>
-                </div>
-                <div class="table-row" v-for="(cell, index) in sortedLteCells" :key="'lte-' + index">
-                  <div class="table-cell">{{ cell.arfcn }}</div>
-                  <div class="table-cell">{{ cell.pci }}</div>
-                  <div class="table-cell">{{ parseInt(cell.pci, 16) || '-' }}</div>
-                  <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrp, 'rsrp')">{{ cell.rsrp || '-' }}</span></div>
-                  <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrq, 'rsrq')">{{ cell.rsrq || '-' }}</span></div>
-                  <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rxlev, 'rssi')">{{ cell.rxlev || '-' }}</span></div>
+                <div class="sim-cell-table" v-if="monnc.lte.length">
+                  <div class="table-row header-row">
+                    <div class="table-cell">ARFCN</div>
+                    <div class="table-cell">PCI(十六进制)</div>
+                    <div class="table-cell">PCI(十进制)</div>
+                    <div class="table-cell">RSRP</div>
+                    <div class="table-cell">RSRQ</div>
+                    <div class="table-cell">RXLEV</div>
+                  </div>
+                  <div class="table-row" v-for="(cell, index) in sortedLteCells" :key="'lte-' + index">
+                    <div class="table-cell">{{ cell.arfcn }}</div>
+                    <div class="table-cell">{{ cell.pci }}</div>
+                    <div class="table-cell">{{ parseInt(cell.pci, 16) || '-' }}</div>
+                    <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrp, 'rsrp')">{{ cell.rsrp || '-' }}</span></div>
+                    <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rsrq, 'rsrq')">{{ cell.rsrq || '-' }}</span></div>
+                    <div class="table-cell"><span class="signal-badge" :class="getSignalColor(cell.rxlev, 'rssi')">{{ cell.rxlev || '-' }}</span></div>
+                  </div>
                 </div>
               </div>
             </el-card>
+            </div>
             </div>
           </el-tab-pane>
         </el-tabs>
@@ -700,6 +856,10 @@ export default {
         lteBandUnLock: true,
         nr_pci: { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '', scs: '' }] },
         lte_pci: { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '' }] },
+        // PCI小区设置方式: prefer=优选PCI小区 / manual=手动锁PCI小区
+        pci_mode: 'manual',
+        // 优选PCI小区配置: 优选策略(rsrp=按信号强度 / stability=按驻留稳定性), 超时时间(秒), 排除的小区PCI(十进制)
+        pci_prefer: { strategy: 'stability', timeout: 60, exclude_pcis: [''] },
         auth: '',
         username: '',
         password: ''
@@ -716,6 +876,8 @@ export default {
       atLogDrainTimer: null,
       simTab: 'status',
       nowTick: 0,
+      // 自动优选小区探测状态, 由后端 sim.getOverview 提供(剩余秒数/轮次/选优结果均由后端计算)
+      pciAutoSelect: { enabled: false, running: false, remain: 0, round: 0, timeout: 0, reason: '', nr: null, lte: null },
       // 路由器与浏览器时钟偏移(ms), 在 routerTime 更新时校准并冻结
       clockOffset: 0,
       // 模组是否被系统识别(未安装模组 / 未上电时为 false)
@@ -810,6 +972,32 @@ export default {
         if (isNaN(vb)) return -1
         return vb - va
       })
+    },
+    // 优选PCI小区: 状态文案(后端未开启自动优选时为未开启)
+    preferStatusText() {
+      if (this.pciAutoSelect.enabled !== true)
+        return '未开启'
+      return this.preferRunning ? '优选策略执行中' : '执行完毕'
+    },
+    // 优选PCI小区: 是否正在探测, 由后端探测状态给出
+    preferRunning() {
+      if (this.settings.pci_mode !== 'prefer')
+        return false
+      return this.pciAutoSelect.running === true
+    },
+    // 优选PCI小区: 剩余探测秒数(由后端探测文件中的开始时间与超时时间推算)
+    preferRemainSeconds() {
+      if (this.settings.pci_mode !== 'prefer')
+        return 0
+      return Math.max(0, Number(this.pciAutoSelect.remain) || 0)
+    },
+    // 优选PCI小区: 已探测轮次(由后端探测文件统计)
+    preferRound() {
+      return Math.max(1, Number(this.pciAutoSelect.round) || 0)
+    },
+    // 优选PCI小区: 决策原因, 由后端统计选优后给出
+    preferDecisionText() {
+      return this.pciAutoSelect.reason || ''
     }
   },
   methods: {
@@ -955,6 +1143,8 @@ export default {
       this.CS = data.CS
       this.monsc = data.monsc
       this.monnc = data.monnc
+      // 自动优选小区探测状态(父级通过 sim.getOverview 同步到 wanData)
+      this.pciAutoSelect = data.pciAutoSelect || { enabled: false, running: false, remain: 0, round: 0, timeout: 0, reason: '', nr: null, lte: null }
       this.realSettings = data.realSettings
       if (!this.settingsInitialized) {
         this.settings.index = data.settings.index
@@ -988,6 +1178,18 @@ export default {
         if (data.settings.nr_pci) {
           this.settings.nr_pci = data.settings.nr_pci
         }
+        // PCI小区设置方式: UCI pciAutoSelect=1 表示自动优选小区
+        const autoSelect = data.settings.pciAutoSelect
+        this.settings.pci_mode = (autoSelect === '1' || autoSelect === 'true' || autoSelect === 1 || autoSelect === true) ? 'prefer' : 'manual'
+        this.settings.pci_prefer.strategy = 'stability'
+        const preferTimeout = Number(data.settings.pciAutoSelectTimeout)
+        this.settings.pci_prefer.timeout = Number.isFinite(preferTimeout) && preferTimeout > 0 ? Math.floor(preferTimeout) : 60
+        // 排除列表: UCI中的000为占位符, 过滤后为空时保留一个空输入框
+        const excludeRaw = data.settings.pciAutoSelectExclude
+        const excludeList = (Array.isArray(excludeRaw) ? excludeRaw : (excludeRaw === undefined || excludeRaw === null ? [] : [excludeRaw]))
+          .map(item => String(item).trim())
+          .filter(item => item !== '' && item !== '000')
+        this.settings.pci_prefer.exclude_pcis = excludeList.length ? excludeList : ['']
         this.settingsInitialized = true
       }
     },
@@ -1262,22 +1464,24 @@ export default {
         this.$message.error('The network interface must be specified!')
         return
       }
-      if (this.settings.nr_pci && this.settings.nr_pci.enabled && !this.settings.nrBandUnLock) {
+      // 优选PCI小区模式下由模组自动选优, 不做手动锁定的参数校验
+      const isManualPciMode = this.settings.pci_mode !== 'prefer'
+      if (isManualPciMode && this.settings.nr_pci && this.settings.nr_pci.enabled && !this.settings.nrBandUnLock) {
         this.$message.error('锁NR频段和锁NR PCI不允许同时设置，请先解锁其中一个')
         return
       }
-      const nrPciEntries = this.settings.nr_pci.items.filter(e => e.enabled)
+      const nrPciEntries = isManualPciMode ? this.settings.nr_pci.items.filter(e => e.enabled) : []
       for (const e of nrPciEntries) {
         if (!e.pcid || !e.band || !e.freq || e.scs === '') {
           this.$message.error('请完整填写NR PCI锁定参数: PCID/频段/频点/子载波间隔')
           return
         }
       }
-      if (this.settings.lte_pci && this.settings.lte_pci.enabled && !this.settings.lteBandUnLock) {
+      if (isManualPciMode && this.settings.lte_pci && this.settings.lte_pci.enabled && !this.settings.lteBandUnLock) {
         this.$message.error('锁LTE频段和锁LTE PCI不允许同时设置，请先解锁其中一个')
         return
       }
-      const ltePciEntries = this.settings.lte_pci.items.filter(e => e.enabled)
+      const ltePciEntries = isManualPciMode ? this.settings.lte_pci.items.filter(e => e.enabled) : []
       for (const e of ltePciEntries) {
         if (!e.pcid || !e.band || !e.freq) {
           this.$message.error('请完整填写LTE PCI锁定参数: PCID/频段/频点')
@@ -1292,6 +1496,7 @@ export default {
         ...this.settings,
         nr_pci: {
           ...this.settings.nr_pci,
+          enabled: isManualPciMode && this.settings.nr_pci.enabled,
           items: nrPciEntries.map(e => ({
             enabled: true,
             pcid: String(e.pcid),
@@ -1302,6 +1507,7 @@ export default {
         },
         lte_pci: {
           ...this.settings.lte_pci,
+          enabled: isManualPciMode && this.settings.lte_pci.enabled,
           items: ltePciEntries.map(e => ({
             enabled: true,
             pcid: String(e.pcid),
@@ -1331,6 +1537,8 @@ export default {
         this.settings.lteBandLockEnabled = false
         this.settings.nr_pci = { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '', scs: '' }] }
         this.settings.lte_pci = { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '' }] }
+        this.settings.pci_mode = 'manual'
+        this.settings.pci_prefer = { strategy: 'stability', timeout: 60, exclude_pcis: [''] }
         this.$oui.call('sim', 'changeSimSettings', this.settings).then((response) => {
           if (response && response.code === 0) {
             this.$oui.call('sim', 'changeSimEnable', this.settings).then((res) => {
@@ -1341,6 +1549,58 @@ export default {
           }
         })
       })
+    },
+    // 优选PCI小区: 立即重选, 由后端复位探测结果并重新探测优选, 期间会重新拨号, 需二次确认
+    handlePreferReselectNow() {
+      this.$confirm('立即重选将重新执行一轮优选探测, 期间会重新拨号并短暂断网, 是否继续？', '立即重选', {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        const ifname = this.settings.ifname || this.settings.alias
+        if (!ifname) {
+          this.$message.error('立即重选失败')
+          return
+        }
+        this.$oui.call('sim', 'pciAutoSelectReselect', { ifname }).then((res) => {
+          if (res === 0)
+            this.$message.success('已触发立即重选')
+          else
+            this.$message.error('立即重选失败')
+        }).catch(() => {
+          this.$message.error('立即重选失败')
+        })
+      }).catch(() => {
+        // 用户取消, 不改变当前优选状态
+      })
+    },
+    // 优选PCI小区: 排除小区列表的增删与校验
+    addExcludePciEntry() {
+      this.settings.pci_prefer.exclude_pcis.push('')
+    },
+    removeExcludePciEntry(idx) {
+      this.settings.pci_prefer.exclude_pcis.splice(idx, 1)
+    },
+    // 仅接受 0-1007 的十进制 PCI, 自动去重
+    handleExcludePciInputChange(idx) {
+      const list = this.settings.pci_prefer.exclude_pcis
+      const digits = String(list[idx] === undefined || list[idx] === null ? '' : list[idx]).replace(/\D/g, '')
+      if (digits === '') {
+        list[idx] = ''
+        return
+      }
+      const pcid = parseInt(digits, 10)
+      if (pcid > 1007) {
+        this.$message.warning('PCI 范围为 0-1007, 请重新输入')
+        list[idx] = ''
+        return
+      }
+      if (list.some((item, i) => i !== idx && String(item) === String(pcid))) {
+        this.$message.warning('该 PCI 已存在, 请勿重复添加')
+        list[idx] = ''
+        return
+      }
+      list[idx] = String(pcid)
     },
     handleNRPciToggle() {
       if (this.settings.nr_pci.enabled) {
@@ -1565,6 +1825,87 @@ export default {
 /* PCI设置卡内的操作按钮与表单拉开间距 */
 .pci-tab-grid .config-card .action-buttons {
   margin-top: 16px;
+}
+
+/* PCI小区设置 tab 右列: 优选项状态卡片 + 相邻小区卡片 上下堆叠 */
+.pci-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sim-gap);
+  min-width: 0;
+}
+
+.pci-side-col .neighbor-card {
+  flex: 1 1 auto;
+}
+
+/* 优选PCI小区: 配置项行 */
+.sim-prefer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.sim-prefer-input {
+  width: 140px;
+}
+
+/* 优选卡片: 排除小区为可增删的条目列表 */
+.sim-prefer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* 条目后的 +/− 圆形按钮, 固定尺寸不被压缩 */
+.sim-prefer-icon-btn {
+  flex: 0 0 auto;
+}
+
+.sim-prefer-hint {
+  font-size: var(--sim-font-xs);
+  color: var(--el-text-color-secondary);
+}
+
+/* 优选状态 / 探测轮次: 标签 + 徽章并排成组, 两组同处一行 */
+.pci-prefer-status-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* 探测结果标题: 文本样式与左侧表单标签(锁定方式)保持一致; 分割线由上方状态行提供, 此处不再重复绘制 */
+.pci-prefer-subtitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  font-size: var(--sim-font-base);
+  font-weight: 400;
+  color: var(--el-text-color-regular);
+}
+
+/* 决策原因: 与「探测结果」同行, 靠右显示 */
+.pci-prefer-reason {
+  font-size: var(--sim-font-minor);
+  font-weight: 600;
+  color: var(--el-color-success);
+}
+
+/* 小区信息表格: 加一圈外框, 与上方状态行区分 */
+.sim-cell-table {
+  border: var(--sim-border);
+  border-radius: var(--sim-radius-sm);
+  padding: 6px 8px 2px;
+  overflow: hidden;
 }
 
 /* 卡片: 一层浅边框 + 纯色底, 不使用渐变/投影/彩色装饰条 */
@@ -1821,7 +2162,8 @@ export default {
 
 .status-label {
   flex: 0 0 auto;
-  font-weight: 500;
+  font-size: var(--sim-font-base);
+  font-weight: 400;
   color: var(--el-text-color-regular);
 }
 
@@ -1852,6 +2194,17 @@ export default {
 .status-badge-noservice {
   background: var(--el-color-warning-light-9);
   color: var(--el-color-warning);
+}
+
+/* 优选状态: 优选进行中 / 执行完毕 */
+.status-badge-running {
+  background: var(--el-color-success-light-9);
+  color: var(--el-color-success);
+}
+
+.status-badge-done {
+  background: var(--el-color-info-light-9);
+  color: var(--el-color-info);
 }
 
 .status-badge-nomodule {
@@ -1962,19 +2315,60 @@ export default {
   background: var(--el-bg-color);
 }
 
-.sim-pci-entry-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.15fr) auto;
+/* 锁NR/LTE PCI: 开关行 */
+.sim-lock-head {
+  display: flex;
   align-items: center;
-  column-gap: 16px;
-  row-gap: var(--sim-gap);
+  gap: 8px;
+}
+
+.sim-lock-head-text {
+  font-size: var(--sim-font-minor);
+  color: var(--el-text-color-secondary);
+}
+
+/* 锁NR/LTE PCI: 条目表(去掉嵌套卡片, 仅用细线分隔) */
+.sim-pci-table {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   min-width: 0;
-  box-sizing: border-box;
-  padding: 12px 16px;
-  border: var(--sim-border);
-  border-radius: var(--sim-radius-sm);
-  background: var(--el-bg-color);
+}
+
+/* 列宽: NR 为5列(含子载波间隔), LTE 为4列 */
+.sim-pci-table:not(.is-lte) {
+  --sim-pci-cols: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) 48px;
+}
+
+.sim-pci-table.is-lte {
+  --sim-pci-cols: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) 48px;
+}
+
+.sim-pci-col-head,
+.sim-pci-entry-row {
+  display: grid;
+  grid-template-columns: var(--sim-pci-cols);
+  align-items: center;
+  column-gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.sim-pci-col-head {
+  padding-bottom: 6px;
+  border-bottom: var(--sim-border);
+  font-size: var(--sim-font-minor);
+  color: var(--el-text-color-secondary);
+}
+
+.sim-pci-entry-row {
+  padding: 8px 0;
+  border-bottom: var(--sim-border);
+}
+
+.sim-pci-entry-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 
 .sim-pci-meta {
@@ -1996,17 +2390,28 @@ export default {
   color: var(--el-text-color-secondary);
 }
 
-.sim-pci-mode-btn {
-  min-width: 112px;
-}
-
 .sim-pci-add-btn {
   flex: 0 0 auto;
 }
 
-.sim-pci-actions {
-  justify-content: flex-start;
-  padding-top: 2px;
+/* 锁NR/LTE PCI: 底部操作行(添加条目 + 允许重选切换) */
+.sim-pci-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sim-pci-foot-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sim-pci-foot-label {
+  font-size: var(--sim-font-minor);
+  color: var(--el-text-color-regular);
 }
 
 .sim-switch-form-item {
@@ -2019,28 +2424,10 @@ export default {
   max-width: 100%;
 }
 
-.sim-pci-field {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.sim-pci-field-wide {
-  flex: 1.15 1 0;
-}
-
-.sim-pci-field :deep(.el-input),
-.sim-pci-field :deep(.el-select) {
-  width: 100%;
-}
-
-.sim-pci-input-wide {
-  width: 100%;
-  min-width: 0;
-}
-
 .sim-pci-remove-btn {
   flex: 0 0 auto;
-  min-width: 88px;
+  justify-self: end;
+  min-width: 0;
 }
 
 .band-option-list {
@@ -2138,18 +2525,19 @@ export default {
     justify-content: flex-start;
   }
 
-  .sim-pci-entry-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .sim-pci-table:not(.is-lte),
+  .sim-pci-table.is-lte {
+    --sim-pci-cols: repeat(2, minmax(0, 1fr));
   }
 
-  .sim-pci-field,
-  .sim-pci-field-wide {
-    min-width: 0;
+  /* 两列布局下输入框本身可辨识, 隐藏列名行避免列名与控件错位 */
+  .sim-pci-col-head {
+    display: none;
   }
 
   .sim-pci-remove-btn {
     grid-column: 1 / -1;
-    width: 100%;
+    justify-self: end;
   }
 }
 
@@ -2185,9 +2573,13 @@ export default {
     padding: 12px;
   }
 
+  .sim-pci-table:not(.is-lte),
+  .sim-pci-table.is-lte {
+    --sim-pci-cols: 1fr;
+  }
+
   .sim-pci-entry-row {
-    grid-template-columns: 1fr;
-    padding: 10px;
+    padding: 10px 0;
   }
 
   .sim-pci-toolbar {
@@ -2196,18 +2588,21 @@ export default {
     align-items: stretch;
   }
 
-  .sim-pci-mode-btn,
+  .sim-pci-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sim-pci-foot-item {
+    justify-content: space-between;
+  }
+
   .sim-pci-add-btn {
     width: 100%;
   }
 
   .sim-pci-remove-btn {
-    width: 100%;
-  }
-
-  .sim-pci-field,
-  .sim-pci-field-wide {
-    width: 100%;
+    justify-self: end;
   }
 }
 
@@ -2328,6 +2723,20 @@ export default {
   border: 1px solid var(--sim-term-line);
   border-radius: var(--sim-radius-sm);
   padding: 8px 10px;
+}
+</style>
+
+<style>
+/* 优选PCI小区提示弹层: 弹层挂载在 body 上, scoped 样式命中不到, 故单独用全局样式块 */
+.sim-prefer-tip-popper.el-popper.is-light {
+  background: var(--el-bg-color-overlay);
+  border: 1px solid var(--el-color-danger);
+  color: var(--el-color-danger);
+}
+
+.sim-prefer-tip-popper.el-popper.is-light .el-popper__arrow::before {
+  background: var(--el-bg-color-overlay);
+  border-color: var(--el-color-danger);
 }
 </style>
 

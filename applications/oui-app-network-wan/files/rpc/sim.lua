@@ -64,64 +64,6 @@ local function getSimUsb(ifname)
     return c:get('sim', ifname, 'usb')
 end
 
--- 检查模组是否存在
-local function isModuleExist(ifname)
-
-    if nil == ifname or '' == ifname then
-        log.error('ifname is nil!')
-        return false
-    end
-
-    -- # uci get sim.sim1.usb
-    -- /sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/2-1
-    local usb = getSimUsb(ifname)
-    if not usb or usb == '' then
-        log.error(string.format("%s usb sysfs path is not defined!", ifname))
-        return false
-    end
-
-    -- usb 是一个 sysfs 目录, io.open 只探测存在性, 不读取内容
-    local f = io.open(usb, "r")
-    if not f then
-        log.info(string.format("%s module not exist: %s", ifname, usb))
-        return false
-    end
-    f:close()
-    return true
-end
-
--- 获取模组拨号节点
-local function getSimNode(ifname)
-    
-    if nil == ifname or '' == ifname then
-        log.error('ifname is nil!')
-        return false
-    end
-
-    local c = uci.cursor()
-    local ttyUSB = c:get('sim', ifname, 'ttyUSB')
-    if not ttyUSB or ttyUSB == '' then
-        log.error(string.format("%s ttyUSB is not defined! (uci get sim.%s.ttyUSB)", ifname, ifname))
-        return nil
-    end
-
-    local usb = c:get('sim', ifname, 'usb')
-    if not usb or usb == '' then
-        log.error(string.format("%s usb sysfs path is not defined!", ifname))
-        return nil
-    end
-
-    local sysfs_path = string.format("%s/%s", usb, ttyUSB)
-    local cmd = string.format("ls %s 2>/dev/null | grep ttyUSB | head -1 | tr -d '\r\n'", sysfs_path)
-    local tty = exec(cmd)
-    if tty == '' then
-        log.error(string.format("%s can not find ttyUSB in %s", ifname, sysfs_path))
-        return nil
-    end
-
-    return string.format("/dev/%s", tty)
-end
-
 -- 获取模组频段设置
 local function getSimConfBand(ifname)
 
@@ -158,54 +100,6 @@ local function getSimConfAPN(ifname)
     return c:get('sim', ifname, 'apn')
 end
 
--- 获取模组鉴权设置
-local function getSimConfAuth(ifname)
-
-    if nil == ifname or '' == ifname then
-        log.error('ifname is nil!')
-        return false
-    end
-
-    local c = uci.cursor()
-    return c:get('sim', ifname, 'auth')
-end
-
--- 获取模组用户名设置
-local function getSimConfUser(ifname)
-
-    if nil == ifname or '' == ifname then
-        log.error('ifname is nil!')
-        return false
-    end
-
-    local c = uci.cursor()
-    return c:get('sim', ifname, 'user')
-end
-
--- 获取模组密码设置
-local function getSimConfPasswd(ifname)
-
-    if nil == ifname or '' == ifname then
-        log.error('ifname is nil!')
-        return false
-    end
-
-    local c = uci.cursor()
-    return c:get('sim', ifname, 'passwd')
-end
-
--- 获取模组小区设置
-local function getSimConfCell(ifname)
-
-    if nil == ifname or '' == ifname then
-        log.error('ifname is nil!')
-        return false
-    end
-
-    local c = uci.cursor()
-    return c:get('sim', ifname, 'cell')
-end
-
 -- 获取模组物理小区PCI设置
 local function getSimConfPCI(ifname)
 
@@ -240,6 +134,114 @@ local function getSimConfLTEBand(ifname)
 
     local c = uci.cursor()
     return c:get('sim', ifname, 'lteBandLock')
+end
+
+-- 获取自动优选小区开关
+local function getSimConfPCIAutoSelect(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local c = uci.cursor()
+    -- c:get()会额外返回选项类型, 这里只取的值
+    local value = c:get('sim', ifname, 'pciAutoSelect')
+    return value
+end
+
+-- 获取自动优选小区探测超时时间(秒)
+local function getSimConfPCIAutoSelectTimeout(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local c = uci.cursor()
+    local value = c:get('sim', ifname, 'pciAutoSelectTimeout')
+    return value
+end
+
+-- 获取自动优选小区排除的小区PCI列表(十进制, 000为占位符)
+local function getSimConfPCIAutoSelectExclude(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local c = uci.cursor()
+    local value = c:get('sim', ifname, 'pciAutoSelectExclude')
+    return value
+end
+
+-- 优选小区探测文件路径
+-- 探测结果仅本次运行有效, 由tracker-sim保存在tmpfs中, 不写入UCI配置文件
+local function getPciAutoSelectFile(ifname)
+    return string.format("/tmp/tracker-sim/%s/autoPciSelect", ifname)
+end
+
+-- 获取自动优选小区探测状态
+-- 探测中返回剩余秒数与已探测轮次; 探测完成后返回tracker-sim选出的最稳定NR/LTE小区
+local function getPciAutoSelectStatus(ifname)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    local enabled = getSimConfPCIAutoSelect(ifname)
+    local timeout = tonumber(getSimConfPCIAutoSelectTimeout(ifname)) or 60
+
+    local status = {
+        enabled = (enabled == '1' or enabled == 'true'),
+        running = false,
+        remain = 0,
+        round = 0,
+        timeout = timeout,
+        reason = ''
+    }
+
+    local f = io.open(getPciAutoSelectFile(ifname), "r")
+    if not f then
+        -- 已开启但探测文件尚未生成, 等待tracker-sim开始探测
+        if status.enabled then
+            status.running = true
+            status.remain = timeout
+        end
+        return status
+    end
+
+    local raw = f:read("*a")
+    f:close()
+
+    local ok, probe = pcall(cjson.decode, raw or '')
+    if not ok or type(probe) ~= 'table' then
+        log.error(string.format("%s autoPciSelect file is invalid", ifname))
+        return status
+    end
+
+    status.timeout = tonumber(probe.timeout) or timeout
+    status.round = type(probe.pci_data) == 'table' and #probe.pci_data or 0
+
+    local start_ts = tonumber(probe.start_timestamp) or 0
+    local stop_ts = tonumber(probe.stop_timestamp) or 0
+    if stop_ts == 0 and start_ts > 0 then
+        -- 探测中: 剩余时间按文件中记录的开始时间推算, 前端不再自行计时
+        local elapsed = os.time() - start_ts
+        status.running = elapsed < status.timeout
+        status.remain = status.running and (status.timeout - elapsed) or 0
+    end
+
+    if type(probe.result) == 'table' then
+        status.reason = probe.result.reason or ''
+        status.nr = probe.result.nr
+        status.lte = probe.result.lte
+        status.finished_at = probe.result.timestamp
+    end
+
+    return status
 end
 
 -- 获取状态更新时间戳
@@ -1245,6 +1247,74 @@ local function setSimLTEBand(ifname, lteBandLock)
     return true
 end
 
+-- 更改自动优选小区配置
+-- pciMode: prefer=自动优选小区(写入pciAutoSelect=1) / 其他=手动锁小区(pciAutoSelect=0)
+-- prefer: { timeout=探测超时秒数, exclude_pcis={排除的小区PCI(十进制)} }
+-- 参数发生变化时复位探测文件并重新拨号, 由tracker-sim重新探测优选
+local function setSimPCIAutoSelect(ifname, pciMode, prefer)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    if nil == pciMode or '' == pciMode then
+        log.info(ifname, "pciMode is nil, skip pciAutoSelect!")
+        return true
+    end
+
+    prefer = prefer or {}
+    local enabled = (pciMode == 'prefer') and '1' or '0'
+    local timeout = tonumber(prefer.timeout) or 60
+
+    -- 排除的小区PCI列表(十进制), 没有有效值时写入占位符000
+    local exclude_list = {}
+    local items = prefer.exclude_pcis
+    if type(items) == 'table' then
+        for _, item in ipairs(items) do
+            local pci = tostring(item or ''):gsub('%s+', '')
+            if pci ~= '' then
+                table.insert(exclude_list, pci)
+            end
+        end
+    end
+    if #exclude_list == 0 then
+        exclude_list = { '000' }
+    end
+
+    local c = uci.cursor()
+    local old_enabled = tostring(getSimConfPCIAutoSelect(ifname) or '')
+    local old_timeout = tonumber(getSimConfPCIAutoSelectTimeout(ifname)) or 60
+    local old_exclude = getSimConfPCIAutoSelectExclude(ifname)
+    if type(old_exclude) ~= 'table' then
+        old_exclude = { tostring(old_exclude or '') }
+    end
+
+    -- 只有参数变化时才复位探测
+    local changed = (old_enabled ~= enabled)
+        or (old_timeout ~= timeout)
+        or (table.concat(old_exclude, ',') ~= table.concat(exclude_list, ','))
+
+    c:set("sim", ifname, 'pciAutoSelect', enabled)
+    c:set("sim", ifname, 'pciAutoSelectTimeout', tostring(timeout))
+    c:delete("sim", ifname, 'pciAutoSelectExclude')
+    c:set("sim", ifname, 'pciAutoSelectExclude', exclude_list)
+    c:commit('sim')
+
+    if not changed then
+        log.info(ifname, "pciAutoSelect settings doesn't changed!")
+        return true
+    end
+
+    log.info(ifname, 'set pciAutoSelect:', enabled, 'timeout:', timeout, 'exclude:', table.concat(exclude_list, ' '))
+
+    -- 复位探测文件并重新拨号: 解除上一次优选锁定的小区, 由tracker-sim重新探测
+    exec(string.format("rm -f %s", getPciAutoSelectFile(ifname)))
+    dial(ifname)
+
+    return true
+end
+
 -- 更改配置
 function M.changeSimSettings(params)
     
@@ -1258,6 +1328,8 @@ function M.changeSimSettings(params)
                         tostring(params.nr_pci and params.nr_pci.enabled), tostring(#((params.nr_pci and params.nr_pci.items) or {}))))
     log.info(string.format("index:%s %s LTE PCI Lock: enable:%s items:%s", params.index, params.alias,
                         tostring(params.lte_pci and params.lte_pci.enabled), tostring(#((params.lte_pci and params.lte_pci.items) or {}))))
+    log.info(string.format("index:%s %s pciMode:%s pciPrefer:%s", params.index, params.alias,
+                        tostring(params.pci_mode), cjson.encode(params.pci_prefer or {})))
 
     setSimNRBand(ifname, params.nrBand)
     setSimLTEBand(ifname, params.lteBand)
@@ -1266,6 +1338,7 @@ function M.changeSimSettings(params)
     setSimNRPCID(ifname, params.nr_pci)
     setSimLTEPCID(ifname, params.lte_pci)
     setSimAuth(ifname, params.auth, params.apn, params.username, params.password)
+    setSimPCIAutoSelect(ifname, params.pci_mode, params.pci_prefer)
 
     return { code = 0 }
 end
@@ -1439,6 +1512,41 @@ local function read_trim(path)
     return (data or ''):gsub('[\r\n]', '')
 end
 
+-- 兜底: 从策略路由表获取默认网关
+-- openmptcprouter 将各 WAN 的默认路由放入独立 table(main 表通常没有, 如 table 6: default via x dev wwan0)
+-- 表号优先取 uci network.<ifname>.ip4table, 否则按源地址从 ip rule 推导(对应规则: from <local_ip> lookup <T>)
+local function resolve_gateway_from_ip_route(ifname, local_ip)
+    if nil == ifname or '' == ifname or nil == local_ip or '' == local_ip then
+        return ''
+    end
+
+    local c = uci.cursor()
+    local tbl = c:get('network', ifname, 'ip4table') or ''
+    tbl = tostring(tbl):gsub('^%s+', ''):gsub('%s+$', '')
+
+    if tbl == '' then
+        for line in exec('ip rule show'):gmatch('[^\r\n]+') do
+            local from_ip = line:match('^%s*%d+:%s+from%s+(%S+)')
+            if from_ip and from_ip == local_ip then
+                tbl = line:match('lookup%s+(%S+)') or ''
+                if tbl ~= '' then
+                    break
+                end
+            end
+        end
+    end
+
+    if not tbl:match('^%d+$') then
+        return ''
+    end
+
+    local gw = exec(string.format("ip route show table %s 2>/dev/null", tbl)):match('default%s+via%s+(%S+)')
+    if gw and gw ~= '0.0.0.0' and gw:match('^%d+%.%d+%.%d+%.%d+$') then
+        return gw
+    end
+    return ''
+end
+
 -- 一次拉取 sim 链路的全部展示数据(字段对齐 getStatus + getProductInfo + getInterfaceStatus)
 function M.getOverview(ifname)
     ifname = getIfname(ifname)
@@ -1479,7 +1587,7 @@ function M.getOverview(ifname)
         ret.imsi = pt.imsi
     end
 
-    -- 3) 接口运行状态(基于 netifd + sysfs, 无子进程)
+    -- 3) 接口运行状态(基于 netifd + sysfs; 网关缺失时兜底查策略路由表)
     local code = -1
     local up = false
     local ip, mask, gateway, mac = '', '', '', ''
@@ -1510,11 +1618,7 @@ function M.getOverview(ifname)
         end
     end
     if gateway == '' then
-        local c = uci.cursor()
-        local gw = c:get('network', ifname, 'gateway')
-        if gw and gw ~= '' then
-            gateway = gw
-        end
+        gateway = resolve_gateway_from_ip_route(ifname, ip)
     end
     if dev == '' then
         -- 兜底: 模组 tracker 记录的接口名
@@ -1535,7 +1639,34 @@ function M.getOverview(ifname)
     ret.rxBytes = rxBytes
     ret.txBytes = txBytes
 
+    -- 4) 自动优选小区探测状态(探测结果仅本次运行有效, 不写入UCI)
+    ret.pciAutoSelect = getPciAutoSelectStatus(ifname)
+
     return ret
+end
+
+-- 立即重选: 复位优选小区的探测文件并重新拨号, 由tracker-sim重新探测并优选
+function M.pciAutoSelectReselect(params)
+
+    local ifname = getIfname(params)
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return -1
+    end
+
+    local enabled = getSimConfPCIAutoSelect(ifname)
+    if enabled ~= '1' and enabled ~= 'true' then
+        log.error(string.format("%s autoPciSelect is not enabled!", ifname))
+        return -1
+    end
+
+    exec(string.format("rm -f %s", getPciAutoSelectFile(ifname)))
+    log.info(string.format("%s pciAutoSelect reselect, remove %s", ifname, getPciAutoSelectFile(ifname)))
+
+    -- 重新拨号以解除上一次优选锁定的小区, 使模组能自由驻留并重新探测
+    exec(string.format("( sleep 2; ifdown %s; sleep 2; ifup %s ) >/dev/null 2>&1 &", ifname, ifname))
+
+    return 0
 end
 
 

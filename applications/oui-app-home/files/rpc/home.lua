@@ -315,7 +315,7 @@ end
 -- 兜底: 从策略路由表获取默认网关
 -- openmptcprouter 将各 WAN 的默认路由放入独立 table(main 表通常没有, 如 table 19: default via x dev eth1)
 -- 表号优先取 uci network.<ifname>.ip4table, 否则按源地址从 ip rule 推导(对应规则: from <local_ip> lookup <T>)
--- 仅当接口在线(有 IP)且 netifd/UCI 都拿不到网关时才走此路径, 避免为离线接口空转 popen
+-- 仅当接口在线(有 IP)且 netifd 拿不到网关时才走此路径, 避免为离线接口空转 popen
 local function resolve_gateway_from_ip_route(ifname, local_ip)
     if not ifname or ifname == '' or not local_ip or local_ip == '' then
         return ''
@@ -349,7 +349,7 @@ local function resolve_gateway_from_ip_route(ifname, local_ip)
     return ''
 end
 
--- 从 netifd 状态解析默认网关; 兜底取 uci 静态配置 gateway; 再兜底查策略路由表
+-- 从 netifd 状态解析默认网关; 取不到时兜底查策略路由表
 local function resolve_gateway(status, ifname, local_ip)
     if type(status) == 'table' and type(status.route) == 'table' then
         for _, r in ipairs(status.route) do
@@ -359,14 +359,6 @@ local function resolve_gateway(status, ifname, local_ip)
                     return gw
                 end
             end
-        end
-    end
-
-    if ifname and ifname ~= '' then
-        local c = uci.cursor()
-        local gw = trim_str(c:get('network', ifname, 'gateway'))
-        if gw ~= '' then
-            return gw
         end
     end
 

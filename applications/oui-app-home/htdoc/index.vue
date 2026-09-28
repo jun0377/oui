@@ -4,7 +4,10 @@
 
       <div class="mode-panel-body">
         <div class="home-dashboard-grid">
-          <div class="home-metric-card home-metric-card-primary home-workmode-card">
+          <div
+            class="home-metric-card home-metric-card-primary home-workmode-card"
+            :class="`is-mode-${workMode || 'unknown'}`"
+          >
             <div class="home-metric-title">{{ featuredWorkModeCard.title }}</div>
             <div class="home-metric-value">{{ featuredWorkModeCard.value }}</div>
             <div class="home-metric-subtitle">{{ featuredWorkModeCard.subtitle }}</div>
@@ -87,7 +90,7 @@
               </div>
             </div>
 
-            <div v-else-if="interfaceCards.length" class="home-interface-list">
+            <div v-else-if="interfaceStates.length" class="home-interface-list">
               <div class="home-interface-head-row">
                 <div class="home-interface-summary home-interface-summary-head">接口</div>
                 <div class="home-interface-inline-fields home-interface-inline-fields-head">
@@ -102,10 +105,9 @@
                 <div class="home-interface-status-head">状态</div>
               </div>
               <div
-                v-for="card in interfaceCards"
+                v-for="card in interfaceStates"
                 :key="card.key"
                 class="home-interface-card"
-                :class="card.statusClass"
               >
                 <div class="home-interface-row">
                   <div class="home-interface-summary">
@@ -174,7 +176,7 @@ const DEFAULT_WORK_MODE_META = {
 const SERVICE_CARD_META = [
   { key: 'admin-backend', title: '管理平台' },
   { key: 'network-status', title: '组网状态' },
-  { key: 'dhcp-status', title: 'DHCP服务器' },
+  { key: 'dhcp-status', title: 'DHCP服务' },
   { key: 'dns-status', title: 'DNS服务' }
 ]
 
@@ -288,17 +290,6 @@ export default {
         label: '运行中',
         subtitle: `租约数 ${this.dhcpLeaseCount} / 地址池 ${this.dhcpRangeText}`
       }
-    },
-    // 网络接口状态
-    interfaceCards() {
-      if (this.interfaceStates.length) {
-        return this.interfaceStates.map(card => ({
-          ...card,
-          statusClass: card.statusTagType ? 'is-status-' + card.statusTagType : (card.online ? 'is-online' : 'is-offline')
-        }))
-      }
-
-      return []
     },
     // 组网状态
     networkingStatus() {
@@ -1034,23 +1025,26 @@ export default {
   width: 100%;
 
   /* 本地设计 token: 圆角/间距/字号/边框统一取值, 避免逐处硬编码 */
-  --home-radius: 8px;
-  --home-radius-sm: 6px;
-  --home-gap: 16px;
+  --home-radius: 10px;
+  --home-radius-sm: 8px;
+  --home-gap: 20px;
   --home-font-title: 14px;
   --home-font-label: 13px;
   --home-font-minor: 12px;
-  --home-font-metric: 26px;
-  --home-font-metric-sm: 20px;
+  --home-font-metric: 32px;
+  --home-font-metric-sm: 24px;
   --home-border: 1px solid var(--el-border-color-lighter);
+  /* 卡片外框: 比内部分隔线深一档, 让每张卡片的外框清晰可辨 */
+  --home-border-card: 1px solid var(--el-border-color);
 }
 
 .mode-card {
   width: 100%;
 }
 
-/* 页面容器: 仅作承载, 不设圆角/边框/阴影 */
+/* 页面容器: 浅灰画布衬托白卡, 不设圆角/边框/阴影 */
 .mode-panel {
+  --el-card-bg-color: var(--el-fill-color-light);
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -1096,15 +1090,17 @@ export default {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  /* 高度随接口行数自适应, 不跟随左侧列拉伸占满整列 */
+  align-self: start;
 }
 
-/* 指标卡: 一层浅边框 + 纯色底, 不使用渐变/投影/彩色装饰条 */
+/* 指标卡: 白底 + 清晰外框, 不使用渐变/投影/彩色装饰条 */
 .home-metric-card,
 .home-section-card {
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  border: var(--home-border);
+  padding: 20px;
+  border: var(--home-border-card);
   border-radius: var(--home-radius);
   background: var(--el-bg-color);
 }
@@ -1113,24 +1109,30 @@ export default {
   min-height: 168px;
 }
 
-/* 服务卡只有标题/数值/副标题三行, 压到约半高(168px -> 84px), 消除卡片内大片留白 */
+/* 服务卡: 高度由内容决定(不受主卡 168px 约束), 数值用紧凑档 */
 .home-status-grid .home-metric-card-primary {
-  min-height: 84px;
-  padding: 10px 14px;
-}
-
-.home-status-grid .home-metric-title {
-  line-height: 1.2;
+  min-height: auto;
 }
 
 .home-status-grid .home-metric-value {
-  margin: 8px 0 2px;
   font-size: var(--home-font-metric-sm);
 }
 
-.home-status-grid .home-metric-subtitle {
-  margin-top: 2px;
-  line-height: 1.3;
+/* 全页唯一的彩色块: 工作模式卡底色跟随当前模式 */
+.home-workmode-card.is-mode-single {
+  background: var(--el-color-primary-light-9);
+}
+
+.home-workmode-card.is-mode-aggregate {
+  background: var(--el-color-success-light-9);
+}
+
+.home-workmode-card.is-mode-balance {
+  background: var(--el-color-warning-light-9);
+}
+
+.home-workmode-card.is-mode-unknown {
+  background: var(--el-color-info-light-9);
 }
 
 .home-workmode-foot {
@@ -1237,7 +1239,16 @@ export default {
   word-break: break-word;
 }
 
-.home-metric-title,
+/* 卡片标题: 小字标签, 让数值成为视觉主体 */
+.home-metric-title {
+  font-size: var(--home-font-minor);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  color: var(--el-text-color-regular);
+}
+
+/* 面板标题与网口名保持主字号 */
 .home-section-title,
 .home-interface-name {
   font-size: var(--home-font-title);
@@ -1245,7 +1256,7 @@ export default {
   color: var(--el-text-color-primary);
 }
 
-/* 网口名在表格列内居中, 卡片标题保持左对齐 */
+/* 网口名在表格列内居中 */
 .home-interface-name {
   text-align: center;
 }
@@ -1264,18 +1275,24 @@ export default {
 }
 
 .home-metric-value {
-  margin: 14px 0 6px;
+  margin: 12px 0 4px;
   font-size: var(--home-font-metric);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--el-text-color-primary);
-  line-height: 1.1;
+  line-height: 1.15;
   word-break: break-word;
+  /* 数值刷新时宽度不跳动 */
+  font-variant-numeric: tabular-nums;
 }
 
 .home-interface-list {
   display: grid;
-  gap: 10px;
-  margin-top: 16px;
+  gap: 0;
+  margin-top: 12px;
+  /* 接口列表外框: 把表头与各接口行包在同一个边框内 */
+  padding: 8px 12px;
+  border: var(--home-border);
+  border-radius: var(--home-radius-sm);
 }
 
 .home-interface-head-row {
@@ -1283,7 +1300,7 @@ export default {
   grid-template-columns: 72px minmax(0, 1fr) 88px;
   align-items: center;
   column-gap: 8px;
-  padding: 0 14px 2px;
+  padding: 0 0 6px;
 }
 
 .home-interface-summary-head {
@@ -1315,35 +1332,14 @@ export default {
   width: 100%;
 }
 
-/* 网口行: 状态色只取 el 语义色板, 不做渐变/内阴影 */
+/* 网口行: 中性分隔线, 颜色只留给状态标签 */
 .home-interface-card {
-  padding: 10px 14px;
-  border: 1px solid transparent;
-  border-radius: var(--home-radius);
-  background: var(--el-fill-color-lighter);
-  transition: border-color 0.2s ease, background-color 0.2s ease;
+  padding: 14px 0;
+  border-top: var(--home-border);
 }
 
-.home-interface-card.is-online,
-.home-interface-card.is-status-success {
-  border-color: var(--el-color-success-light-5);
-  background: var(--el-color-success-light-9);
-}
-
-.home-interface-card.is-offline,
-.home-interface-card.is-status-danger {
-  border-color: var(--el-color-danger-light-5);
-  background: var(--el-color-danger-light-9);
-}
-
-.home-interface-card.is-status-warning {
-  border-color: var(--el-color-warning-light-5);
-  background: var(--el-color-warning-light-9);
-}
-
-.home-interface-card.is-status-info {
-  border-color: var(--el-border-color-lighter);
-  background: var(--el-fill-color-light);
+.home-interface-card:first-child {
+  border-top: 0;
 }
 
 .home-interface-row {
