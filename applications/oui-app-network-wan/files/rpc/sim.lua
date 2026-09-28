@@ -1360,28 +1360,18 @@ function M.changeSimEnable(params)
     end
     
     local c = uci.cursor()
-    local interface = get_interface(ifname)
-    if interface == nil or interface == '' then
-        log.error(string.format("get_interface(%s) failed", ifname))
-        return -1
-    end
 
-    local cmd = ''
     if params.enable then
         c:set("sim", ifname, 'enable', 'true')
         c:commit('sim')
 
-        cmd = string.format('ifup %s', interface)
-        exec(cmd)
-
-        -- 触发拨号
+        -- 触发拨号(ifup 逻辑接口, 如 ifup sim1)
         dial(ifname)
     else
         c:set("sim", ifname, 'enable', 'false')
         c:commit('sim')
-        
-        cmd = string.format('ifdown %s', ifname)
-        exec(cmd)
+
+        exec(string.format('ifdown %s', ifname))
     end
 
     return 0
