@@ -357,71 +357,55 @@
 
           <!-- Tab 3: 锁频段 -->
           <el-tab-pane label="频段设置" name="bandlock" lazy>
-            <el-form :model="settings" label-width="90px" class="config-form" label-align="left" label-position="left">
-                <el-form-item label="锁 NR 频段" class="sim-lock-form-item">
-                  <div class="sim-lock-section">
-                    <div class="sim-pci-row sim-lock-toolbar">
-                      <el-tag
-                        class="band-option-tag"
-                        :type="!settings.nrBandLockEnabled ? 'primary' : 'info'"
-                        :effect="!settings.nrBandLockEnabled ? 'dark' : 'plain'"
-                        @click="handleNRBandToggle"
+            <div class="pci-tab-grid">
+              <!-- 左栏: 频段锁定设置 -->
+              <el-card class="config-card">
+              <template #header>
+                <div class="card-header">
+                  <span class="sim-card-title">频段锁定设置</span>
+                </div>
+              </template>
+              <div class="band-lock-form">
+                <!-- 锁 NR 频段: 频段列表首项为「解锁」 -->
+                <div class="band-lock-row">
+                  <span class="band-lock-title">锁 NR 频段</span>
+                  <div class="band-lock-body">
+                    <el-radio-group
+                      v-model="settings.nrBand"
+                      class="band-seg-group"
+                      @change="selectNRBandOption"
+                    >
+                      <el-radio-button
+                        v-for="opt in getNRBandOptions()"
+                        :key="opt"
+                        :value="opt"
                       >
-                        {{ settings.nrBandLockEnabled ? '解锁' : '未锁定,点击进行设置' }}
-                      </el-tag>
-                    </div>
-                    <template v-if="settings.nrBandLockEnabled">
-                      <div class="sim-band-panel">
-                        <div v-if="getNRBandOptions().filter(o => o !== '解锁').length" class="band-option-list">
-                          <el-tag
-                            v-for="opt in getNRBandOptions().filter(o => o !== '解锁')"
-                            :key="opt"
-                            class="band-option-tag"
-                            :type="isNRBandOptionActive(opt) ? 'primary' : 'info'"
-                            :effect="isNRBandOptionActive(opt) ? 'dark' : 'plain'"
-                            @click="selectNRBandOption(opt)"
-                          >
-                            {{ opt }}
-                          </el-tag>
-                        </div>
-                        <div v-else class="band-option-empty">暂无可选频段</div>
-                      </div>
-                    </template>
+                        {{ opt === 'unlocked' ? '解锁' : opt }}
+                      </el-radio-button>
+                    </el-radio-group>
                   </div>
-                </el-form-item>
+                </div>
 
-                <el-form-item label="锁 LTE 频段" class="sim-lock-form-item">
-                  <div class="sim-lock-section">
-                    <div class="sim-pci-row sim-lock-toolbar">
-                      <el-tag
-                        class="band-option-tag"
-                        :type="!settings.lteBandLockEnabled ? 'primary' : 'info'"
-                        :effect="!settings.lteBandLockEnabled ? 'dark' : 'plain'"
-                        @click="handleLTEBandToggle"
+                <!-- 锁 LTE 频段: 与 NR 同构 -->
+                <div class="band-lock-row">
+                  <span class="band-lock-title">锁 LTE 频段</span>
+                  <div class="band-lock-body">
+                    <el-radio-group
+                      v-model="settings.lteBand"
+                      class="band-seg-group"
+                      @change="selectLTEBandOption"
+                    >
+                      <el-radio-button
+                        v-for="opt in getLTEBandOptions()"
+                        :key="opt"
+                        :value="opt"
                       >
-                        {{ settings.lteBandLockEnabled ? '解锁' : '未锁定,点击进行设置' }}
-                      </el-tag>
-                    </div>
-                    <template v-if="settings.lteBandLockEnabled">
-                      <div class="sim-band-panel">
-                        <div v-if="getLTEBandOptions().filter(o => o !== '解锁').length" class="band-option-list">
-                          <el-tag
-                            v-for="opt in getLTEBandOptions().filter(o => o !== '解锁')"
-                            :key="opt"
-                            class="band-option-tag"
-                            :type="isLTEBandOptionActive(opt) ? 'primary' : 'info'"
-                            :effect="isLTEBandOptionActive(opt) ? 'dark' : 'plain'"
-                            @click="selectLTEBandOption(opt)"
-                          >
-                            {{ opt }}
-                          </el-tag>
-                        </div>
-                        <div v-else class="band-option-empty">暂无可选频段</div>
-                      </div>
-                    </template>
+                        {{ opt === 'unlocked' ? '解锁' : opt }}
+                      </el-radio-button>
+                    </el-radio-group>
                   </div>
-                </el-form-item>
-              </el-form>
+                </div>
+              </div>
 
               <!-- Action buttons -->
               <div class="action-buttons card-actions">
@@ -429,6 +413,67 @@
                 <el-button @click="resetConfig" type="warning" size="large" class="btn-disabled-warning">{{ $t('Reset to Default') }}</el-button>
                 <el-button @click="goBack" type="info" size="large">{{ $t('Back') }}</el-button>
               </div>
+              </el-card>
+
+              <!-- 右栏: 锁频段/锁小区状态(5G与LTE并排一行) -->
+              <div class="band-status-row">
+                <el-card class="config-card compact-card">
+                  <template #header>
+                    <div class="card-header">
+                      <span class="sim-card-title">{{ $t('5G锁频/锁小区状态') }}</span>
+                    </div>
+                  </template>
+                  <div class="status-info">
+                    <div class="status-item">
+                      <span class="status-label">锁状态:</span>
+                      <span class="status-value">{{ getFreqLockTypeText(realSettings.nrfreqlock.operatetype) }}</span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">频段:</span>
+                      <span class="status-value">{{ realSettings.nrfreqlock.band.map(v => 'n' + v).join(', ') }}</span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">频点:</span>
+                      <span class="status-value">{{ realSettings.nrfreqlock.arfcn.join(', ') }}</span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">SCS:</span>
+                      <span class="status-value">{{ realSettings.nrfreqlock.scstype.join(', ') }}</span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">PCI:</span>
+                      <span class="status-value">{{ realSettings.nrfreqlock.pci.join(', ') }}</span>
+                    </div>
+                  </div>
+                </el-card>
+
+                <el-card class="config-card compact-card">
+                  <template #header>
+                    <div class="card-header">
+                      <span class="sim-card-title">{{ $t('LTE锁频/锁小区状态') }}</span>
+                    </div>
+                  </template>
+                  <div class="status-info">
+                    <div class="status-item">
+                      <span class="status-label">锁状态:</span>
+                      <span class="status-value">{{ getFreqLockTypeText(realSettings.ltefreqlock.operatetype) }}</span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">频段:</span>
+                      <span class="status-value">{{ realSettings.ltefreqlock.band.map(v => 'b' + v).join(',') }}</span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">频点:</span>
+                      <span class="status-value">{{ realSettings.ltefreqlock.arfcn.join(', ') }}</span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">PCI:</span>
+                      <span class="status-value">{{ realSettings.ltefreqlock.pci.join(', ') }}</span>
+                    </div>
+                  </div>
+                </el-card>
+              </div>
+            </div>
           </el-tab-pane>
 
           <!-- Tab 4: PCI小区设置(优选PCI小区 / 手动锁PCI小区) -->
@@ -467,13 +512,6 @@
 
                       <template v-if="settings.nr_pci.enabled">
                         <div class="sim-pci-table">
-                          <div class="sim-pci-col-head">
-                            <span>PCID(十进制)</span>
-                            <span>频点</span>
-                            <span>频段</span>
-                            <span>子载波间隔</span>
-                            <span></span>
-                          </div>
                           <div v-for="(entry, idx) in settings.nr_pci.items" :key="idx" class="sim-pci-entry-row">
                             <el-input v-model="entry.pcid" placeholder="PCID(十进制)" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
                             <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleNRPciInputChange(idx)"/>
@@ -493,12 +531,28 @@
                               <el-option label="120KHz" value="3"/>
                               <el-option label="240KHz" value="4"/>
                             </el-select>
-                            <el-button link type="danger" class="sim-pci-remove-btn" @click="removeNRPciEntry(idx)">删除</el-button>
+                            <div class="sim-pci-actions">
+                              <el-button circle size="small" plain type="danger" aria-label="删除" title="删除该条目" @click="removeNRPciEntry(idx)">
+                                <el-icon><Minus /></el-icon>
+                              </el-button>
+                              <el-button
+                                circle
+                                size="small"
+                                plain
+                                type="primary"
+                                class="sim-pci-add-btn"
+                                :class="{ 'is-placeholder': idx !== settings.nr_pci.items.length - 1 }"
+                                aria-label="添加条目"
+                                title="添加条目"
+                                @click="addNRPciEntry"
+                              >
+                                <el-icon><Plus /></el-icon>
+                              </el-button>
+                            </div>
                           </div>
                         </div>
 
                         <div class="sim-pci-foot">
-                          <el-button size="small" class="sim-pci-add-btn" @click="addNRPciEntry">添加条目</el-button>
                           <div class="sim-pci-foot-item">
                             <span class="sim-pci-foot-label">允许重选切换小区</span>
                             <el-switch v-model="settings.nr_pci.reSelEnabled" size="small"/>
@@ -517,12 +571,6 @@
 
                       <template v-if="settings.lte_pci.enabled">
                         <div class="sim-pci-table is-lte">
-                          <div class="sim-pci-col-head">
-                            <span>PCID</span>
-                            <span>频点</span>
-                            <span>频段</span>
-                            <span></span>
-                          </div>
                           <div v-for="(entry, idx) in settings.lte_pci.items" :key="idx" class="sim-pci-entry-row">
                             <el-input v-model="entry.pcid" placeholder="PCID" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)"/>
                             <el-input v-model="entry.freq" placeholder="频点" class="sim-pci-input" size="small" @change="handleLtePciInputChange(idx)"/>
@@ -536,12 +584,28 @@
                               <el-option label="b40" value="40"/>
                               <el-option label="b41" value="41"/>
                             </el-select>
-                            <el-button link type="danger" class="sim-pci-remove-btn" @click="removeLtePciEntry(idx)">删除</el-button>
+                            <div class="sim-pci-actions">
+                              <el-button circle size="small" plain type="danger" aria-label="删除" title="删除该条目" @click="removeLtePciEntry(idx)">
+                                <el-icon><Minus /></el-icon>
+                              </el-button>
+                              <el-button
+                                circle
+                                size="small"
+                                plain
+                                type="primary"
+                                class="sim-pci-add-btn"
+                                :class="{ 'is-placeholder': idx !== settings.lte_pci.items.length - 1 }"
+                                aria-label="添加条目"
+                                title="添加条目"
+                                @click="addLtePciEntry"
+                              >
+                                <el-icon><Plus /></el-icon>
+                              </el-button>
+                            </div>
                           </div>
                         </div>
 
                         <div class="sim-pci-foot">
-                          <el-button size="small" class="sim-pci-add-btn" @click="addLtePciEntry">添加条目</el-button>
                           <div class="sim-pci-foot-item">
                             <span class="sim-pci-foot-label">允许重选切换小区</span>
                             <el-switch v-model="settings.lte_pci.reSelEnabled" size="small"/>
@@ -1124,10 +1188,10 @@ export default {
       return bands.join(' ')
     },
     getNRBandOptions() {
-      return ['解锁', 'n1', 'n3', 'n5', 'n8', 'n28', 'n41', 'n78', 'n79']
+      return ['unlocked', 'n1', 'n3', 'n5', 'n8', 'n28', 'n41', 'n78', 'n79']
     },
     getLTEBandOptions() {
-      return ['解锁', 'b1', 'b3', 'b5', 'b8', 'b34', 'b38', 'b39', 'b40', 'b41']
+      return ['unlocked', 'b1', 'b3', 'b5', 'b8', 'b34', 'b38', 'b39', 'b40', 'b41']
     },
     applyWanData(data) {
       if (!data)
@@ -1163,8 +1227,15 @@ export default {
         const lteStoredBand = bandTokens.find(item => item.toLowerCase().startsWith('b')) || ''
         const nrRealBand = data.realSettings && data.realSettings.nrfreqlock && Array.isArray(data.realSettings.nrfreqlock.band) ? (data.realSettings.nrfreqlock.band[0] || '') : ''
         const lteRealBand = data.realSettings && data.realSettings.ltefreqlock && Array.isArray(data.realSettings.ltefreqlock.band) ? (data.realSettings.ltefreqlock.band[0] || '') : ''
-        this.settings.nrBand = nrRealBand || nrStoredBand
-        this.settings.lteBand = lteRealBand || lteStoredBand
+        // 上报的频段可能是纯数字(如 41), 统一成选项形式(n41)才能命中频段选择项
+        const toBandOption = (prefix, raw) => {
+          const value = String(raw === null || raw === undefined ? '' : raw).trim().toLowerCase()
+          if (!value || value === 'unlocked' || value === 'none')
+            return value
+          return value.startsWith(prefix) ? value : prefix + value
+        }
+        this.settings.nrBand = toBandOption('n', nrRealBand || nrStoredBand)
+        this.settings.lteBand = toBandOption('b', lteRealBand || lteStoredBand)
         this.settings.nrBandUnLock = (this.settings.nrBand === 'unlocked' || this.settings.nrBand === 'none' || this.settings.nrBand === '')
         this.settings.lteBandUnLock = (this.settings.lteBand === 'unlocked' || this.settings.lteBand === 'none' || this.settings.lteBand === '')
         this.settings.nrBandLockEnabled = !this.settings.nrBandUnLock
@@ -1609,20 +1680,6 @@ export default {
         this.settings.nr_pci.enabled = true
       }
     },
-    handleNRBandToggle() {
-      if (this.settings.nrBandLockEnabled) {
-        this.selectNRBandOption('解锁')
-      } else {
-        this.settings.nrBandLockEnabled = true
-      }
-    },
-    handleLTEBandToggle() {
-      if (this.settings.lteBandLockEnabled) {
-        this.selectLTEBandOption('解锁')
-      } else {
-        this.settings.lteBandLockEnabled = true
-      }
-    },
     handleNRPciUnlock() {
       this.settings.nr_pci.enabled = false
       this.settings.nr_pci.items.forEach(e => {
@@ -1672,7 +1729,7 @@ export default {
       }
     },
     selectNRBandOption(value) {
-      if (value === '解锁') {
+      if (value === 'unlocked') {
         this.settings.nrBand = 'unlocked'
         this.settings.nrBandUnLock = true
         this.settings.nrBandLockEnabled = false
@@ -1683,7 +1740,7 @@ export default {
       this.settings.nrBandLockEnabled = true
     },
     selectLTEBandOption(value) {
-      if (value === '解锁') {
+      if (value === 'unlocked') {
         this.settings.lteBand = 'unlocked'
         this.settings.lteBandUnLock = true
         this.settings.lteBandLockEnabled = false
@@ -1692,16 +1749,6 @@ export default {
       this.settings.lteBand = value
       this.settings.lteBandUnLock = false
       this.settings.lteBandLockEnabled = true
-    },
-    isNRBandOptionActive(value) {
-      if (value === '解锁')
-        return this.settings.nrBandUnLock || this.settings.nrBand === ''
-      return !this.settings.nrBandUnLock && this.settings.nrBand === value
-    },
-    isLTEBandOptionActive(value) {
-      if (value === '解锁')
-        return this.settings.lteBandUnLock || this.settings.lteBand === ''
-      return !this.settings.lteBandUnLock && this.settings.lteBand === value
     }
   }
 }
@@ -1814,7 +1861,7 @@ export default {
   grid-column: span 2;
 }
 
-/* PCI小区设置 tab: 左设置/右状态 两栏布局 */
+/* 左设置/右状态 两栏布局: PCI小区设置 tab 与 频段设置 tab 共用 */
 .pci-tab-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1822,17 +1869,30 @@ export default {
   align-items: start;
 }
 
-/* PCI设置卡内的操作按钮与表单拉开间距 */
+/* PCI设置卡内(左栏)的操作按钮与表单拉开间距 */
 .pci-tab-grid .config-card .action-buttons {
   margin-top: 16px;
 }
 
-/* PCI小区设置 tab 右列: 优选项状态卡片 + 相邻小区卡片 上下堆叠 */
+/* 右列: 多张状态卡片上下堆叠 */
 .pci-side-col {
   display: flex;
   flex-direction: column;
   gap: var(--sim-gap);
   min-width: 0;
+}
+
+/* 频段设置 tab 右列: 5G/LTE 两张锁频状态卡并排一行, 拉伸到等高(行数不同也大小一致) */
+.band-status-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sim-gap);
+  align-items: stretch;
+  min-width: 0;
+}
+
+.band-status-row .el-card {
+  height: 100%;
 }
 
 .pci-side-col .neighbor-card {
@@ -2288,17 +2348,44 @@ export default {
   width: 100%;
 }
 
-.sim-lock-toolbar {
-  justify-content: flex-start;
-  padding-bottom: 2px;
+/* 锁频段设置: 开关行 + 分段频段选择, 单层容器 */
+.band-lock-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sim-gap);
+  width: 100%;
+  min-width: 0;
+  padding: 10px 0;
 }
 
-.sim-band-panel {
+.band-lock-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sim-gap);
   box-sizing: border-box;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: var(--sim-border);
-  border-radius: var(--sim-radius-sm);
-  background: var(--el-bg-color);
+  border-radius: var(--sim-radius);
+  background: var(--el-fill-color-lighter);
+}
+
+.band-lock-title {
+  font-size: var(--sim-font-base);
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.band-lock-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.band-seg-group {
+  flex-wrap: wrap;
+  max-width: 100%;
 }
 
 .sim-pci-toolbar {
@@ -2335,16 +2422,15 @@ export default {
   min-width: 0;
 }
 
-/* 列宽: NR 为5列(含子载波间隔), LTE 为4列 */
+/* 列宽: NR 为5列(含子载波间隔), LTE 为4列, 末列为圆形加减按钮 */
 .sim-pci-table:not(.is-lte) {
-  --sim-pci-cols: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) 48px;
+  --sim-pci-cols: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) auto;
 }
 
 .sim-pci-table.is-lte {
-  --sim-pci-cols: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) 48px;
+  --sim-pci-cols: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) auto;
 }
 
-.sim-pci-col-head,
 .sim-pci-entry-row {
   display: grid;
   grid-template-columns: var(--sim-pci-cols);
@@ -2352,16 +2438,6 @@ export default {
   column-gap: 12px;
   width: 100%;
   min-width: 0;
-}
-
-.sim-pci-col-head {
-  padding-bottom: 6px;
-  border-bottom: var(--sim-border);
-  font-size: var(--sim-font-minor);
-  color: var(--el-text-color-secondary);
-}
-
-.sim-pci-entry-row {
   padding: 8px 0;
   border-bottom: var(--sim-border);
 }
@@ -2390,15 +2466,24 @@ export default {
   color: var(--el-text-color-secondary);
 }
 
-.sim-pci-add-btn {
-  flex: 0 0 auto;
+/* 锁NR/LTE PCI: 行尾的添加/删除圆形按钮 */
+.sim-pci-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
-/* 锁NR/LTE PCI: 底部操作行(添加条目 + 允许重选切换) */
+/* 加号只在最后一行可见; 其余行占位隐藏, 保证每行输入框宽度一致 */
+.sim-pci-add-btn.is-placeholder {
+  visibility: hidden;
+}
+
+/* 锁NR/LTE PCI: 底部操作行(允许重选切换) */
 .sim-pci-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -2424,40 +2509,6 @@ export default {
   max-width: 100%;
 }
 
-.sim-pci-remove-btn {
-  flex: 0 0 auto;
-  justify-self: end;
-  min-width: 0;
-}
-
-.band-option-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-height: 32px;
-  align-items: center;
-}
-
-.band-option-tag {
-  cursor: pointer;
-  min-height: 30px;
-  padding: 0 14px;
-  border-radius: 999px;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.band-option-tag:hover {
-  color: var(--el-color-primary);
-  border-color: var(--el-color-primary);
-}
-
-.band-option-empty {
-  color: var(--el-text-color-secondary);
-  font-size: var(--sim-font-minor);
-  line-height: 1.6;
-  padding: 2px 0;
-}
-
 :deep(.wan-enable-switch.el-switch:not(.is-checked) .el-switch__inner .is-text),
 :deep(.wan-enable-switch:not(.is-checked) .el-switch__inner .is-text) {
   color: var(--el-color-danger);
@@ -2476,6 +2527,10 @@ export default {
   }
 
   .pci-tab-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .band-status-row {
     grid-template-columns: 1fr;
   }
 
@@ -2530,14 +2585,8 @@ export default {
     --sim-pci-cols: repeat(2, minmax(0, 1fr));
   }
 
-  /* 两列布局下输入框本身可辨识, 隐藏列名行避免列名与控件错位 */
-  .sim-pci-col-head {
-    display: none;
-  }
-
-  .sim-pci-remove-btn {
+  .sim-pci-actions {
     grid-column: 1 / -1;
-    justify-self: end;
   }
 }
 
@@ -2595,14 +2644,6 @@ export default {
 
   .sim-pci-foot-item {
     justify-content: space-between;
-  }
-
-  .sim-pci-add-btn {
-    width: 100%;
-  }
-
-  .sim-pci-remove-btn {
-    justify-self: end;
   }
 }
 
