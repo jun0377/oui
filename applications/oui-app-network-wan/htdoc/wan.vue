@@ -4,15 +4,11 @@
       <div class="wan-panel-body">
         <div class="wan-layout wired-config-section is-equal-height">
           <div class="wan-hero">
-            <div class="wan-metric-head">
-              <div class="wan-metric-main">
-                <div class="wan-metric-title">{{ settings.alias || 'WAN' }}</div>
-                <div class="wan-metric-subtitle">{{ settings.interface || '-' }}</div>
-              </div>
-            </div>
+            <div class="wan-metric-title">{{ settings.alias || 'WAN' }}</div>
+            <div class="wan-metric-subtitle">{{ settings.interface || '-' }}</div>
           </div>
           <div class="left-column">
-            <el-card class="config-card wan-accent-slate">
+            <el-card class="config-card">
           <template #header>
             <div class="card-header">
               <span class="wan-card-title">{{ $t('Basic Settings') }}</span>
@@ -52,7 +48,7 @@
               />
             </el-form-item>
           </el-form>
-          <div class="action-buttons card-actions">
+          <div class="action-buttons">
             <el-button @click="saveConfig" type="primary" size="large">
               {{ $t('保存 & 应用') }}
             </el-button>
@@ -64,7 +60,7 @@
       </div>
 
       <div class="right-column">
-        <el-card class="config-card compact-card wan-accent-blue">
+        <el-card class="config-card compact-card">
           <template #header>
             <div class="card-header">
               <span class="wan-card-title">实时状态</span>
@@ -424,13 +420,22 @@ export default {
 .wan-page {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 18px;
+  padding: 16px;
+
+  /* 本地设计 token: 圆角/间距/字号/边框统一取值, 避免逐处硬编码 */
+  --wan-radius: 8px;
+  --wan-gap: 12px;
+  --wan-font-title: 16px;
+  --wan-font-base: 14px;
+  --wan-font-label: 13px;
+  --wan-border: 1px solid var(--el-border-color-lighter);
 }
 
+/* 页面容器: 仅作承载, 不设圆角/边框/阴影 */
 .wan-panel {
   width: 100%;
-  border-radius: 12px;
   border: 0;
+  border-radius: 0;
   box-shadow: none;
 }
 
@@ -439,55 +444,36 @@ export default {
 }
 
 .wan-panel-body {
-  padding: 10px 8px;
+  padding: 0;
 }
 
+/* 网口标题条: 标题与网口名同行, 靠下边框分隔, 不做渐变/彩边/投影 */
 .wan-hero {
   grid-column: 1 / -1;
-  margin-bottom: 16px;
-  padding: 18px;
-  border: 1px solid rgba(59, 130, 246, 0.18);
-  border-radius: 16px;
-  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
-  box-shadow: 0 14px 30px rgba(59, 130, 246, 0.12);
-}
-
-.wan-metric-head {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.wan-metric-main {
-  flex: 1;
-  min-width: 0;
-  text-align: center;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: var(--wan-gap);
+  padding: 0 4px 10px;
+  border-bottom: var(--wan-border);
 }
 
 .wan-metric-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--wan-font-title);
+  font-weight: 600;
   color: var(--el-text-color-primary);
   line-height: 1.2;
 }
 
 .wan-metric-subtitle {
-  margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--wan-font-label);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }
 
-.wan-metric-tags {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
 .wan-layout {
   display: grid;
-  gap: 16px;
+  gap: var(--wan-gap);
   align-items: start;
 }
 
@@ -516,48 +502,29 @@ export default {
   flex-direction: column;
 }
 
+/* 卡片: 一层浅边框 + 纯色底, 不使用渐变/投影/彩色装饰条 */
 .config-card {
   width: 100%;
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--el-border-color);
-  border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
-}
-
-.config-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  border-radius: 16px 0 0 16px;
-  background: #cbd5e1;
-}
-
-.wan-accent-blue::before {
-  background: #3b82f6;
-}
-
-.wan-accent-slate::before {
-  background: #64748b;
+  border: var(--wan-border);
+  border-radius: var(--wan-radius);
+  background: var(--el-bg-color);
 }
 
 :deep(.config-card .el-card__header) {
-  padding: 14px 18px 0;
+  padding: 12px 16px 0;
   border-bottom: 0;
 }
 
 :deep(.config-card .el-card__body) {
-  padding: 12px 18px 18px;
+  padding: 10px 16px 16px;
 }
 
 :deep(.compact-card .el-card__header) {
-  padding: 12px 16px 0;
+  padding: 12px 14px 0;
 }
 
 :deep(.compact-card .el-card__body) {
-  padding: 10px 16px 16px;
+  padding: 8px 14px 14px;
 }
 
 .card-header {
@@ -568,7 +535,7 @@ export default {
 }
 
 .wan-card-title {
-  font-size: 15px;
+  font-size: var(--wan-font-base);
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
@@ -597,15 +564,14 @@ export default {
 
 .status-info {
   padding: 10px 0;
-  font-size: var(--el-font-size-base);
-  color: var(--el-text-color-primary);
 }
 
 .status-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
+  gap: 12px;
+  padding: 8px 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
@@ -614,13 +580,20 @@ export default {
 }
 
 .status-label {
+  flex: 0 0 auto;
+  font-size: var(--wan-font-label);
   font-weight: 400;
   color: var(--el-text-color-regular);
 }
 
 .status-value {
-  font-weight: 400;
+  min-width: 0;
+  flex: 1 1 auto;
+  text-align: right;
+  font-weight: 600;
   color: var(--el-text-color-primary);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .wan-full-width {
@@ -630,11 +603,7 @@ export default {
 .action-buttons {
   display: flex;
   justify-content: center;
-  gap: 15px;
-}
-
-.card-actions {
-  justify-content: center;
+  gap: 12px;
 }
 
 :deep(.wan-enable-switch.el-switch:not(.is-checked) .el-switch__inner .is-text),

@@ -900,6 +900,10 @@ export default {
           if (typeof data.moduleExist === 'boolean')
             link.moduleExist = data.moduleExist
 
+          // 使能标志(取UCI配置): 状态列据此优先显示"已禁用", 随轮询同步以免开关链路后状态滞后
+          if (data.enable !== undefined && data.enable !== null)
+            link.settings.enable = data.enable === true || data.enable === 'true' || data.enable === '1' || data.enable === 1
+
           // 产品信息
           const productInfo = link.productInfo
           if (data.vendor) productInfo.vendor = data.vendor

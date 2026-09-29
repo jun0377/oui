@@ -1629,7 +1629,12 @@ function M.getOverview(ifname)
     ret.rxBytes = rxBytes
     ret.txBytes = txBytes
 
-    -- 4) 自动优选小区探测状态(探测结果仅本次运行有效, 不写入UCI)
+    -- 4) 使能标志(取UCI配置; 列表页状态列依赖它, 放入轮询数据避免开关后状态滞后)
+    local c = uci.cursor()
+    local enable = tostring(c:get('sim', ifname, 'enable') or '')
+    ret.enable = (enable == '1' or enable == 'true')
+
+    -- 5) 自动优选小区探测状态(探测结果仅本次运行有效, 不写入UCI)
     ret.pciAutoSelect = getPciAutoSelectStatus(ifname)
 
     return ret
