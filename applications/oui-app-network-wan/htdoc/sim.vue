@@ -10,7 +10,7 @@
           <!-- Tab 1: 实时状态 -->
           <el-tab-pane label="实时状态" name="status" lazy>
             <div class="status-tab-content">
-              <el-card class="config-card compact-card connection-card">
+              <el-card class="config-card compact-card">
                 <template #header>
                   <div class="card-header">
                     <span class="sim-card-title">{{ $t('连接状态') }}</span>
@@ -269,8 +269,15 @@
                 </el-card>
               </div>
 
-              <!-- AT日志终端: 置于实时状态页右下角 -->
-              <el-card class="config-card compact-card at-log-card">
+              <!-- 双击放大时的遮罩, 点击退出放大 -->
+              <div v-if="atLogExpanded" class="at-log-backdrop" @click="closeAtLogExpand"></div>
+
+              <!-- AT日志终端: 置于实时状态页右下角, 双击可放大查看 -->
+              <el-card
+                class="config-card compact-card at-log-card"
+                :class="{ 'is-expanded': atLogExpanded }"
+                @dblclick="toggleAtLogExpand"
+              >
                 <div class="at-log-terminal" ref="atLogTerminal" @scroll="handleAtLogScroll">
                   <div v-if="atLogs.length === 0" class="at-log-empty">暂无AT指令日志</div>
                   <div
@@ -289,8 +296,9 @@
                     </template>
                   </div>
                 </div>
-                <div class="at-log-actions">
-                  <el-button size="small" :type="atLogErrorOnly ? 'danger' : 'default'" @click="atLogErrorOnly = !atLogErrorOnly">
+                <div class="at-log-actions" @dblclick.stop>
+                  <el-button v-if="atLogExpanded" size="small" @click.stop="closeAtLogExpand">关闭</el-button>
+                  <el-button size="small" :type="atLogErrorOnly ? 'danger' : 'default'" @click.stop="atLogErrorOnly = !atLogErrorOnly">
                     {{ atLogErrorOnly ? '显示全部' : '只看错误' }}
                   </el-button>
                 </div>
@@ -933,6 +941,7 @@ export default {
       pendingAtLogs: [],
       atLogEnabled: false,
       atLogErrorOnly: false,
+      atLogExpanded: false,
       atLogSeq: 0,
       maxLogEntries: 200,
       atLogLoading: false,
@@ -958,8 +967,11 @@ export default {
     }, { time: 1000, repeat: true })
     // AT日志终端常驻实时状态页, 默认开启拉取
     this.atLogEnabled = true
+    // 放大AT日志时支持 ESC 退出
+    window.addEventListener('keydown', this.handleAtLogKeydown)
   },
   beforeUnmount() {
+    window.removeEventListener('keydown', this.handleAtLogKeydown)
     this.$timer.stop('sim-at-logs')
     if (this.atLogDrainTimer) {
       clearTimeout(this.atLogDrainTimer)
@@ -1286,6 +1298,19 @@ export default {
     handleAtLogScroll() {
       this.atLogAutoFollow = this.isAtLogNearBottom()
     },
+    // 双击日志区域在"内嵌/放大"之间切换
+    toggleAtLogExpand() {
+      this.atLogExpanded = !this.atLogExpanded
+      if (this.atLogExpanded)
+        this.scrollAtLogToBottom()
+    },
+    closeAtLogExpand() {
+      this.atLogExpanded = false
+    },
+    handleAtLogKeydown(e) {
+      if (e.key === 'Escape' && this.atLogExpanded)
+        this.atLogExpanded = false
+    },
     normalizeAtLogResponse(result) {
       if (!result)
         return null
@@ -1459,6 +1484,14 @@ export default {
         this.$message.error('设置失败')
       })
     },
+    // 判断SIM卡是否未插入(拔卡/未识别)
+    isSimMissing() {
+      const status = String((this.sim && this.sim.status) || '').toLowerCase()
+      if (status.includes('not inserted') || status.includes('sim removed'))
+        return true
+      const iccid = String((this.productInfo && this.productInfo.iccid) || '').trim()
+      return iccid === '' || iccid === '-'
+    },
     // 当前状态字符串
     getStatusText() {
       if (!this.settings.enable)
@@ -1466,6 +1499,9 @@ export default {
       // 模组是否被系统识别(未安装模组或模组未上电)
       if (this.moduleExist === false)
         return '模组不存在'
+      // SIM卡是否未插入(拔卡/被移除)
+      if (this.isSimMissing())
+        return '未插卡'
       if (this.isNoService)
         return '无服务'
       // 判断是否有IP,有IP则返回'在线'
@@ -2005,6 +2041,44 @@ export default {
   font-size: var(--sim-font-label);
 }
 
+/* 卡片统一样式: 外边框 + 卡片内部再画一圈边框线, 标题嵌在内部框线的上边靠左
+   (AT日志终端没有标题行, 且正文用绝对定位铺满, 故排除) */
+.config-card:not(.at-log-card) {
+  position: relative;
+  border: 1px solid var(--el-border-color);
+  /* 内部框相对卡片的内缩量, 顶部留出标题位置 */
+  --conn-inset-y: 14px;
+  --conn-inset-x: 10px;
+}
+
+/* 卡片正文本身即"内部框" */
+:deep(.config-card:not(.at-log-card) .el-card__body) {
+  margin: var(--conn-inset-y) var(--conn-inset-x) var(--conn-inset-x);
+  border: 1px solid var(--el-border-color);
+  border-radius: var(--sim-radius-sm);
+  padding: 12px 14px;
+}
+
+/* 标题行移到内部框的上边框上, 靠左 */
+:deep(.config-card:not(.at-log-card) .el-card__header) {
+  position: absolute;
+  top: var(--conn-inset-y);
+  left: 0;
+  transform: translateY(-50%);
+  padding: 0 0 0 calc(var(--conn-inset-x) + 16px);
+  border-bottom: 0;
+  background: transparent;
+  z-index: 1;
+}
+
+/* 标题带卡片同色底用于切断内部框线; 它上方就是卡片底色, 深浅色主题都不会有色差 */
+.config-card:not(.at-log-card) .sim-card-title {
+  display: inline-block;
+  padding: 0 8px;
+  line-height: 1.4;
+  background: var(--el-bg-color);
+}
+
 .neighbor-card {
   flex: 2;
 }
@@ -2109,16 +2183,33 @@ export default {
 .status-table {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  /* 与 .table-title 的负边距计算配套: 让下方表格的上边框正好落在标题的垂直中心 */
+  --cell-title-gap: 15px;
+  --cell-title-height: 20px;
+  gap: var(--cell-title-gap);
   padding: 10px 0;
 }
 
+/* 表格标题: 内嵌在下方表格的上边框上, 靠左(与卡片标题同一套"内部框线"风格) */
 .table-title {
-  margin-bottom: 4px;
-  text-align: center;
+  width: fit-content;
+  margin: 0 0 calc(-1 * (var(--cell-title-height) / 2 + var(--cell-title-gap))) 16px;
+  padding: 0 8px;
+  line-height: var(--cell-title-height);
+  text-align: left;
   font-size: var(--sim-font-label);
   font-weight: 600;
   color: var(--el-text-color-regular);
+  position: relative;
+  z-index: 1;
+  background: var(--el-bg-color);
+}
+
+/* 标题下方的表格加一圈边框, 作为标题所在的那条"框线" */
+.table-title + .sim-cell-table {
+  border: 1px solid var(--el-border-color);
+  border-radius: var(--sim-radius-sm);
+  padding: 8px 10px;
 }
 
 .table-row {
@@ -2764,6 +2855,50 @@ export default {
   border: 1px solid var(--sim-term-line);
   border-radius: var(--sim-radius-sm);
   padding: 8px 10px;
+}
+
+/* 双击放大AT日志: 遮罩 + 卡片临时铺满视口, 以显示更多条目 */
+.at-log-backdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.at-log-card {
+  cursor: zoom-in;
+}
+
+.at-log-card.is-expanded {
+  position: fixed;
+  top: 4vh;
+  left: 4vw;
+  width: 92vw;
+  height: 92vh;
+  z-index: 2001;
+  margin: 0;
+  cursor: default;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* 放大时让日志区域撑满卡片(覆盖小屏布局里的固定高度与静态定位) */
+:deep(.at-log-card.is-expanded .el-card__body) {
+  position: relative;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.at-log-card.is-expanded .at-log-terminal {
+  position: absolute;
+  top: 8px;
+  left: 14px;
+  right: 14px;
+  bottom: 40px;
+  flex: none;
 }
 </style>
 

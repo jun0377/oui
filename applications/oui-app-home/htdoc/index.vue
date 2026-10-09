@@ -688,7 +688,8 @@ export default {
         statusTagType = 'danger'
       } else {
         const iccid = productInfo.iccid || ''
-        if (iccid === '' || iccid === '-') {
+        const simStatusText = String(simStatus.sim || '').toLowerCase()
+        if (simStatusText.includes('not inserted') || simStatusText.includes('sim removed') || iccid === '' || iccid === '-') {
           statusText = '未识别SIM卡'
           statusTagType = 'danger'
         } else if (hcsq && hcsq.sysmode === 'NOSERVICE') {
@@ -1099,10 +1100,42 @@ export default {
 .home-section-card {
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  position: relative;
+  /* 内部框线相对卡片的内缩量(与下面标题的定位配套) */
+  --home-inset-y: 14px;
+  --home-inset-x: 10px;
+  /* 正文避让内部框线, 顶部留出标题所在的位置 */
+  padding: 28px 26px 20px;
   border: var(--home-border-card);
   border-radius: var(--home-radius);
   background: var(--el-bg-color);
+}
+
+/* 卡片内部再画一圈框线(外面那圈仍是卡片自身的边框) */
+.home-metric-card::before,
+.home-section-card::before {
+  content: '';
+  position: absolute;
+  top: var(--home-inset-y);
+  left: var(--home-inset-x);
+  right: var(--home-inset-x);
+  bottom: var(--home-inset-x);
+  border: 1px solid var(--el-border-color);
+  border-radius: var(--home-radius-sm);
+  pointer-events: none;
+}
+
+/* 标题: 嵌在内部框线的上边框上, 靠左; 底色继承卡片自身, 用于切断框线(工作模式卡的着色底也能适配) */
+.home-metric-card > .home-metric-title,
+.home-section-card > .home-section-title {
+  position: absolute;
+  top: var(--home-inset-y);
+  left: calc(var(--home-inset-x) + 16px);
+  transform: translateY(-50%);
+  margin: 0;
+  padding: 0 8px;
+  background: inherit;
+  z-index: 1;
 }
 
 .home-metric-card-primary {

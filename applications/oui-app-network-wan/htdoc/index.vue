@@ -904,6 +904,10 @@ export default {
           if (data.enable !== undefined && data.enable !== null)
             link.settings.enable = data.enable === true || data.enable === 'true' || data.enable === '1' || data.enable === 1
 
+          // 拔卡/未插卡时清除SIM相关展示字段, 避免残留的运营商/频段/信号/小区信息
+          if (!data.iccid)
+            this.clearSimDisplayFields(link)
+
           // 产品信息
           const productInfo = link.productInfo
           if (data.vendor) productInfo.vendor = data.vendor
@@ -1511,6 +1515,47 @@ export default {
       const r = this.calcBytes(bytes)
       return r ? r.unit : ''
     },
+    // 判断SIM卡是否未插入(拔卡/未识别)
+    isSimMissing(link) {
+      if (!link)
+        return false
+      const status = String((link.sim && link.sim.status) || '').toLowerCase()
+      if (status.includes('not inserted') || status.includes('sim removed'))
+        return true
+      const iccid = String((link.productInfo && link.productInfo.iccid) || '').trim()
+      return iccid === '' || iccid === '-'
+    },
+    // 清除SIM相关展示字段(拔卡后避免残留运营商/频段/信号/小区信息)
+    clearSimDisplayFields(link) {
+      if (!link)
+        return
+      const productInfo = link.productInfo
+      productInfo.iccid = ''
+      productInfo.imsi = ''
+      const sim = link.sim
+      sim.operator = ''
+      sim.country = ''
+      sim.mcc = ''
+      sim.mnc = ''
+      link.freqInfo = { sysmode: '', class: [] }
+      link.monsc = createEmptyMonsc()
+      link.monnc = createEmptyMonnc()
+      const status = link.status
+      status.rat = ''
+      status.nr = { rsrp: '', rsrq: '', sinr: '', band: '' }
+      status.lte = { rsrp: '', rsrq: '', sinr: '', rssi: '', band: '' }
+      status.hcsq = {
+        sysmode: '',
+        rsrp: '',
+        rsrp_dbm: '',
+        rsrq: '',
+        rsrq_db: '',
+        sinr: '',
+        sinr_db: '',
+        rssi: '',
+        rssi_dbm: ''
+      }
+    },
     // 获取链路状态文本（组合 NR 和 LTE 注册状态）
     getStatusText(index) {
       const link = this.wanLinks[index]
@@ -1525,10 +1570,9 @@ export default {
       if (link.moduleExist === false)
         return '模组不存在'
 
-      // 检查是否插卡（ICCID 为空说明未插卡/未插网线）
-      const iccid = link.productInfo && link.productInfo.iccid
-      if (iccid === '' || iccid === '-')
-        return '未识别SIM卡'
+      // 检查是否插卡（SIM状态为未插卡/被移除, 或 ICCID 为空）
+      if (this.isSimMissing(link))
+        return '未插卡'
 
       // 检查信号强度是否无服务
       if ((link.status && link.status.hcsq && link.status.hcsq.sysmode) === 'NOSERVICE')
