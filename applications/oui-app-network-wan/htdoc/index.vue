@@ -1665,6 +1665,9 @@ export default {
         if (data.pciAutoSelect !== undefined) settings.pciAutoSelect = data.pciAutoSelect
         if (data.pciAutoSelectTimeout !== undefined) settings.pciAutoSelectTimeout = data.pciAutoSelectTimeout
         if (data.pciAutoSelectExclude !== undefined) settings.pciAutoSelectExclude = data.pciAutoSelectExclude
+        // 网络探测地址: detectionHosts 为已启用地址(tracker-sim 探测用), detectionHostsDisabled 为未启用地址
+        if (data.detectionHosts !== undefined) settings.detectionHosts = data.detectionHosts
+        if (data.detectionHostsDisabled !== undefined) settings.detectionHostsDisabled = data.detectionHostsDisabled
       })
     },
     // 从freqInfo中解析出频段信息

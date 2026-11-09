@@ -238,6 +238,16 @@ local function setVPSip(server_ip)
     exec(cmd)
 end
 
+-- selfvpn: 服务器地址由 selfvpn 自己的 remoteAddr 维护
+local function setSelfVpnIP(server_ip)
+    log.info('set selfvpn ip: ', server_ip)
+    local c = uci.cursor()
+    if c:get('selfvpn', 'selfvpn') then
+        c:set('selfvpn', 'selfvpn', 'remoteAddr', server_ip)
+        c:commit('selfvpn')
+    end
+end
+
 -- uci get openmptcprouter.vps.ip
 function M.getServerIP()
     local c = uci.cursor()
@@ -250,7 +260,7 @@ function M.getServerPort()
     return c:get('openmptcprouter', 'vps', 'port')
 end
 
--- 获取聚合模式配置: 服务器IP/端口 + 传输模式(openvpn->tcp, mqvpn->udp)
+-- 获取聚合模式配置: 服务器IP/端口 + 传输模式(selfvpn->tcp, mqvpn->udp)
 function M.getAggregateConfig()
     local c = uci.cursor()
     local vpn = c:get('openmptcprouter', 'settings', 'vpn')
@@ -258,8 +268,7 @@ function M.getAggregateConfig()
     return {
         ip = c:get('openmptcprouter', 'vps', 'ip') or '',
         port = tonumber(c:get('openmptcprouter', 'vps', 'port')) or 0,
-        -- settings.vpn 为空时聚合模式默认使用 mqvpn
-        transport = vpn == 'openvpn' and 'tcp' or 'udp'
+        transport = (vpn == 'selfvpn' or vpn == 'openvpn') and 'tcp' or 'udp'
     }
 end
 
@@ -283,7 +292,8 @@ function M.applyAggregateConfig(params)
     local transport = trim(params.transport):lower()
     local vpn
     if transport == 'tcp' then
-        vpn = 'openvpn'
+        -- TCP 传输使用 selfvpn(替代原 OpenVPN)
+        vpn = 'selfvpn'
     elseif transport == 'udp' then
         vpn = 'mqvpn'
     else
@@ -306,6 +316,7 @@ function M.applyAggregateConfig(params)
     setDsvpnIP(server_ip)
     setMLVPNip(server_ip)
     setOpenVpnIP(server_ip)
+    setSelfVpnIP(server_ip)
 
     -- 上面已改动过配置文件, cursor 必须在之后创建, 否则会用旧数据覆盖刚写入的内容
     local c = uci.cursor()

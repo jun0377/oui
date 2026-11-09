@@ -1315,6 +1315,58 @@ local function setSimPCIAutoSelect(ifname, pciMode, prefer)
     return true
 end
 
+-- 更改网络探测地址
+-- hosts: { { host = '1.2.3.4', enabled = true }, ... }
+-- 勾选的写入 detectionHosts(tracker-sim 使用, 任一地址可达即认为链路可上网),
+-- 未勾选的写入 detectionHostsDisabled, 仅用于页面上恢复勾选状态
+local function setSimDetectionHosts(ifname, hosts)
+
+    if nil == ifname or '' == ifname then
+        log.error('ifname is nil!')
+        return false
+    end
+
+    -- 未下发该字段时保持原配置不变
+    if type(hosts) ~= 'table' then
+        return true
+    end
+
+    local enabled_list = {}
+    local disabled_list = {}
+    for _, item in ipairs(hosts) do
+        local host = tostring(item and item.host or ''):gsub('%s+', '')
+        if host ~= '' then
+            if item.enabled then
+                table.insert(enabled_list, host)
+            else
+                table.insert(disabled_list, host)
+            end
+        end
+    end
+
+    local c = uci.cursor()
+    c:delete("sim", ifname, 'detectionHosts')
+    c:delete("sim", ifname, 'detectionHostsDisabled')
+    if #enabled_list > 0 then
+        c:set("sim", ifname, 'detectionHosts', enabled_list)
+    end
+    if #disabled_list > 0 then
+        c:set("sim", ifname, 'detectionHostsDisabled', disabled_list)
+    end
+    local ok, err = c:commit('sim')
+
+    -- 提交后回读一次: 便于确认配置确实写入(/var/log/sim.log)
+    local saved = uci.cursor():get('sim', ifname, 'detectionHosts')
+    if type(saved) == 'table' then
+        saved = table.concat(saved, ' ')
+    end
+    log.info(ifname, 'set detectionHosts enabled:', table.concat(enabled_list, ' '),
+             'disabled:', table.concat(disabled_list, ' '),
+             'commit:', tostring(ok), 'saved:', tostring(saved), err and ('err:' .. tostring(err)) or '')
+
+    return ok ~= false
+end
+
 -- 更改配置
 function M.changeSimSettings(params)
     
@@ -1330,6 +1382,8 @@ function M.changeSimSettings(params)
                         tostring(params.lte_pci and params.lte_pci.enabled), tostring(#((params.lte_pci and params.lte_pci.items) or {}))))
     log.info(string.format("index:%s %s pciMode:%s pciPrefer:%s", params.index, params.alias,
                         tostring(params.pci_mode), cjson.encode(params.pci_prefer or {})))
+    log.info(string.format("index:%s %s detectionHosts:%s", params.index, params.alias,
+                        cjson.encode(params.detection_hosts or {})))
 
     setSimNRBand(ifname, params.nrBand)
     setSimLTEBand(ifname, params.lteBand)
@@ -1339,6 +1393,10 @@ function M.changeSimSettings(params)
     setSimLTEPCID(ifname, params.lte_pci)
     setSimAuth(ifname, params.auth, params.apn, params.username, params.password)
     setSimPCIAutoSelect(ifname, params.pci_mode, params.pci_prefer)
+    if not setSimDetectionHosts(ifname, params.detection_hosts) then
+        log.error(ifname, 'set detectionHosts failed')
+        return { code = -1, msg = 'detectionHosts write failed' }
+    end
 
     return { code = 0 }
 end

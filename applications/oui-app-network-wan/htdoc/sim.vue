@@ -314,6 +314,17 @@
           <!-- Tab 2: 基本设置 -->
           <el-tab-pane label="基本设置" name="basic" lazy>
             <el-form :model="settings" label-width="90px" class="config-form basic-form" label-align="left" label-position="left">
+                <el-form-item :label="$t('Enable')">
+                  <el-switch
+                    :model-value="settings.enable"
+                    @update:model-value="handleEnableChange"
+                    inline-prompt
+                    :active-text="'开'"
+                    :inactive-text="'关'"
+                    class="wan-enable-switch"
+                  />
+                </el-form-item>
+
                 <el-form-item :label="$t('Network Access')">
                   <el-select v-model="settings.net" :placeholder="$t('Select access type')" class="sim-full-width">
                     <el-option :label="$t('AUTO')" value="AUTO"/>
@@ -343,15 +354,31 @@
                 <el-form-item label="APN">
                   <el-input v-model="settings.apn" placeholder="Enter APN"/>
                 </el-form-item>
-                <el-form-item :label="$t('Enable')">
-                  <el-switch
-                    :model-value="settings.enable"
-                    @update:model-value="handleEnableChange"
-                    inline-prompt
-                    :active-text="'开'"
-                    :inactive-text="'关'"
-                    class="wan-enable-switch"
-                  />
+                <el-form-item label="网络探测" class="sim-detection-form-item">
+                  <div class="sim-detection-section">
+                    <div class="sim-detection-tip">勾选启用,任一地址可通即视为可上网</div>
+                    <div class="sim-detection-list">
+                      <div v-if="settings.detection_hosts.length === 0" class="sim-detection-empty">暂无探测地址，请在下方添加</div>
+                      <div v-for="(entry, idx) in settings.detection_hosts" :key="entry.host" class="sim-detection-item">
+                        <el-checkbox v-model="entry.enabled" class="sim-detection-check">
+                          <span class="sim-detection-host">{{ entry.host }}</span>
+                        </el-checkbox>
+                        <el-button circle size="small" plain type="danger" aria-label="删除" title="删除该地址" @click="removeDetectionHost(idx)">
+                          <el-icon><Minus /></el-icon>
+                        </el-button>
+                      </div>
+                    </div>
+                    <div class="sim-detection-add">
+                      <el-input
+                        v-model="detectionNewHost"
+                        size="small"
+                        placeholder="输入 IPv4 地址，如 223.5.5.5"
+                        class="sim-detection-add-input"
+                        @keyup.enter="addDetectionHost"
+                      />
+                      <el-button size="small" type="primary" plain @click="addDetectionHost">添加</el-button>
+                    </div>
+                  </div>
                 </el-form-item>
               </el-form>
 
@@ -840,6 +867,15 @@
 </template>
 
 <script>
+// 默认网络探测地址: 与 /etc/config/sim 中 detectionHosts 的出厂值一致
+const DEFAULT_DETECTION_HOSTS = ['223.5.5.5', '223.6.6.6', '119.29.29.29', '180.76.76.76', '122.112.208.1']
+// 探测地址只接受 IPv4: ping 目标由 tracker-sim 直接下发, 不做域名解析兜底
+const IPV4_PATTERN = /^(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$/
+// 探测地址条数上限(与其它列表类配置一致, 避免 UCI 无限膨胀)
+const DETECTION_HOST_LIMIT = 20
+// 详情页页签名, 当前页签会同步到 URL query(tab), 浏览器刷新后仍停留在原页签
+const SIM_TABS = ['status', 'basic', 'bandlock', 'pcilock']
+
 export default {
   name: 'sim-settings',
   emits: ['go-back'],
@@ -932,10 +968,14 @@ export default {
         pci_mode: 'manual',
         // 优选PCI小区配置: 优选策略(rsrp=按信号强度 / stability=按驻留稳定性), 超时时间(秒), 排除的小区PCI(十进制)
         pci_prefer: { strategy: 'stability', timeout: 60, exclude_pcis: [''] },
+        // 网络探测地址: 勾选启用的地址会写入 UCI detectionHosts, 未勾选的写入 detectionHostsDisabled
+        detection_hosts: [],
         auth: '',
         username: '',
         password: ''
       },
+      // 网络探测地址: 新增条目的输入框
+      detectionNewHost: '',
       settingsInitialized: false,
       atLogs: [],
       pendingAtLogs: [],
@@ -960,6 +1000,8 @@ export default {
   created() {
     if (this.wanData)
       this.applyWanData(this.wanData)
+    // 当前页签记录在 URL query 中, 浏览器刷新后回到原页签而不是实时状态
+    this.simTab = this.parseTabQuery()
     this.$timer.create('sim-at-logs', () => this.fetchAtLogs(), { time: 1000, repeat: true, autostart: false })
     // 每秒刷新相对时间显示
     this.$timer.create('sim-time-ago', () => {
@@ -979,6 +1021,12 @@ export default {
     }
   },
   watch: {
+    // 切换页签时同步到 URL, 刷新后由 created() 从 query 恢复; 保留 sub/idx 等其它参数
+    simTab(val) {
+      if (!SIM_TABS.includes(val))
+        return
+      this.$router.replace({ query: { ...this.$route.query, tab: val } }).catch(() => {})
+    },
     atLogEnabled(val) {
       if (val) {
         this.atLogSeq = 0
@@ -1234,6 +1282,8 @@ export default {
         this.settings.auth = data.settings.auth
         this.settings.username = data.settings.username
         this.settings.password = data.settings.password
+        // 网络探测地址: 合并已启用(detectionHosts)与未启用(detectionHostsDisabled)两组
+        this.settings.detection_hosts = this.buildDetectionHosts(data.settings)
         const bandTokens = String(this.settings.band || '').split(',').map(item => item.trim()).filter(Boolean)
         const nrStoredBand = bandTokens.find(item => item.toLowerCase().startsWith('n')) || ''
         const lteStoredBand = bandTokens.find(item => item.toLowerCase().startsWith('b')) || ''
@@ -1275,6 +1325,11 @@ export default {
         this.settings.pci_prefer.exclude_pcis = excludeList.length ? excludeList : ['']
         this.settingsInitialized = true
       }
+    },
+    // 从 URL query 读取当前页签, 缺失或非法时回落到实时状态
+    parseTabQuery() {
+      const tab = String(this.$route.query.tab || '')
+      return SIM_TABS.includes(tab) ? tab : 'status'
     },
     goBack() {
       this.$emit('go-back', { refresh: true })
@@ -1429,6 +1484,64 @@ export default {
           this.fetchAtLogs()
       })
     },
+    // 网络探测地址: UCI 里可能是字符串(单条含空格)或列表, 统一摊平成地址数组
+    normalizeDetectionHosts(raw) {
+      const items = Array.isArray(raw) ? raw : (raw === undefined || raw === null || raw === '' ? [] : [raw])
+      return items.reduce((list, item) => list.concat(String(item).split(/\s+/)), []).filter(Boolean)
+    },
+    // 网络探测地址: 由 UCI 的已启用/未启用两组地址还原成带勾选状态的列表
+    buildDetectionHosts(settings) {
+      const enabled = this.normalizeDetectionHosts(settings.detectionHosts)
+      const disabled = this.normalizeDetectionHosts(settings.detectionHostsDisabled)
+      const seen = new Set()
+      const list = []
+      const push = (host, flag) => {
+        if (seen.has(host))
+          return
+        seen.add(host)
+        list.push({ host, enabled: flag })
+      }
+      enabled.forEach(host => push(host, true))
+      disabled.forEach(host => push(host, false))
+      // 两项都未配置过(如老固件)时给出厂默认地址
+      if (list.length === 0 && settings.detectionHosts === undefined && settings.detectionHostsDisabled === undefined)
+        DEFAULT_DETECTION_HOSTS.forEach(host => push(host, true))
+      return list
+    },
+    // 网络探测地址: IPv4 格式校验, 并排除不能作为探测目标的保留地址
+    // 0.0.0.0/8、127.0.0.0/8(回环)、224.0.0.0/4(组播)、240.0.0.0/4(保留/广播) 都 ping 不通
+    isValidDetectionHost(host) {
+      if (!IPV4_PATTERN.test(host))
+        return false
+      const first = Number(host.split('.')[0])
+      return first !== 0 && first !== 127 && first < 224
+    },
+    // 网络探测地址: 新增一条(默认勾选)
+    addDetectionHost() {
+      const host = String(this.detectionNewHost || '').trim()
+      if (!host) {
+        this.$message.warning('请输入探测地址')
+        return
+      }
+      if (!this.isValidDetectionHost(host)) {
+        this.$message.warning('请输入合法的 IPv4 地址, 且不能为 0.0.0.0、127.x、组播或广播地址')
+        return
+      }
+      if (this.settings.detection_hosts.some(entry => String(entry.host).trim() === host)) {
+        this.$message.warning('该地址已存在')
+        return
+      }
+      if (this.settings.detection_hosts.length >= DETECTION_HOST_LIMIT) {
+        this.$message.warning(`最多允许 ${DETECTION_HOST_LIMIT} 个探测地址`)
+        return
+      }
+      this.settings.detection_hosts.push({ host, enabled: true })
+      this.detectionNewHost = ''
+    },
+    // 网络探测地址: 删除一条
+    removeDetectionHost(idx) {
+      this.settings.detection_hosts.splice(idx, 1)
+    },
     addNRPciEntry() {
       if (this.settings.nr_pci.items.length >= 20) {
         this.$message.warning('最多允许20个条目')
@@ -1571,6 +1684,35 @@ export default {
         this.$message.error('The network interface must be specified!')
         return
       }
+      // 网络探测地址: 保存前整体校验, 兼容从历史 UCI 读到的非法/重复条目
+      const detectionHosts = []
+      const seenHosts = new Set()
+      for (const entry of this.settings.detection_hosts) {
+        const host = String(entry.host || '').trim()
+        if (!host) {
+          this.$message.error('存在空的网络探测地址, 请删除后重新填写')
+          return
+        }
+        if (!this.isValidDetectionHost(host)) {
+          this.$message.error(`网络探测地址不合法: ${host}`)
+          return
+        }
+        if (seenHosts.has(host)) {
+          this.$message.error(`网络探测地址重复: ${host}`)
+          return
+        }
+        if (detectionHosts.length >= DETECTION_HOST_LIMIT) {
+          this.$message.error(`网络探测地址最多 ${DETECTION_HOST_LIMIT} 个`)
+          return
+        }
+        seenHosts.add(host)
+        detectionHosts.push({ host, enabled: !!entry.enabled })
+      }
+      // 至少要启用一个, 否则 tracker-sim 退回全局默认地址
+      if (!detectionHosts.some(entry => entry.enabled)) {
+        this.$message.error('请至少启用一个网络探测地址')
+        return
+      }
       // 优选PCI小区模式下由模组自动选优, 不做手动锁定的参数校验
       const isManualPciMode = this.settings.pci_mode !== 'prefer'
       if (isManualPciMode && this.settings.nr_pci && this.settings.nr_pci.enabled && !this.settings.nrBandUnLock) {
@@ -1621,11 +1763,17 @@ export default {
             band: String(e.band),
             freq: String(e.freq)
           }))
-        }
+        },
+        // 网络探测地址: 使用校验并去空白后的列表
+        detection_hosts: detectionHosts
       }
       this.$oui.call('sim', 'changeSimSettings', payload).then((response) => {
         if (response && response.code === 0)
           this.$message.success('设置成功')
+        else
+          this.$message.error((response && response.msg) || '设置失败')
+      }).catch(() => {
+        this.$message.error('设置失败')
       })
     },
     resetConfig() {
@@ -1646,6 +1794,7 @@ export default {
         this.settings.lte_pci = { enabled: false, reSelEnabled: true, items: [{ enabled: false, pcid: '', band: '', freq: '' }] }
         this.settings.pci_mode = 'manual'
         this.settings.pci_prefer = { strategy: 'stability', timeout: 60, exclude_pcis: [''] }
+        this.settings.detection_hosts = DEFAULT_DETECTION_HOSTS.map(host => ({ host, enabled: true }))
         this.$oui.call('sim', 'changeSimSettings', this.settings).then((response) => {
           if (response && response.code === 0) {
             this.$oui.call('sim', 'changeSimEnable', this.settings).then((res) => {
@@ -2390,6 +2539,84 @@ export default {
 
 .sim-full-width {
   width: 100%;
+}
+
+/* 网络探测地址: 直接展开的列表, 与锁频段区块同一视觉风格 */
+.sim-detection-form-item,
+:deep(.sim-detection-form-item .el-form-item__content) {
+  width: 100%;
+}
+
+.sim-detection-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sim-gap);
+  /* 与其他设置项(el-input/el-select 的 20%)同宽 */
+  width: 20%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: var(--sim-border);
+  border-radius: var(--sim-radius);
+  background: var(--el-fill-color-lighter);
+}
+
+.sim-detection-tip {
+  font-size: var(--sim-font-minor);
+  line-height: 18px;
+  color: var(--el-text-color-secondary);
+}
+
+.sim-detection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.sim-detection-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sim-gap);
+  padding: 2px 4px;
+  border-radius: var(--sim-radius-sm);
+}
+
+.sim-detection-item:hover {
+  background: var(--el-fill-color-light);
+}
+
+.sim-detection-check {
+  flex: 1;
+  min-width: 0;
+  margin-right: 0;
+}
+
+.sim-detection-host {
+  font-size: var(--sim-font-label);
+  color: var(--el-text-color-primary);
+}
+
+.sim-detection-empty {
+  padding: 4px;
+  font-size: var(--sim-font-minor);
+  color: var(--el-text-color-placeholder);
+}
+
+.sim-detection-add {
+  display: flex;
+  align-items: center;
+  gap: var(--sim-gap);
+}
+
+/* 覆盖 basic-form 对 el-input 的 20% 宽度限制 */
+:deep(.sim-detection-add .el-input) {
+  width: auto;
+}
+
+.sim-detection-add-input {
+  flex: 1;
 }
 
 .sim-inline-row {
