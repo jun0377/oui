@@ -81,7 +81,7 @@ export default {
         ip: '',
         // 服务器端口默认 65500, 实际以服务端配置为准
         port: 65500,
-        transport: 'udp'
+        transport: 'tcp'
       },
       // 服务器状态
       serverStatus: {
@@ -180,7 +180,8 @@ export default {
         if (port >= 1 && port <= 65535)
           this.ServerConfig.port = port
         const transport = String(config.transport || '').trim().toLowerCase()
-        this.ServerConfig.transport = transport === 'tcp' ? 'tcp' : 'udp'
+        // 默认使用 TCP: 只有明确返回 udp 才切换到 UDP
+        this.ServerConfig.transport = transport === 'udp' ? 'udp' : 'tcp'
       }).catch(() => {})
     },
     // 获取状态信息

@@ -260,7 +260,7 @@ function M.getServerPort()
     return c:get('openmptcprouter', 'vps', 'port')
 end
 
--- 获取聚合模式配置: 服务器IP/端口 + 传输模式(selfvpn->tcp, mqvpn->udp)
+-- 获取聚合模式配置: 服务器IP/端口 + 传输模式(仅 mqvpn->udp, 其余默认 tcp)
 function M.getAggregateConfig()
     local c = uci.cursor()
     local vpn = c:get('openmptcprouter', 'settings', 'vpn')
@@ -268,7 +268,8 @@ function M.getAggregateConfig()
     return {
         ip = c:get('openmptcprouter', 'vps', 'ip') or '',
         port = tonumber(c:get('openmptcprouter', 'vps', 'port')) or 0,
-        transport = (vpn == 'selfvpn' or vpn == 'openvpn') and 'tcp' or 'udp'
+        -- 默认使用 TCP: 只有 mqvpn 是 UDP, 未配置时也按 TCP(selfvpn) 处理
+        transport = (vpn == 'mqvpn') and 'udp' or 'tcp'
     }
 end
 
