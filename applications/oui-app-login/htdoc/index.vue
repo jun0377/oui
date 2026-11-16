@@ -84,6 +84,15 @@ export default {
 
 <style scoped>
 .login-page {
+  /* 与布局页面保持一致的主色 */
+  --el-color-primary: #6366f1;
+  --el-color-primary-light-3: #9294f5;
+  --el-color-primary-light-5: #b1b3f8;
+  --el-color-primary-light-7: #d0d1fb;
+  --el-color-primary-light-8: #e0e0fc;
+  --el-color-primary-light-9: #eff0fe;
+  --el-color-primary-dark-2: #4f52c1;
+
   position: fixed;
   inset: 0;
   overflow: hidden;
@@ -91,7 +100,16 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 24px 18px 200px;
-  background: #eef2f7;
+  background: var(--el-bg-color-page);
+}
+
+html.dark .login-page {
+  --el-color-primary-light-3: #4547a9;
+  --el-color-primary-light-5: #323379;
+  --el-color-primary-light-7: #1e1f48;
+  --el-color-primary-light-8: #141430;
+  --el-color-primary-light-9: #0a0a18;
+  --el-color-primary-dark-2: #8285f4;
 }
 
 /* 点阵网格背景 */
@@ -392,10 +410,10 @@ export default {
 
 .mode-panel {
   position: relative;
-  border-radius: 14px;
-  border: 1px solid var(--el-border-color);
-  background: #ffffff;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+  background: var(--el-bg-color);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -406,7 +424,7 @@ export default {
 }
 
 .login-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--el-text-color-primary);
   line-height: 1.2;
@@ -417,7 +435,7 @@ export default {
 }
 
 :deep(.mode-panel .el-card__header) {
-  padding: 18px 18px 0;
+  padding: 14px 18px 0;
   border-bottom: 0;
 }
 
@@ -427,7 +445,7 @@ export default {
 }
 
 :deep(.mode-panel .el-card__body) {
-  padding: 12px 18px 18px;
+  padding: 16px 18px 18px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -446,7 +464,13 @@ export default {
 }
 
 :deep(.login-form .el-input__wrapper) {
-  border-radius: 12px;
+  border-radius: 8px;
+  background-color: var(--el-fill-color-light);
+  box-shadow: 0 0 0 1px var(--el-border-color-lighter) inset;
+}
+
+:deep(.login-form .el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
 }
 
 .login-actions {
@@ -459,8 +483,8 @@ export default {
 
 .login-button {
   width: 40%;
-  border-radius: 12px;
-  font-weight: 700;
+  border-radius: 8px;
+  font-weight: 600;
   box-shadow: none;
 }
 
